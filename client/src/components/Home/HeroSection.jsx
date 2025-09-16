@@ -328,9 +328,6 @@ const HeroSection = () => {
                               }`}
                             >
                               <div className='flex items-center gap-3 mb-2 md:mb-3'>
-                                <feature.icon
-                                  className={`w-4 h-4 md:w-5 md:h-5 text-white`}
-                                />
                                 <div
                                   className={`flex-1 h-2 md:h-3 rounded-full bg-gradient-to-r ${feature.color} opacity-60`}
                                 ></div>

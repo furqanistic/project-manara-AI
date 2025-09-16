@@ -172,7 +172,7 @@ const ImageCollageSection = () => {
             isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
           }`}
         >
-          <h2 className='text-3xl lg:text-5xl font-bold text-stone-900 leading-tight'>
+          <h2 className='text-5xl md:text-7xl font-bold text-stone-900 leading-tight'>
             <span className='block'>Designs That</span>
             <span className='bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 bg-clip-text text-transparent'>
               Inspire Reality
@@ -261,27 +261,6 @@ const ImageCollageSection = () => {
               )}
             </div>
           ))}
-        </div>
-
-        {/* Compact Bottom CTA */}
-        <div
-          className={`text-center transition-all duration-800 delay-300 ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-          }`}
-        >
-          <div className='space-y-4'>
-            <h3 className='text-xl font-bold text-stone-900'>
-              Ready to see your space transformed?
-            </h3>
-            <div className='flex flex-col sm:flex-row gap-3 justify-center'>
-              <button className='px-6 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-semibold rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200'>
-                Start Your Design Journey
-              </button>
-              <button className='px-6 py-3 bg-white/80 backdrop-blur-sm text-stone-700 font-semibold rounded-full border border-stone-200 hover:border-amber-300 shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200'>
-                Explore More Designs
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>
