@@ -1,27 +1,173 @@
-<!-- File: client/index.html -->
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/favicon_io/favicon.ico" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/favicon_io/favicon-16x16.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/favicon_io/favicon-32x32.png"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="/favicon_io/apple-touch-icon.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="/favicon_io/android-chrome-192x192.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="512x512"
+      href="/favicon_io/android-chrome-512x512.png"
+    />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/favicon_io/site.webmanifest" />
+
+    <!-- Viewport and Mobile Optimization -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="theme-color" content="#1a202c" />
+    <meta name="msapplication-TileColor" content="#1a202c" />
+
+    <!-- SEO Meta Tags -->
+    <title>
+      Manāra - AI Interior Design for Dubai | 3D Rendering & Smart Planning
+    </title>
+    <meta
+      name="description"
+      content="Transform your space with Manāra, the AI-powered interior design copilot for UAE. Get personalized 3D renders, AutoCAD floor plans, and curated shop lists within 1-2 hours in Dubai, Abu Dhabi, and surrounding cities."
+    />
+    <meta
+      name="keywords"
+      content="AI interior design, Dubai interior design, UAE home design, 3D rendering, AutoCAD floor plans, interior design copilot, smart home planning, Dubai furniture, UAE designers"
+    />
+    <meta name="author" content="Manāra" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://manara.ai" />
+
+    <!-- Open Graph Meta Tags -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Manāra" />
+    <meta
+      property="og:title"
+      content="Manāra - AI Interior Design for Dubai | 3D Rendering & Smart Planning"
+    />
+    <meta
+      property="og:description"
+      content="Transform your space with Manāra, the AI-powered interior design copilot for UAE. Get personalized 3D renders, AutoCAD floor plans, and curated shop lists within 1-2 hours."
+    />
+    <meta property="og:url" content="https://manara.ai" />
+    <meta
+      property="og:image"
+      content="https://manara.ai/favicon_io/android-chrome-512x512.png"
+    />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:image:alt" content="Manāra AI Interior Design Logo" />
+    <meta property="og:locale" content="en_AE" />
+
+    <!-- Twitter Card Meta Tags -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Manāra - AI Interior Design for Dubai | 3D Rendering & Smart Planning"
+    />
+    <meta
+      name="twitter:description"
+      content="Transform your space with Manāra, the AI-powered interior design copilot for UAE. Get personalized 3D renders, AutoCAD floor plans, and curated shop lists within 1-2 hours."
+    />
+    <meta
+      name="twitter:image"
+      content="https://manara.ai/favicon_io/android-chrome-512x512.png"
+    />
+    <meta name="twitter:image:alt" content="Manāra AI Interior Design Logo" />
+
+    <!-- Performance Optimization -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com" />
+
+    <!-- Google Fonts -->
     <link
       href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
       rel="stylesheet"
     />
-    <title>
-      Manāra - AI Interior Design for Dubai | 3D Rendering & Smart Planning
-    </title>
+
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Manāra",
+        "description": "AI-powered interior design copilot for UAE that creates personalized 3D renders, AutoCAD floor plans, and curated shop lists",
+        "applicationCategory": "DesignApplication",
+        "operatingSystem": "Web Browser",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "AED"
+        },
+        "provider": {
+          "@type": "Organization",
+          "name": "Manāra"
+        },
+        "areaServed": {
+          "@type": "Country",
+          "name": "United Arab Emirates"
+        }
+      }
+    </script>
   </head>
+
   <style>
     body {
       font-family: 'Poppins', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f7fafc;
+    }
+
+    /* Loading state styling */
+    #root {
+      min-height: 100vh;
+    }
+
+    /* Prevent flash of unstyled content */
+    .loading {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: 'Poppins', sans-serif;
+      color: #4a5568;
     }
   </style>
+
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="loading">Loading Manāra...</div>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
