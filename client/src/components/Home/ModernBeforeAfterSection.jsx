@@ -92,7 +92,7 @@ const ModernBeforeAfterSection = () => {
               {/* Before Image */}
               <div className='relative w-full h-[500px] md:h-[600px]'>
                 <img
-                  src='https://images.unsplash.com/photo-1586023492125-27b2c045efd7?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+                  src='/Home/after.webp'
                   alt='Before transformation'
                   className='w-full h-full object-cover'
                 />
@@ -111,7 +111,7 @@ const ModernBeforeAfterSection = () => {
                 }}
               >
                 <img
-                  src='https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80'
+                  src='/Home/before.webp'
                   alt='After transformation'
                   className='w-full h-full object-cover'
                 />
