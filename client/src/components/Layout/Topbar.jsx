@@ -65,14 +65,12 @@ const TopBar = () => {
         { name: 'Mood Boards', href: '#' },
       ],
     },
-    { name: 'Projects', href: '#' },
-    { name: 'Marketplace', href: '#' },
-    { name: 'Resources', href: '#' },
+    { name: 'About', href: '#' },
   ]
 
   return (
     <div className='fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8 pt-4'>
-      <div className='max-w-6xl mx-auto'>
+      <div className='max-w-5xl mx-auto'>
         <nav
           className={`relative transition-all duration-300 ease-out rounded-full px-6 py-3 ${
             isLightBackground
@@ -138,10 +136,10 @@ const TopBar = () => {
                       {/* Dropdown */}
                       {activeDropdown === item.name && (
                         <div
-                          className={`absolute top-full mt-2 left-0 min-w-48 backdrop-blur-2xl border rounded-2xl shadow-2xl overflow-hidden ${
+                          className={`absolute top-full mt-2 left-0 min-w-48 backdrop-blur-xl border rounded-2xl shadow-2xl overflow-hidden ${
                             isLightBackground
-                              ? 'bg-white/90 border-gray-200/50'
-                              : 'bg-black/80 border-white/20'
+                              ? 'bg-white/95 border-gray-200/50'
+                              : 'bg-black/95 border-white/20'
                           }`}
                         >
                           <div
@@ -160,7 +158,7 @@ const TopBar = () => {
                                   className={`block px-4 py-2 text-sm transition-all duration-200 ${
                                     isLightBackground
                                       ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
-                                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                                      : 'text-gray-200 hover:text-white hover:bg-white/10'
                                   }`}
                                 >
                                   {dropdownItem.name}
@@ -219,10 +217,10 @@ const TopBar = () => {
                 {/* User Dropdown */}
                 {activeDropdown === 'user' && (
                   <div
-                    className={`absolute top-full mt-2 right-0 min-w-48 backdrop-blur-2xl border rounded-2xl shadow-2xl overflow-hidden ${
+                    className={`absolute top-full mt-2 right-0 min-w-48 backdrop-blur-xl border rounded-2xl shadow-2xl overflow-hidden ${
                       isLightBackground
-                        ? 'bg-white/90 border-gray-200/50'
-                        : 'bg-black/80 border-white/20'
+                        ? 'bg-white/95 border-gray-200/50'
+                        : 'bg-black/95 border-white/20'
                     }`}
                   >
                     <div
@@ -238,7 +236,7 @@ const TopBar = () => {
                         className={`flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${
                           isLightBackground
                             ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
-                            : 'text-gray-300 hover:text-white hover:bg-white/10'
+                            : 'text-gray-200 hover:text-white hover:bg-white/10'
                         }`}
                       >
                         <User className='w-4 h-4' />
@@ -249,7 +247,7 @@ const TopBar = () => {
                         className={`flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${
                           isLightBackground
                             ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
-                            : 'text-gray-300 hover:text-white hover:bg-white/10'
+                            : 'text-gray-200 hover:text-white hover:bg-white/10'
                         }`}
                       >
                         <Settings className='w-4 h-4' />
@@ -300,10 +298,10 @@ const TopBar = () => {
           {/* Mobile Menu */}
           {isMenuOpen && (
             <div
-              className={`lg:hidden absolute top-full left-0 right-0 mt-2 backdrop-blur-2xl border rounded-2xl shadow-2xl overflow-hidden ${
+              className={`lg:hidden absolute top-full left-0 right-0 mt-2 backdrop-blur-xl border rounded-2xl shadow-2xl overflow-hidden ${
                 isLightBackground
-                  ? 'bg-white/90 border-gray-200/50'
-                  : 'bg-black/80 border-white/20'
+                  ? 'bg-white/95 border-gray-200/50'
+                  : 'bg-black/95 border-white/20'
               }`}
             >
               <div
@@ -323,7 +321,7 @@ const TopBar = () => {
                           className={`flex items-center justify-between w-full px-3 py-2 transition-colors duration-200 rounded-lg ${
                             isLightBackground
                               ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
-                              : 'text-gray-300 hover:text-white hover:bg-white/10'
+                              : 'text-gray-200 hover:text-white hover:bg-white/10'
                           }`}
                         >
                           <span>{item.name}</span>
@@ -345,7 +343,7 @@ const TopBar = () => {
                                   className={`block px-3 py-2 text-sm transition-colors duration-200 rounded-lg ${
                                     isLightBackground
                                       ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-50/50'
-                                      : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                      : 'text-gray-300 hover:text-white hover:bg-white/5'
                                   }`}
                                 >
                                   {dropdownItem.name}
@@ -361,7 +359,7 @@ const TopBar = () => {
                         className={`block px-3 py-2 transition-colors duration-200 rounded-lg ${
                           isLightBackground
                             ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
-                            : 'text-gray-300 hover:text-white hover:bg-white/10'
+                            : 'text-gray-200 hover:text-white hover:bg-white/10'
                         }`}
                       >
                         {item.name}
@@ -388,7 +386,7 @@ const TopBar = () => {
                     className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${
                       isLightBackground
                         ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/50'
-                        : 'text-gray-400 hover:text-white hover:bg-white/10'
+                        : 'text-gray-300 hover:text-white hover:bg-white/10'
                     }`}
                   >
                     <User className='w-4 h-4' />
@@ -399,7 +397,7 @@ const TopBar = () => {
                     className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${
                       isLightBackground
                         ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/50'
-                        : 'text-gray-400 hover:text-white hover:bg-white/10'
+                        : 'text-gray-300 hover:text-white hover:bg-white/10'
                     }`}
                   >
                     <Settings className='w-4 h-4' />
