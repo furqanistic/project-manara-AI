@@ -1,27 +1,17 @@
-import { ArrowUpRight, Eye, Play, Sparkles } from 'lucide-react'
-import React, { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion'
+import { ArrowUpRight, Eye, Sparkles } from 'lucide-react'
+import React, { useState } from 'react'
 
 const ImageCollageSection = () => {
   const [hoveredImage, setHoveredImage] = useState(null)
-  const [isVisible, setIsVisible] = useState(false)
-  const sectionRef = useRef(null)
+  const { scrollY } = useScroll()
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true)
-        }
-      },
-      { threshold: 0.3 }
-    )
+  // Parallax effects for background elements
+  const y1 = useTransform(scrollY, [0, 1000], [0, -50])
+  const y2 = useTransform(scrollY, [0, 1000], [0, 100])
+  const y3 = useTransform(scrollY, [0, 1000], [0, -30])
 
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current)
-    }
-
-    return () => observer.disconnect()
-  }, [])
+  const brandColor = '#937c60'
 
   const designImages = [
     {
@@ -123,147 +113,373 @@ const ImageCollageSection = () => {
   ]
 
   const getBubbleSize = (size) => {
-    switch (size) {
-      case 'xl':
-        return 'w-80 h-80'
-      case 'lg':
-        return 'w-60 h-60'
-      case 'md':
-        return 'w-48 h-48'
-      case 'sm':
-        return 'w-40 h-40'
-      default:
-        return 'w-48 h-48'
+    const sizes = {
+      xl: 'w-72 h-72 md:w-80 md:h-80',
+      lg: 'w-52 h-52 md:w-60 md:h-60',
+      md: 'w-40 h-40 md:w-48 md:h-48',
+      sm: 'w-32 h-32 md:w-40 md:h-40',
     }
+    return sizes[size] || sizes.md
   }
 
-  const getZIndex = (size, isHovered) => {
-    if (isHovered) return 'z-50'
-    switch (size) {
-      case 'xl':
-        return 'z-30'
-      case 'lg':
-        return 'z-25'
-      case 'md':
-        return 'z-20'
-      case 'sm':
-        return 'z-15'
-      default:
-        return 'z-20'
-    }
+  const getInitialDelay = (index) => index * 0.1
+
+  // Animation variants
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.08,
+        delayChildren: 0.3,
+      },
+    },
+  }
+
+  const headerVariants = {
+    hidden: { y: 60, opacity: 0 },
+    visible: {
+      y: 0,
+      opacity: 1,
+      transition: {
+        duration: 0.8,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+  }
+
+  const bubbleVariants = {
+    hidden: {
+      scale: 0.8,
+      opacity: 0,
+      y: 50,
+      filter: 'blur(4px)',
+    },
+    visible: {
+      scale: 1,
+      opacity: 1,
+      y: 0,
+      filter: 'blur(0px)',
+      transition: {
+        duration: 0.8,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
+  }
+
+  const hoverVariants = {
+    rest: {
+      scale: 1,
+      y: 0,
+      rotate: 0,
+      filter: 'brightness(1) saturate(1)',
+    },
+    hover: {
+      scale: 1.08,
+      y: -8,
+      rotate: 1,
+      filter: 'brightness(1.1) saturate(1.2)',
+      transition: {
+        duration: 0.3,
+        ease: [0.22, 1, 0.36, 1],
+      },
+    },
   }
 
   return (
-    <div
-      ref={sectionRef}
-      className='relative bg-gradient-to-br from-stone-50 to-amber-50/50 py-16 overflow-hidden'
-    >
-      {/* Simplified Background */}
+    <section className='relative py-24 overflow-hidden bg-gradient-to-b from-white to-stone-50'>
+      {/* Animated Background Elements */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-20 left-1/4 w-72 h-72 bg-gradient-to-br from-purple-200/10 to-amber-200/8 rounded-full'></div>
-        <div className='absolute bottom-20 right-1/4 w-64 h-64 bg-gradient-to-br from-blue-200/10 to-purple-200/8 rounded-full'></div>
-        <div className='absolute top-1/2 right-10 w-56 h-56 bg-gradient-to-br from-emerald-200/10 to-teal-200/8 rounded-full'></div>
+        <motion.div
+          style={{ y: y1 }}
+          className='absolute top-20 left-1/4 w-72 h-72 rounded-full opacity-30'
+          animate={{
+            scale: [1, 1.1, 1],
+            rotate: [0, 180, 360],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        >
+          <div
+            className='w-full h-full rounded-full'
+            style={{
+              background: `radial-gradient(circle, ${brandColor}20 0%, transparent 70%)`,
+            }}
+          />
+        </motion.div>
+
+        <motion.div
+          style={{ y: y2 }}
+          className='absolute bottom-20 right-1/4 w-64 h-64 rounded-full opacity-20'
+          animate={{
+            scale: [1, 1.2, 1],
+            rotate: [360, 180, 0],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        >
+          <div className='w-full h-full bg-gradient-to-br from-blue-200 to-purple-200 rounded-full' />
+        </motion.div>
+
+        <motion.div
+          style={{ y: y3 }}
+          className='absolute top-1/2 right-10 w-56 h-56 rounded-full opacity-15'
+          animate={{
+            scale: [1, 1.15, 1],
+            rotate: [0, -180, -360],
+          }}
+          transition={{
+            duration: 30,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        >
+          <div className='w-full h-full bg-gradient-to-br from-emerald-200 to-teal-200 rounded-full' />
+        </motion.div>
       </div>
 
       <div className='relative z-10 max-w-8xl mx-auto px-4'>
-        {/* Compact Header Section */}
-        <div
-          className={`text-center mb-12 space-y-4 transition-all duration-800 ${
-            isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-6'
-          }`}
+        {/* Header Section */}
+        <motion.div
+          className='text-center mb-16 space-y-6'
+          variants={headerVariants}
+          initial='hidden'
+          whileInView='visible'
+          viewport={{ once: true, margin: '-100px' }}
         >
-          <h2 className='text-5xl md:text-7xl font-bold text-stone-900 leading-tight'>
-            <span className='block'>Designs That</span>
-            <span className='bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 bg-clip-text text-transparent'>
+          <motion.h2
+            className='text-5xl md:text-7xl font-bold text-stone-900 leading-tight'
+            initial={{ scale: 0.9, opacity: 0 }}
+            whileInView={{ scale: 1, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <motion.span
+              className='block'
+              initial={{ x: -50 }}
+              whileInView={{ x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.1 }}
+            >
+              Designs That
+            </motion.span>
+            <motion.span
+              className='block'
+              style={{ color: brandColor }}
+              initial={{ x: 50 }}
+              whileInView={{ x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8, delay: 0.2 }}
+            >
               Inspire Reality
-            </span>
-          </h2>
+            </motion.span>
+          </motion.h2>
 
-          <p className='text-lg text-stone-600 max-w-2xl mx-auto leading-relaxed'>
+          <motion.p
+            className='text-lg text-stone-600 max-w-2xl mx-auto leading-relaxed'
+            initial={{ y: 30, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.3 }}
+          >
             Every space tells a story. Our AI creates personalized designs that
             transform houses into homes.
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
-        {/* Expanded Bubble Collage */}
-        <div className='relative h-[650px] w-full mb-16'>
-          {designImages.map((image, index) => (
-            <div
-              key={image.id}
-              className={`group absolute ${getBubbleSize(
-                image.size
-              )} ${getZIndex(
-                image.size,
-                hoveredImage === image.id
-              )} rounded-full overflow-hidden cursor-pointer transition-all duration-400 ease-out ${
-                isVisible ? `opacity-100 scale-100` : 'opacity-0 scale-75'
-              }`}
-              style={{
-                top: image.position.top,
-                left: image.position.left,
-                transitionDelay: `${index * 80}ms`,
-                transform:
-                  hoveredImage === image.id
-                    ? 'scale(1.08) translateY(-6px)'
-                    : 'scale(1) translateY(0px)',
-                filter:
-                  hoveredImage && hoveredImage !== image.id
-                    ? 'brightness(0.8) saturate(0.8)'
-                    : 'brightness(1) saturate(1)',
-              }}
-              onMouseEnter={() => setHoveredImage(image.id)}
-              onMouseLeave={() => setHoveredImage(null)}
-            >
-              {/* Cool Outer Ring */}
-              <div
-                className={`absolute -inset-1 rounded-full bg-gradient-to-br from-amber-300/30 via-orange-300/20 to-amber-400/30 opacity-0 group-hover:opacity-100 transition-all duration-400`}
-              ></div>
+        {/* Image Collage */}
+        <motion.div
+          className='relative h-[500px] md:h-[650px] w-full'
+          variants={containerVariants}
+          initial='hidden'
+          whileInView='visible'
+          viewport={{ once: true, margin: '-100px' }}
+        >
+          <AnimatePresence>
+            {designImages.map((image, index) => (
+              <motion.div
+                key={image.id}
+                className={`absolute ${getBubbleSize(
+                  image.size
+                )} cursor-pointer`}
+                style={{
+                  top: image.position.top,
+                  left: image.position.left,
+                  zIndex: hoveredImage === image.id ? 50 : 30 - index,
+                }}
+                variants={bubbleVariants}
+                initial='hidden'
+                whileInView='visible'
+                viewport={{ once: true }}
+                transition={{
+                  delay: getInitialDelay(index),
+                }}
+                onHoverStart={() => setHoveredImage(image.id)}
+                onHoverEnd={() => setHoveredImage(null)}
+              >
+                <motion.div
+                  className='relative w-full h-full'
+                  variants={hoverVariants}
+                  initial='rest'
+                  animate={hoveredImage === image.id ? 'hover' : 'rest'}
+                >
+                  {/* Outer Glow Ring */}
+                  <motion.div
+                    className='absolute -inset-2 rounded-full'
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{
+                      opacity: hoveredImage === image.id ? 1 : 0,
+                      scale: hoveredImage === image.id ? 1 : 0.8,
+                    }}
+                    transition={{ duration: 0.3 }}
+                    style={{
+                      background: `radial-gradient(circle, ${brandColor}30 0%, ${brandColor}10 50%, transparent 100%)`,
+                    }}
+                  />
 
-              {/* Subtle Glow Effect */}
-              {hoveredImage === image.id && (
-                <div className='absolute -inset-2 rounded-full bg-gradient-to-br from-amber-400/20 via-orange-400/15 to-amber-500/20'></div>
-              )}
+                  {/* Main Image Container */}
+                  <motion.div
+                    className='relative w-full h-full rounded-full overflow-hidden border-4 border-white shadow-xl'
+                    whileHover={{
+                      borderColor: `${brandColor}60`,
+                      boxShadow: `0 20px 40px -10px ${brandColor}20`,
+                    }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <motion.img
+                      src={image.url}
+                      alt={image.title}
+                      className='w-full h-full object-cover'
+                      whileHover={{ scale: 1.1 }}
+                      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                    />
 
-              {/* Image Container */}
-              <div className='relative w-full h-full rounded-full overflow-hidden border-3 border-white/90 shadow-lg'>
-                <img
-                  src={image.url}
-                  alt={image.title}
-                  className='w-full h-full object-cover transition-all duration-500 group-hover:scale-105'
-                />
+                    {/* Overlay */}
+                    <motion.div
+                      className='absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent'
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: hoveredImage === image.id ? 1 : 0 }}
+                      transition={{ duration: 0.3 }}
+                    />
 
-                {/* Light Gradient Overlay */}
-                <div className='absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300' />
+                    {/* Content Overlay */}
+                    <AnimatePresence>
+                      {hoveredImage === image.id && (
+                        <motion.div
+                          className='absolute inset-0 flex flex-col items-center justify-center text-white'
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 20 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <motion.div
+                            className='text-center space-y-2'
+                            initial={{ scale: 0.8 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                          >
+                            <h3 className='font-bold text-sm md:text-base'>
+                              {image.title}
+                            </h3>
+                            <p className='text-xs md:text-sm opacity-80'>
+                              {image.category}
+                            </p>
+                          </motion.div>
 
-                {/* Centered View Button */}
-                <div className='absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300'>
-                  <button className='group/btn px-5 py-2.5 bg-gradient-to-r from-amber-400/95 to-amber-500/95 backdrop-blur-sm border border-amber-300/60 rounded-full text-white font-medium hover:from-amber-300 hover:to-amber-400 transition-all duration-300 transform hover:scale-105 shadow-lg'>
-                    <div className='flex items-center gap-2'>
-                      <Eye className='w-4 h-4 transition-transform duration-200 group-hover/btn:scale-110' />
-                      <span className='text-sm font-semibold'>View</span>
-                    </div>
+                          <motion.button
+                            className='mt-4 flex items-center gap-2 px-4 py-2 backdrop-blur-sm border border-white/30 rounded-full text-xs md:text-sm font-medium transition-all duration-300'
+                            style={{
+                              background: `linear-gradient(45deg, ${brandColor}90, rgba(255,255,255,0.1))`,
+                            }}
+                            whileHover={{
+                              scale: 1.05,
+                              background: `linear-gradient(45deg, ${brandColor}, rgba(255,255,255,0.2))`,
+                            }}
+                            whileTap={{ scale: 0.95 }}
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ duration: 0.3, delay: 0.2 }}
+                          >
+                            <Eye className='w-4 h-4' />
+                            <span>View Design</span>
+                            <ArrowUpRight className='w-3 h-3' />
+                          </motion.button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-                    {/* Button Shine Effect */}
-                    <div className='absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/25 to-transparent transform -skew-x-12 translate-x-[-100%] group-hover/btn:translate-x-[100%] transition-transform duration-600'></div>
-                  </button>
-                </div>
+                    {/* Shine Effect */}
+                    <motion.div
+                      className='absolute top-4 left-4 w-8 h-8 bg-white/30 rounded-full'
+                      animate={{
+                        opacity: [0.3, 0.7, 0.3],
+                        scale: [1, 1.1, 1],
+                      }}
+                      transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        delay: index * 0.2,
+                      }}
+                    />
+                  </motion.div>
 
-                {/* Simple Shine Effect */}
-                <div className='absolute top-4 left-4 w-6 h-6 bg-white/40 rounded-full opacity-50 group-hover:opacity-70 transition-all duration-400'></div>
-              </div>
+                  {/* Floating Sparkles */}
+                  <AnimatePresence>
+                    {hoveredImage === image.id && (
+                      <>
+                        {[...Array(3)].map((_, i) => (
+                          <motion.div
+                            key={i}
+                            className='absolute w-1 h-1 rounded-full'
+                            style={{
+                              background: brandColor,
+                              top: `${20 + i * 30}%`,
+                              right: `${-10 + i * 5}%`,
+                            }}
+                            initial={{ opacity: 0, scale: 0, rotate: 0 }}
+                            animate={{
+                              opacity: [0, 1, 0],
+                              scale: [0, 1, 0],
+                              rotate: 360,
+                              x: [0, 10, 20],
+                              y: [0, -10, -20],
+                            }}
+                            exit={{ opacity: 0, scale: 0 }}
+                            transition={{
+                              duration: 1.5,
+                              delay: i * 0.2,
+                              repeat: Infinity,
+                              repeatDelay: 2,
+                            }}
+                          />
+                        ))}
+                      </>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
 
-              {/* Minimal Sparkles */}
-              {hoveredImage === image.id && (
-                <>
-                  <div className='absolute -top-1 -right-1 w-2.5 h-2.5 bg-gradient-to-r from-amber-300 to-amber-400 rounded-full opacity-80'></div>
-                  <div className='absolute -bottom-1 -left-1 w-2 h-2 bg-gradient-to-r from-orange-300 to-amber-300 rounded-full opacity-80'></div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
+                {/* Blur effect for non-hovered items */}
+                {hoveredImage && hoveredImage !== image.id && (
+                  <motion.div
+                    className='absolute inset-0 backdrop-blur-[2px] rounded-full'
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  />
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </motion.div>
       </div>
-    </div>
+    </section>
   )
 }
 

@@ -7,13 +7,20 @@ import {
   User,
   X,
 } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 const TopBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState(null)
   const [isLightBackground, setIsLightBackground] = useState(false)
+
+  // Refs for dropdown containers
+  const dropdownRefs = useRef({})
+  const mobileMenuRef = useRef(null)
+
+  const brandColor = '#937c60'
+  const brandColorLight = '#a68970'
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,6 +51,36 @@ const TopBar = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Click outside to close dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if click is outside all dropdown containers
+      const isOutsideDropdowns = Object.values(dropdownRefs.current).every(
+        (ref) => ref && !ref.contains(event.target)
+      )
+
+      // Check if click is outside mobile menu
+      const isOutsideMobileMenu =
+        !mobileMenuRef.current || !mobileMenuRef.current.contains(event.target)
+
+      if (isOutsideDropdowns && activeDropdown) {
+        setActiveDropdown(null)
+      }
+
+      if (isOutsideMobileMenu && isMenuOpen) {
+        setIsMenuOpen(false)
+      }
+    }
+
+    // Add event listener
+    document.addEventListener('mousedown', handleClickOutside)
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [activeDropdown, isMenuOpen])
+
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen)
   }
@@ -53,7 +90,7 @@ const TopBar = () => {
   }
 
   const navItems = [
-    { name: 'Home', href: '#' },
+    { name: 'Home', href: '/' },
     {
       name: 'Design Studio',
       href: '#',
@@ -65,13 +102,14 @@ const TopBar = () => {
         { name: 'Mood Boards', href: '#' },
       ],
     },
-    { name: 'About', href: '#' },
+    { name: 'About', href: '/about' },
   ]
 
   return (
     <div className='fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8 pt-4'>
       <div className='max-w-5xl mx-auto'>
         <nav
+          ref={mobileMenuRef}
           className={`relative transition-all duration-300 ease-out rounded-full px-6 py-3 ${
             isLightBackground
               ? isScrolled
@@ -105,8 +143,13 @@ const TopBar = () => {
                     e.target.nextSibling.style.display = 'flex'
                   }}
                 />
-                <div className='w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full items-center justify-center hidden'>
-                  <Sparkles className='w-4 h-4 text-black' />
+                <div
+                  className='w-8 h-8 rounded-full items-center justify-center hidden'
+                  style={{
+                    background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
+                  }}
+                >
+                  <Sparkles className='w-4 h-4 text-white' />
                 </div>
               </div>
             </div>
@@ -116,7 +159,10 @@ const TopBar = () => {
               {navItems.map((item, index) => (
                 <div key={index} className='relative'>
                   {item.hasDropdown ? (
-                    <div className='relative'>
+                    <div
+                      className='relative'
+                      ref={(el) => (dropdownRefs.current[item.name] = el)}
+                    >
                       <button
                         onClick={() => toggleDropdown(item.name)}
                         className={`flex items-center space-x-1 px-4 py-2 transition-all duration-200 rounded-full group ${
@@ -188,7 +234,10 @@ const TopBar = () => {
             {/* Right Section */}
             <div className='flex items-center space-x-3'>
               {/* User Menu - Desktop */}
-              <div className='relative hidden lg:block'>
+              <div
+                className='relative hidden lg:block'
+                ref={(el) => (dropdownRefs.current['user'] = el)}
+              >
                 <button
                   onClick={() => toggleDropdown('user')}
                   className={`flex items-center space-x-2 px-3 py-2 border rounded-full transition-all duration-200 group ${
@@ -273,7 +322,21 @@ const TopBar = () => {
               </div>
 
               {/* CTA Button */}
-              <button className='hidden sm:flex items-center px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold rounded-full hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-amber-500/25'>
+              <button
+                className='hidden sm:flex items-center px-4 py-2 text-white font-semibold rounded-full hover:scale-105 transition-all duration-200 shadow-lg'
+                style={{
+                  background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
+                  boxShadow: `0 8px 20px ${brandColor}25`,
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.background = `linear-gradient(to right, ${brandColorLight}, ${brandColor})`
+                  e.target.style.boxShadow = `0 12px 30px ${brandColor}30`
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = `linear-gradient(to right, ${brandColor}, ${brandColorLight})`
+                  e.target.style.boxShadow = `0 8px 20px ${brandColor}25`
+                }}
+              >
                 <span className='text-sm'>Start Designing</span>
               </button>
 
@@ -374,7 +437,12 @@ const TopBar = () => {
                     isLightBackground ? 'border-gray-200/50' : 'border-white/10'
                   }`}
                 >
-                  <button className='w-full px-4 py-3 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold rounded-full hover:scale-105 transition-all duration-200'>
+                  <button
+                    className='w-full px-4 py-3 text-white font-semibold rounded-full hover:scale-105 transition-all duration-200'
+                    style={{
+                      background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
+                    }}
+                  >
                     Start Designing
                   </button>
                 </div>

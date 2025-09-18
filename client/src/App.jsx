@@ -1,6 +1,7 @@
 // File: client/src/App.jsx
 import React from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import AboutPage from './pages/About/AboutPage'
 import HomePage from './pages/Home/HomePage'
 
 const App = () => {
@@ -10,6 +11,7 @@ const App = () => {
         <Routes>
           <Route path='/'>
             <Route index element={<HomePage />} />
+            <Route path='/about' element={<AboutPage />} />
           </Route>
         </Routes>
       </BrowserRouter>
