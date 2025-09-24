@@ -1,3 +1,4 @@
+// File: client/src/components/Layout/Topbar.jsx
 import {
   ChevronDown,
   LogOut,
@@ -96,14 +97,18 @@ const TopBar = () => {
       href: '#',
       hasDropdown: true,
       dropdownItems: [
-        { name: 'AI Design Copilot', href: '#' },
         { name: '3D Visualization', href: '#' },
-        { name: 'Floor Plans (2D)', href: '#' },
-        { name: 'Mood Boards', href: '#' },
+        { name: 'Floor Plans (2D)', href: 'floorplans' },
+        { name: 'Mood Boards', href: '/moodboard' },
       ],
     },
     { name: 'About', href: '/about' },
   ]
+
+  const handleAuthRedirect = (type) => {
+    // You can add query parameters or state to distinguish between signup/login
+    window.location.href = `/auth?type=${type}`
+  }
 
   return (
     <div className='fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8 pt-4'>
@@ -321,24 +326,37 @@ const TopBar = () => {
                 )}
               </div>
 
-              {/* CTA Button */}
-              <button
-                className='hidden sm:flex items-center px-4 py-2 text-white font-semibold rounded-full hover:scale-105 transition-all duration-200 shadow-lg'
-                style={{
-                  background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
-                  boxShadow: `0 8px 20px ${brandColor}25`,
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.background = `linear-gradient(to right, ${brandColorLight}, ${brandColor})`
-                  e.target.style.boxShadow = `0 12px 30px ${brandColor}30`
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.background = `linear-gradient(to right, ${brandColor}, ${brandColorLight})`
-                  e.target.style.boxShadow = `0 8px 20px ${brandColor}25`
-                }}
-              >
-                <span className='text-sm'>Start Designing</span>
-              </button>
+              {/* Auth Buttons - Desktop */}
+              <div className='hidden sm:flex items-center space-x-2'>
+                <button
+                  onClick={() => handleAuthRedirect('login')}
+                  className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
+                    isLightBackground
+                      ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
+                      : 'text-gray-300 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  Log In
+                </button>
+                <button
+                  onClick={() => handleAuthRedirect('signup')}
+                  className='px-4 py-2 text-white text-sm font-semibold rounded-full hover:scale-105 transition-all duration-200 shadow-lg'
+                  style={{
+                    background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
+                    boxShadow: `0 8px 20px ${brandColor}25`,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = `linear-gradient(to right, ${brandColorLight}, ${brandColor})`
+                    e.target.style.boxShadow = `0 12px 30px ${brandColor}30`
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = `linear-gradient(to right, ${brandColor}, ${brandColorLight})`
+                    e.target.style.boxShadow = `0 8px 20px ${brandColor}25`
+                  }}
+                >
+                  Sign Up
+                </button>
+              </div>
 
               {/* Mobile Menu Toggle */}
               <button
@@ -431,19 +449,30 @@ const TopBar = () => {
                   </div>
                 ))}
 
-                {/* Mobile CTA */}
+                {/* Mobile Auth Buttons */}
                 <div
-                  className={`pt-4 border-t ${
+                  className={`pt-4 border-t space-y-2 ${
                     isLightBackground ? 'border-gray-200/50' : 'border-white/10'
                   }`}
                 >
                   <button
+                    onClick={() => handleAuthRedirect('login')}
+                    className={`w-full px-4 py-3 text-sm font-medium rounded-full transition-all duration-200 border ${
+                      isLightBackground
+                        ? 'text-gray-700 hover:text-gray-900 border-gray-200/50 hover:bg-gray-100/50'
+                        : 'text-gray-300 hover:text-white border-white/20 hover:bg-white/10'
+                    }`}
+                  >
+                    Log In
+                  </button>
+                  <button
+                    onClick={() => handleAuthRedirect('signup')}
                     className='w-full px-4 py-3 text-white font-semibold rounded-full hover:scale-105 transition-all duration-200'
                     style={{
                       background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
                     }}
                   >
-                    Start Designing
+                    Sign Up
                   </button>
                 </div>
 
