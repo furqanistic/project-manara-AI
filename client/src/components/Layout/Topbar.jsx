@@ -9,12 +9,20 @@ import {
   X,
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
+import { useSelector } from 'react-redux'
+import { useNavigate } from 'react-router-dom'
+import { useLogout } from '../../hooks/useAuth'
 
 const TopBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const [isScrolled, setIsScrolled] = useState(false)
   const [activeDropdown, setActiveDropdown] = useState(null)
   const [isLightBackground, setIsLightBackground] = useState(false)
+
+  // Get user from Redux
+  const { currentUser } = useSelector((state) => state.user)
+  const logoutMutation = useLogout()
+  const navigate = useNavigate()
 
   // Refs for dropdown containers
   const dropdownRefs = useRef({})
@@ -27,14 +35,12 @@ const TopBar = () => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20)
 
-      // Detect background color by checking the element behind the navbar
       const element = document.elementFromPoint(window.innerWidth / 2, 80)
       if (element) {
         const styles = window.getComputedStyle(element)
         const bgColor = styles.backgroundColor
         const computedColor = styles.getPropertyValue('background-color')
 
-        // Simple heuristic: if background is light (white, light gray, etc.)
         const isLight =
           bgColor === 'rgb(255, 255, 255)' ||
           bgColor === 'rgba(255, 255, 255, 1)' ||
@@ -48,19 +54,16 @@ const TopBar = () => {
     }
 
     window.addEventListener('scroll', handleScroll)
-    handleScroll() // Check initial state
+    handleScroll()
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Click outside to close dropdowns
   useEffect(() => {
     const handleClickOutside = (event) => {
-      // Check if click is outside all dropdown containers
       const isOutsideDropdowns = Object.values(dropdownRefs.current).every(
         (ref) => ref && !ref.contains(event.target)
       )
 
-      // Check if click is outside mobile menu
       const isOutsideMobileMenu =
         !mobileMenuRef.current || !mobileMenuRef.current.contains(event.target)
 
@@ -73,10 +76,7 @@ const TopBar = () => {
       }
     }
 
-    // Add event listener
     document.addEventListener('mousedown', handleClickOutside)
-
-    // Cleanup
     return () => {
       document.removeEventListener('mousedown', handleClickOutside)
     }
@@ -98,7 +98,7 @@ const TopBar = () => {
       hasDropdown: true,
       dropdownItems: [
         { name: '3D Visualization', href: '#' },
-        { name: 'Floor Plans (2D)', href: 'floorplans' },
+        { name: 'Floor Plans (2D)', href: '/floorplans' },
         { name: 'Mood Boards', href: '/moodboard' },
       ],
     },
@@ -106,8 +106,16 @@ const TopBar = () => {
   ]
 
   const handleAuthRedirect = (type) => {
-    // You can add query parameters or state to distinguish between signup/login
-    window.location.href = `/auth?type=${type}`
+    navigate(`/auth?type=${type}`)
+  }
+
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync()
+      setActiveDropdown(null)
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
   }
 
   return (
@@ -139,11 +147,10 @@ const TopBar = () => {
             <div className='flex items-center'>
               <div className='relative'>
                 <img
-                  src='logo.png'
+                  src='/logo.png'
                   alt='Manāra Logo'
                   className='h-10 w-auto object-contain max-w-none'
                   onError={(e) => {
-                    // Fallback to gradient logo if image fails to load
                     e.target.style.display = 'none'
                     e.target.nextSibling.style.display = 'flex'
                   }}
@@ -238,125 +245,167 @@ const TopBar = () => {
 
             {/* Right Section */}
             <div className='flex items-center space-x-3'>
-              {/* User Menu - Desktop */}
-              <div
-                className='relative hidden lg:block'
-                ref={(el) => (dropdownRefs.current['user'] = el)}
-              >
-                <button
-                  onClick={() => toggleDropdown('user')}
-                  className={`flex items-center space-x-2 px-3 py-2 border rounded-full transition-all duration-200 group ${
-                    isLightBackground
-                      ? 'bg-gray-50/50 hover:bg-gray-100/70 border-gray-200/50'
-                      : 'bg-white/5 hover:bg-white/10 border-white/20'
-                  }`}
+              {currentUser ? (
+                // Logged In: Show User Menu
+                <div
+                  className='relative hidden lg:block'
+                  ref={(el) => (dropdownRefs.current['user'] = el)}
                 >
-                  <div className='w-6 h-6 bg-gradient-to-br from-violet-400 to-purple-500 rounded-full flex items-center justify-center'>
-                    <User className='w-3 h-3 text-white' />
-                  </div>
-                  <span
-                    className={`text-sm group-hover:text-current transition-colors ${
-                      isLightBackground ? 'text-gray-700' : 'text-gray-300'
-                    }`}
-                  >
-                    Account
-                  </span>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform duration-200 ${
-                      isLightBackground ? 'text-gray-500' : 'text-gray-400'
-                    } ${activeDropdown === 'user' ? 'rotate-180' : ''}`}
-                  />
-                </button>
-
-                {/* User Dropdown */}
-                {activeDropdown === 'user' && (
-                  <div
-                    className={`absolute top-full mt-2 right-0 min-w-48 backdrop-blur-xl border rounded-2xl shadow-2xl overflow-hidden ${
+                  <button
+                    onClick={() => toggleDropdown('user')}
+                    disabled={logoutMutation.isPending}
+                    className={`flex items-center space-x-2 px-3 py-2 border rounded-full transition-all duration-200 group ${
                       isLightBackground
-                        ? 'bg-white/95 border-gray-200/50'
-                        : 'bg-black/95 border-white/20'
+                        ? 'bg-gray-50/50 hover:bg-gray-100/70 border-gray-200/50'
+                        : 'bg-white/5 hover:bg-white/10 border-white/20'
+                    } ${
+                      logoutMutation.isPending
+                        ? 'opacity-50 cursor-not-allowed'
+                        : ''
                     }`}
                   >
-                    <div
-                      className={`absolute inset-x-0 top-0 h-px ${
-                        isLightBackground
-                          ? 'bg-gradient-to-r from-transparent via-gray-300/50 to-transparent'
-                          : 'bg-gradient-to-r from-transparent via-white/30 to-transparent'
-                      }`}
-                    ></div>
-                    <div className='py-2'>
-                      <a
-                        href='#'
-                        className={`flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${
-                          isLightBackground
-                            ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
-                            : 'text-gray-200 hover:text-white hover:bg-white/10'
-                        }`}
-                      >
-                        <User className='w-4 h-4' />
-                        <span>Profile</span>
-                      </a>
-                      <a
-                        href='#'
-                        className={`flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${
-                          isLightBackground
-                            ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
-                            : 'text-gray-200 hover:text-white hover:bg-white/10'
-                        }`}
-                      >
-                        <Settings className='w-4 h-4' />
-                        <span>Settings</span>
-                      </a>
-                      <hr
-                        className={`my-1 ${
-                          isLightBackground
-                            ? 'border-gray-200/50'
-                            : 'border-white/10'
-                        }`}
-                      />
-                      <a
-                        href='#'
-                        className='flex items-center space-x-2 px-4 py-2 text-sm text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all duration-200'
-                      >
-                        <LogOut className='w-4 h-4' />
-                        <span>Sign Out</span>
-                      </a>
+                    <div className='w-6 h-6 bg-gradient-to-br from-violet-400 to-purple-500 rounded-full flex items-center justify-center'>
+                      <User className='w-3 h-3 text-white' />
                     </div>
-                  </div>
-                )}
-              </div>
+                    <span
+                      className={`text-sm group-hover:text-current transition-colors truncate max-w-[120px] ${
+                        isLightBackground ? 'text-gray-700' : 'text-gray-300'
+                      }`}
+                    >
+                      {currentUser.name || 'User'}
+                    </span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform duration-200 ${
+                        isLightBackground ? 'text-gray-500' : 'text-gray-400'
+                      } ${activeDropdown === 'user' ? 'rotate-180' : ''}`}
+                    />
+                  </button>
 
-              {/* Auth Buttons - Desktop */}
-              <div className='hidden sm:flex items-center space-x-2'>
-                <button
-                  onClick={() => handleAuthRedirect('login')}
-                  className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
-                    isLightBackground
-                      ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
-                      : 'text-gray-300 hover:text-white hover:bg-white/10'
-                  }`}
-                >
-                  Log In
-                </button>
-                <button
-                  onClick={() => handleAuthRedirect('signup')}
-                  className='px-4 py-2 text-white text-sm font-semibold rounded-full hover:scale-105 transition-all duration-200 shadow-lg'
-                  style={{
-                    background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
-                    boxShadow: `0 8px 20px ${brandColor}25`,
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = `linear-gradient(to right, ${brandColorLight}, ${brandColor})`
-                    e.target.style.boxShadow = `0 12px 30px ${brandColor}30`
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = `linear-gradient(to right, ${brandColor}, ${brandColorLight})`
-                    e.target.style.boxShadow = `0 8px 20px ${brandColor}25`
-                  }}
-                >
-                  Sign Up
-                </button>
-              </div>
+                  {/* User Dropdown */}
+                  {activeDropdown === 'user' && (
+                    <div
+                      className={`absolute top-full mt-2 right-0 min-w-48 backdrop-blur-xl border rounded-2xl shadow-2xl overflow-hidden ${
+                        isLightBackground
+                          ? 'bg-white/95 border-gray-200/50'
+                          : 'bg-black/95 border-white/20'
+                      }`}
+                    >
+                      <div
+                        className={`absolute inset-x-0 top-0 h-px ${
+                          isLightBackground
+                            ? 'bg-gradient-to-r from-transparent via-gray-300/50 to-transparent'
+                            : 'bg-gradient-to-r from-transparent via-white/30 to-transparent'
+                        }`}
+                      ></div>
+                      <div className='py-2'>
+                        {/* User Info */}
+                        <div className='px-4 py-2 border-b border-gray-200/20'>
+                          <p
+                            className={`text-sm font-medium ${
+                              isLightBackground ? 'text-gray-900' : 'text-white'
+                            }`}
+                          >
+                            {currentUser.name}
+                          </p>
+                          <p
+                            className={`text-xs ${
+                              isLightBackground
+                                ? 'text-gray-500'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {currentUser.email}
+                          </p>
+                          {currentUser.role === 'admin' && (
+                            <span className='inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gradient-to-r from-violet-500 to-purple-500 text-white'>
+                              ADMIN
+                            </span>
+                          )}
+                        </div>
+
+                        <a
+                          href='#'
+                          className={`flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${
+                            isLightBackground
+                              ? 'text-gray-700 hover:bg-gray-100/50'
+                              : 'text-gray-200 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          <User className='w-4 h-4' />
+                          <span>Profile</span>
+                        </a>
+                        <a
+                          href='#'
+                          className={`flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${
+                            isLightBackground
+                              ? 'text-gray-700 hover:bg-gray-100/50'
+                              : 'text-gray-200 hover:text-white hover:bg-white/10'
+                          }`}
+                        >
+                          <Settings className='w-4 h-4' />
+                          <span>Settings</span>
+                        </a>
+                        <hr
+                          className={`my-1 ${
+                            isLightBackground
+                              ? 'border-gray-200/50'
+                              : 'border-white/10'
+                          }`}
+                        />
+                        <button
+                          onClick={handleLogout}
+                          disabled={logoutMutation.isPending}
+                          className='w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed'
+                        >
+                          {logoutMutation.isPending ? (
+                            <>
+                              <div className='w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin' />
+                              <span>Signing Out...</span>
+                            </>
+                          ) : (
+                            <>
+                              <LogOut className='w-4 h-4' />
+                              <span>Sign Out</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                // Not Logged In: Show Auth Buttons
+                <div className='hidden sm:flex items-center space-x-2'>
+                  <button
+                    onClick={() => handleAuthRedirect('login')}
+                    className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 ${
+                      isLightBackground
+                        ? 'text-gray-700 hover:text-gray-900 hover:bg-gray-100/50'
+                        : 'text-gray-300 hover:text-white hover:bg-white/10'
+                    }`}
+                  >
+                    Log In
+                  </button>
+                  <button
+                    onClick={() => handleAuthRedirect('signup')}
+                    className='px-4 py-2 text-white text-sm font-semibold rounded-full hover:scale-105 transition-all duration-200 shadow-lg'
+                    style={{
+                      background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
+                      boxShadow: `0 8px 20px ${brandColor}25`,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.background = `linear-gradient(to right, ${brandColorLight}, ${brandColor})`
+                      e.target.style.boxShadow = `0 12px 30px ${brandColor}30`
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.background = `linear-gradient(to right, ${brandColor}, ${brandColorLight})`
+                      e.target.style.boxShadow = `0 8px 20px ${brandColor}25`
+                    }}
+                  >
+                    Sign Up
+                  </button>
+                </div>
+              )}
 
               {/* Mobile Menu Toggle */}
               <button
@@ -449,58 +498,105 @@ const TopBar = () => {
                   </div>
                 ))}
 
-                {/* Mobile Auth Buttons */}
-                <div
-                  className={`pt-4 border-t space-y-2 ${
-                    isLightBackground ? 'border-gray-200/50' : 'border-white/10'
-                  }`}
-                >
-                  <button
-                    onClick={() => handleAuthRedirect('login')}
-                    className={`w-full px-4 py-3 text-sm font-medium rounded-full transition-all duration-200 border ${
+                {currentUser ? (
+                  // Mobile: Logged In User
+                  <>
+                    <div
+                      className={`pt-4 border-t ${
+                        isLightBackground
+                          ? 'border-gray-200/50'
+                          : 'border-white/10'
+                      }`}
+                    >
+                      <div className='px-3 py-2 mb-2'>
+                        <p
+                          className={`text-sm font-medium ${
+                            isLightBackground ? 'text-gray-900' : 'text-white'
+                          }`}
+                        >
+                          {currentUser.name}
+                        </p>
+                        <p
+                          className={`text-xs ${
+                            isLightBackground
+                              ? 'text-gray-500'
+                              : 'text-gray-400'
+                          }`}
+                        >
+                          {currentUser.email}
+                        </p>
+                      </div>
+                      <a
+                        href='#'
+                        className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${
+                          isLightBackground
+                            ? 'text-gray-600 hover:bg-gray-100/50'
+                            : 'text-gray-300 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <User className='w-4 h-4' />
+                        <span>Profile</span>
+                      </a>
+                      <a
+                        href='#'
+                        className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${
+                          isLightBackground
+                            ? 'text-gray-600 hover:bg-gray-100/50'
+                            : 'text-gray-300 hover:text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <Settings className='w-4 h-4' />
+                        <span>Settings</span>
+                      </a>
+                      <button
+                        onClick={handleLogout}
+                        disabled={logoutMutation.isPending}
+                        className='w-full flex items-center space-x-2 px-3 py-2 text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-all duration-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed'
+                      >
+                        {logoutMutation.isPending ? (
+                          <>
+                            <div className='w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin' />
+                            <span>Signing Out...</span>
+                          </>
+                        ) : (
+                          <>
+                            <LogOut className='w-4 h-4' />
+                            <span>Sign Out</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  // Mobile: Auth Buttons
+                  <div
+                    className={`pt-4 border-t space-y-2 ${
                       isLightBackground
-                        ? 'text-gray-700 hover:text-gray-900 border-gray-200/50 hover:bg-gray-100/50'
-                        : 'text-gray-300 hover:text-white border-white/20 hover:bg-white/10'
+                        ? 'border-gray-200/50'
+                        : 'border-white/10'
                     }`}
                   >
-                    Log In
-                  </button>
-                  <button
-                    onClick={() => handleAuthRedirect('signup')}
-                    className='w-full px-4 py-3 text-white font-semibold rounded-full hover:scale-105 transition-all duration-200'
-                    style={{
-                      background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
-                    }}
-                  >
-                    Sign Up
-                  </button>
-                </div>
-
-                {/* Mobile User Options */}
-                <div className='pt-2 space-y-1'>
-                  <a
-                    href='#'
-                    className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${
-                      isLightBackground
-                        ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/50'
-                        : 'text-gray-300 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    <User className='w-4 h-4' />
-                    <span>Profile</span>
-                  </a>
-                  <a
-                    href='#'
-                    className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${
-                      isLightBackground
-                        ? 'text-gray-600 hover:text-gray-800 hover:bg-gray-100/50'
-                        : 'text-gray-300 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    <Settings className='w-4 h-4' />
-                    <span>Settings</span>
-                  </a>
-                </div>
+                    <button
+                      onClick={() => handleAuthRedirect('login')}
+                      className={`w-full px-4 py-3 text-sm font-medium rounded-full transition-all duration-200 border ${
+                        isLightBackground
+                          ? 'text-gray-700 hover:text-gray-900 border-gray-200/50 hover:bg-gray-100/50'
+                          : 'text-gray-300 hover:text-white border-white/20 hover:bg-white/10'
+                      }`}
+                    >
+                      Log In
+                    </button>
+                    <button
+                      onClick={() => handleAuthRedirect('signup')}
+                      className='w-full px-4 py-3 text-white font-semibold rounded-full hover:scale-105 transition-all duration-200'
+                      style={{
+                        background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
+                      }}
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

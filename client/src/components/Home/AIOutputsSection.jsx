@@ -173,13 +173,13 @@ const AIOutputsSection = () => {
           }}
         />
         <motion.div
-          style={{ y: y2 }}
+          style={{
+            y: y2,
+            background: `radial-gradient(circle, ${brandColorLight} 0%, transparent 70%)`,
+          }}
           className={`absolute bottom-32 left-20 ${
             isMobile ? 'w-24 h-24' : 'w-40 h-40'
           } rounded-full opacity-5`}
-          style={{
-            background: `radial-gradient(circle, ${brandColorLight} 0%, transparent 70%)`,
-          }}
           animate={{
             scale: [1, 1.3, 1],
             rotate: [360, 0],

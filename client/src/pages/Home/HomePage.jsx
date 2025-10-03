@@ -1,3 +1,4 @@
+// File: client/src/pages/Home/HomePage.jsx
 import AIOutputsSection from '@/components/Home/AIOutputsSection'
 import HeroSection from '@/components/Home/HeroSection'
 import ImageCollageSection from '@/components/Home/ImageCollageSection'

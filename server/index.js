@@ -1,19 +1,20 @@
-// File: server/index.js - MINIMAL VERSION TO GET STARTED
+// File: server/index.js
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import express from 'express'
 import mongoose from 'mongoose'
-
-// Only import existing routes
+// Import routes
 import authRoute from './routes/auth.js'
-// import referralRoute from './routes/referral.js' // Comment out for now
+import moodboardRoute from './routes/moodboard.js'
 
 const app = express()
 dotenv.config({ quiet: true })
 
 app.use(cookieParser())
-app.use(express.json())
+app.use(express.json({ limit: '50mb' })) // Increased limit for base64 images
+app.use(express.urlencoded({ limit: '50mb', extended: true }))
+
 app.use(
   cors({
     origin:
@@ -28,14 +29,39 @@ app.use(
 
 // Routes
 app.use('/api/auth/', authRoute)
-// app.use('/api/referral/', referralRoute) // Comment out for now
+app.use('/api/moodboards/', moodboardRoute)
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'success',
-    message: 'Server is running!',
+    message: 'Server is running',
     timestamp: new Date().toISOString(),
+  })
+})
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  // Ensure status code is a number
+  let statusCode = 500
+  if (typeof err.status === 'number') {
+    statusCode = err.status
+  } else if (typeof err.statusCode === 'number') {
+    statusCode = err.statusCode
+  }
+
+  const message = err.message || 'Something went wrong'
+
+  console.error('Error:', {
+    statusCode,
+    message,
+    stack: err.stack,
+  })
+
+  return res.status(statusCode).json({
+    status: 'error',
+    statusCode,
+    message,
   })
 })
 
@@ -53,8 +79,8 @@ const connect = () => {
 }
 
 const PORT = process.env.PORT || 8800
-
 app.listen(PORT, () => {
   connect()
   console.log(`🚀 Server running on port ${PORT}`)
+  console.log(`🎨 Moodboard generation with Gemini 2.5 Flash Image enabled`)
 })

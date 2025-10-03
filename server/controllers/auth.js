@@ -54,7 +54,7 @@ export const signup = async (req, res, next) => {
   session.startTransaction()
 
   try {
-    const { name, email, password, role, referralCode } = req.body
+    const { name, email, password, role } = req.body
 
     // Check if all required fields are provided
     if (!name || !email || !password) {
@@ -87,52 +87,20 @@ export const signup = async (req, res, next) => {
       return next(createError(400, 'User with this email already exists'))
     }
 
-    let referrerUser = null
-
-    // Handle referral code if provided
-    if (referralCode && referralCode.trim()) {
-      referrerUser = await User.findByReferralCode(
-        referralCode.trim().toUpperCase()
-      ).session(session)
-
-      if (!referrerUser) {
-        await session.abortTransaction()
-        return next(createError(400, 'Invalid referral code'))
-      }
-
-      // Check if referrer is trying to refer themselves (edge case)
-      if (referrerUser.email === email) {
-        await session.abortTransaction()
-        return next(createError(400, 'You cannot refer yourself'))
-      }
-    }
-
     // Create new user (password will be hashed by the pre-save middleware)
     const newUserData = {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password,
       role: userRole,
-      referredBy: referrerUser ? referrerUser._id : null,
     }
 
     const [newUser] = await User.create([newUserData], { session })
 
-    // If there's a referrer, add this user to their referrals
-    if (referrerUser) {
-      await referrerUser.addReferral(newUser._id)
-
-      // You can add referral rewards logic here
-      // For example, give points to the referrer
-      console.log(`User ${referrerUser.name} referred ${newUser.name}`)
-    }
-
     await session.commitTransaction()
 
-    // Populate referral information for response
-    const populatedUser = await User.findById(newUser._id)
-      .populate('referredBy', 'name email referralCode')
-      .select('-password')
+    // Get user without password
+    const populatedUser = await User.findById(newUser._id).select('-password')
 
     // Send token to the new user
     createSendToken(populatedUser, 201, res)
@@ -175,10 +143,8 @@ export const signin = async (req, res, next) => {
     user.lastLogin = new Date()
     await user.save({ validateBeforeSave: false })
 
-    // Populate user data for response
-    const populatedUser = await User.findById(user._id)
-      .populate('referredBy', 'name email referralCode')
-      .select('-password')
+    // Get user data for response
+    const populatedUser = await User.findById(user._id).select('-password')
 
     createSendToken(populatedUser, 200, res)
   } catch (err) {
@@ -232,7 +198,7 @@ export const updateUser = async (req, res, next) => {
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
       runValidators: true,
-    }).populate('referredBy', 'name email referralCode')
+    })
 
     res.status(200).json({
       status: 'success',
@@ -277,8 +243,6 @@ export const deleteUser = async (req, res, next) => {
 export const getUserProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.params.id)
-      .populate('referredBy', 'name email referralCode')
-      .populate('referrals.user', 'name email joinedAt')
 
     if (!user) {
       return next(createError(404, 'No user found with that ID'))
@@ -303,7 +267,6 @@ export const getAllUsers = async (req, res, next) => {
     const skip = (page - 1) * limit
 
     const users = await User.find({ isDeleted: false })
-      .populate('referredBy', 'name email referralCode')
       .select('-password')
       .skip(skip)
       .limit(limit)
@@ -367,10 +330,7 @@ export const changePassword = async (req, res, next) => {
     await user.save()
 
     // Get updated user without password
-    const updatedUser = await User.findById(user._id).populate(
-      'referredBy',
-      'name email referralCode'
-    )
+    const updatedUser = await User.findById(user._id)
 
     createSendToken(updatedUser, 200, res)
   } catch (error) {

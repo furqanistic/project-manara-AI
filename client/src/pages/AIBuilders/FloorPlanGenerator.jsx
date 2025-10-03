@@ -1,3 +1,4 @@
+// File: client/src/pages/AIBuilders/FloorPlanGenerator.jsx
 import {
   ArrowRight,
   Circle,
