@@ -1,5 +1,4 @@
 // File: server/models/Moodboard.js
-// ============================================
 import mongoose from 'mongoose'
 
 const MoodboardSchema = new mongoose.Schema(
@@ -93,6 +92,7 @@ const MoodboardSchema = new mongoose.Schema(
         description: String,
       },
     ],
+    // Individual generated images (stored for editing)
     generatedImages: [
       {
         url: String,
@@ -115,9 +115,37 @@ const MoodboardSchema = new mongoose.Schema(
           tokens: Number,
           index: Number,
           editPrompt: String,
+          isIndividual: Boolean,
         },
       },
     ],
+    // Composite moodboard (the final combined image)
+    compositeMoodboard: {
+      url: String,
+      prompt: String,
+      generatedAt: {
+        type: Date,
+        default: Date.now,
+      },
+      metadata: {
+        model: String,
+        aspectRatio: String,
+        tokens: Number,
+        isComposite: Boolean,
+        width: Number,
+        height: Number,
+        imageCount: Number,
+        imageRegions: [
+          {
+            index: Number,
+            x: Number,
+            y: Number,
+            width: Number,
+            height: Number,
+          },
+        ],
+      },
+    },
     status: {
       type: String,
       enum: ['draft', 'generating', 'completed', 'failed'],

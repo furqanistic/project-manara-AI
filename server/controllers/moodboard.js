@@ -6,8 +6,11 @@ import {
   buildMoodboardPrompt,
   editImage,
   generateImage,
-  regenerateImages,
 } from '../services/geminiService.js'
+import {
+  createCompositeMoodboard,
+  getImageRegions,
+} from '../services/imageCompositor.js'
 
 /**
  * Create a new moodboard
@@ -33,19 +36,17 @@ export const createMoodboard = async (req, res, next) => {
       aspectRatio,
     } = req.body
 
-    // Validate required fields
     if (!title) {
       if (session) await session.abortTransaction()
       return next(createError(400, 'Moodboard title is required'))
     }
 
-    // Validate user exists
     if (!req.user || !req.user._id) {
       if (session) await session.abortTransaction()
       return next(createError(401, 'User not authenticated'))
     }
 
-    // Create moodboard document
+    // Force single layout and image count of 1
     const moodboardData = {
       userId: req.user._id,
       title: title.trim(),
@@ -56,8 +57,8 @@ export const createMoodboard = async (req, res, next) => {
       notes,
       projectId,
       status: 'draft',
-      layout: layout || 'grid',
-      imageCount: imageCount || 4,
+      layout: 'single', // Always single
+      imageCount: 1, // Always 1 image
       aspectRatio: aspectRatio || '1:1',
     }
 
@@ -86,27 +87,25 @@ export const createMoodboard = async (req, res, next) => {
 
 /**
  * Generate moodboard images using Gemini 2.5 Flash Image
+ * Creates a single image with exact aspect ratio
  */
 export const generateMoodboardImages = async (req, res, next) => {
   try {
     const { id } = req.params
     const { customPrompt, referenceImages, imageCount, aspectRatio } = req.body
 
-    // Find moodboard
     const moodboard = await Moodboard.findById(id)
 
     if (!moodboard) {
       return next(createError(404, 'Moodboard not found'))
     }
 
-    // Check ownership
     if (moodboard.userId.toString() !== req.user._id.toString()) {
       return next(
         createError(403, 'You can only generate images for your own moodboards')
       )
     }
 
-    // Update status to generating
     moodboard.status = 'generating'
     await moodboard.save({ validateBeforeSave: false })
 
@@ -118,7 +117,7 @@ export const generateMoodboardImages = async (req, res, next) => {
         roomType: moodboard.roomType,
         colorPalette: moodboard.colorPalette,
         customPrompt: moodboard.prompt,
-        layout: moodboard.layout,
+        layout: 'single',
         aspectRatio: aspectRatio || moodboard.aspectRatio,
       })
 
@@ -131,38 +130,60 @@ export const generateMoodboardImages = async (req, res, next) => {
       }))
     }
 
-    // Generate multiple images based on imageCount
-    const numImages = imageCount || moodboard.imageCount || 4
-    const generatedImageEntries = []
+    console.log('Generating single moodboard image with exact aspect ratio...')
 
-    for (let i = 0; i < numImages; i++) {
-      // Generate each image with slight variation in prompt
-      const variationPrompt = `${enhancedPrompt}. Variation ${
-        i + 1
-      } of ${numImages}.`
-      const result = await generateImage(
-        variationPrompt,
-        processedImages,
-        aspectRatio || moodboard.aspectRatio
-      )
+    // Generate single image with exact aspect ratio
+    const result = await generateImage(
+      enhancedPrompt,
+      processedImages,
+      aspectRatio || moodboard.aspectRatio
+    )
 
-      // Save generated image
-      generatedImageEntries.push({
-        url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
-        prompt: variationPrompt,
-        generatedAt: new Date(),
-        metadata: {
-          model: 'gemini-2.5-flash-image',
-          tokens: 1290,
-          aspectRatio: aspectRatio || moodboard.aspectRatio,
-          index: i,
-        },
-      })
+    // Store the single generated image
+    const generatedImageEntry = {
+      url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
+      prompt: enhancedPrompt,
+      generatedAt: new Date(),
+      metadata: {
+        model: 'gemini-2.5-flash-image',
+        tokens: 1290,
+        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        index: 0,
+        isIndividual: true,
+      },
     }
 
-    moodboard.generatedImages = generatedImageEntries
+    // For single layout, the composite is the same as the individual image
+    const compositeMoodboardEntry = {
+      url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
+      prompt: enhancedPrompt,
+      generatedAt: new Date(),
+      metadata: {
+        model: 'gemini-2.5-flash-image',
+        tokens: 1290,
+        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        isComposite: true,
+        width: 1024, // Default width, will be adjusted by Sharp
+        height: 1024, // Will be calculated based on aspect ratio
+        imageCount: 1,
+        imageRegions: [
+          {
+            index: 0,
+            x: 0,
+            y: 0,
+            width: 1024,
+            height: 1024,
+          },
+        ],
+      },
+    }
+
+    moodboard.compositeMoodboard = compositeMoodboardEntry
+    moodboard.generatedImages = [generatedImageEntry]
     moodboard.status = 'completed'
     await moodboard.save()
+
+    console.log('Moodboard generated successfully with exact aspect ratio')
 
     res.status(200).json({
       status: 'success',
@@ -173,7 +194,6 @@ export const generateMoodboardImages = async (req, res, next) => {
   } catch (error) {
     console.error('Error generating moodboard images:', error)
 
-    // Update moodboard status to failed
     try {
       const moodboard = await Moodboard.findById(req.params.id)
       if (moodboard) {
@@ -189,7 +209,7 @@ export const generateMoodboardImages = async (req, res, next) => {
 }
 
 /**
- * Regenerate specific images in a moodboard
+ * Regenerate the moodboard image
  */
 export const regenerateMoodboardImages = async (req, res, next) => {
   try {
@@ -204,14 +224,12 @@ export const regenerateMoodboardImages = async (req, res, next) => {
       return next(createError(400, 'Image indices are required'))
     }
 
-    // Find moodboard
     const moodboard = await Moodboard.findById(id)
 
     if (!moodboard) {
       return next(createError(404, 'Moodboard not found'))
     }
 
-    // Check ownership
     if (moodboard.userId.toString() !== req.user._id.toString()) {
       return next(
         createError(
@@ -221,48 +239,69 @@ export const regenerateMoodboardImages = async (req, res, next) => {
       )
     }
 
-    // Build base prompt from moodboard settings
+    // Build base prompt
     const basePrompt = buildMoodboardPrompt({
       style: moodboard.style,
       roomType: moodboard.roomType,
       colorPalette: moodboard.colorPalette,
       customPrompt: moodboard.prompt,
-      layout: moodboard.layout,
+      layout: 'single',
       aspectRatio: aspectRatio || moodboard.aspectRatio,
     })
 
-    // Combine with custom regeneration prompt if provided
     const regenerationPrompt = customPrompt
       ? `${basePrompt}. Additional requirements: ${customPrompt}`
       : basePrompt
 
-    // Regenerate each selected image
-    for (const index of imageIndices) {
-      if (index >= 0 && index < moodboard.generatedImages.length) {
-        // Generate new image with variation
-        const variationPrompt = `${regenerationPrompt}. Regenerated variation for position ${
-          index + 1
-        }.`
-        const result = await generateImage(
-          variationPrompt,
-          [],
-          aspectRatio || moodboard.aspectRatio
-        )
+    console.log('Regenerating moodboard image...')
 
-        // Replace the image at the specified index
-        moodboard.generatedImages[index] = {
-          url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
-          prompt: variationPrompt,
-          generatedAt: new Date(),
-          regenerated: true,
-          metadata: {
-            model: 'gemini-2.5-flash-image',
-            tokens: 1290,
-            aspectRatio: aspectRatio || moodboard.aspectRatio,
-            index: index,
+    // Regenerate the single image
+    const result = await generateImage(
+      regenerationPrompt,
+      [],
+      aspectRatio || moodboard.aspectRatio
+    )
+
+    // Update the image
+    const regeneratedImageEntry = {
+      url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
+      prompt: regenerationPrompt,
+      generatedAt: new Date(),
+      regenerated: true,
+      metadata: {
+        model: 'gemini-2.5-flash-image',
+        tokens: 1290,
+        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        index: 0,
+        isIndividual: true,
+      },
+    }
+
+    moodboard.generatedImages[0] = regeneratedImageEntry
+
+    // Update composite (same as individual for single layout)
+    moodboard.compositeMoodboard = {
+      url: regeneratedImageEntry.url,
+      prompt: basePrompt,
+      generatedAt: new Date(),
+      metadata: {
+        model: 'gemini-2.5-flash-image',
+        tokens: 1290,
+        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        isComposite: true,
+        width: 1024,
+        height: 1024,
+        imageCount: 1,
+        imageRegions: [
+          {
+            index: 0,
+            x: 0,
+            y: 0,
+            width: 1024,
+            height: 1024,
           },
-        }
-      }
+        ],
+      },
     }
 
     await moodboard.save()
@@ -281,7 +320,7 @@ export const regenerateMoodboardImages = async (req, res, next) => {
 }
 
 /**
- * Edit a generated moodboard image with natural language
+ * Edit the moodboard image
  */
 export const editMoodboardImage = async (req, res, next) => {
   try {
@@ -292,30 +331,28 @@ export const editMoodboardImage = async (req, res, next) => {
       return next(createError(400, 'Edit prompt is required'))
     }
 
-    // Find moodboard
     const moodboard = await Moodboard.findById(id)
 
     if (!moodboard) {
       return next(createError(404, 'Moodboard not found'))
     }
 
-    // Check ownership
     if (moodboard.userId.toString() !== req.user._id.toString()) {
       return next(
         createError(403, 'You can only edit your own moodboard images')
       )
     }
 
-    // Get the image to edit
     if (imageIndex === undefined || !moodboard.generatedImages[imageIndex]) {
       return next(createError(400, 'Invalid image index'))
     }
 
     const existingImage = moodboard.generatedImages[imageIndex]
-    // Extract base64 from data URL
     const baseImageData = existingImage.url.split(',')[1]
 
-    // Edit image using Gemini's targeted transformation capabilities
+    console.log('Editing moodboard image...')
+
+    // Edit the image with exact aspect ratio
     const result = await editImage(
       editPrompt,
       baseImageData,
@@ -323,8 +360,8 @@ export const editMoodboardImage = async (req, res, next) => {
       aspectRatio || moodboard.aspectRatio
     )
 
-    // Replace the edited image at the same index
-    moodboard.generatedImages[imageIndex] = {
+    // Update the image
+    const editedImageEntry = {
       url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
       prompt: `${existingImage.prompt} | Edited: ${editPrompt}`,
       generatedAt: new Date(),
@@ -335,6 +372,34 @@ export const editMoodboardImage = async (req, res, next) => {
         aspectRatio: aspectRatio || moodboard.aspectRatio,
         index: imageIndex,
         editPrompt: editPrompt,
+        isIndividual: true,
+      },
+    }
+
+    moodboard.generatedImages[imageIndex] = editedImageEntry
+
+    // Update composite (same as individual for single layout)
+    moodboard.compositeMoodboard = {
+      url: editedImageEntry.url,
+      prompt: moodboard.compositeMoodboard?.prompt || '',
+      generatedAt: new Date(),
+      metadata: {
+        model: 'gemini-2.5-flash-image',
+        tokens: 1290,
+        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        isComposite: true,
+        width: 1024,
+        height: 1024,
+        imageCount: 1,
+        imageRegions: [
+          {
+            index: 0,
+            x: 0,
+            y: 0,
+            width: 1024,
+            height: 1024,
+          },
+        ],
       },
     }
 
@@ -402,7 +467,6 @@ export const getMoodboardById = async (req, res, next) => {
       return next(createError(404, 'Moodboard not found'))
     }
 
-    // Check ownership or admin access
     if (
       moodboard.userId._id.toString() !== req.user._id.toString() &&
       req.user.role !== 'admin'
@@ -445,7 +509,6 @@ export const updateMoodboard = async (req, res, next) => {
       return next(createError(404, 'Moodboard not found'))
     }
 
-    // Check ownership
     if (moodboard.userId.toString() !== req.user._id.toString()) {
       return next(createError(403, 'You can only update your own moodboards'))
     }
@@ -457,8 +520,9 @@ export const updateMoodboard = async (req, res, next) => {
     if (colorPalette) moodboard.colorPalette = colorPalette
     if (notes !== undefined) moodboard.notes = notes
     if (status) moodboard.status = status
-    if (layout) moodboard.layout = layout
-    if (imageCount) moodboard.imageCount = imageCount
+    // Force single layout
+    moodboard.layout = 'single'
+    moodboard.imageCount = 1
     if (aspectRatio) moodboard.aspectRatio = aspectRatio
 
     await moodboard.save()
@@ -483,7 +547,6 @@ export const deleteMoodboard = async (req, res, next) => {
       return next(createError(404, 'Moodboard not found'))
     }
 
-    // Check ownership or admin
     if (
       moodboard.userId.toString() !== req.user._id.toString() &&
       req.user.role !== 'admin'

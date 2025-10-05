@@ -8,10 +8,7 @@ import {
 } from '@/hooks/useMoodboard'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowRight,
-  Camera,
   ChefHat,
-  ChevronDown,
   Download,
   Edit3,
   Globe,
@@ -19,17 +16,16 @@ import {
   Home,
   Layers,
   Loader2,
+  Maximize2,
   Palette,
-  Plus,
   RefreshCw,
-  Settings,
-  Sliders,
   Sofa,
   Sparkles,
   Utensils,
+  Wand2,
   X,
 } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
 const MoodboardGenerator = () => {
@@ -38,16 +34,12 @@ const MoodboardGenerator = () => {
   const [selectedColor, setSelectedColor] = useState('')
   const [selectedRatio, setSelectedRatio] = useState('Square (1:1)')
   const [changes, setChanges] = useState('')
-  const [products, setProducts] = useState([])
   const [isMobile, setIsMobile] = useState(false)
   const [currentMoodboard, setCurrentMoodboard] = useState(null)
-  const [editingImageIndex, setEditingImageIndex] = useState(null)
   const [editPrompt, setEditPrompt] = useState('')
-  const [selectedImages, setSelectedImages] = useState([])
   const [regeneratePrompt, setRegeneratePrompt] = useState('')
-  const [showRegeneratePanel, setShowRegeneratePanel] = useState(false)
-  const [moodboardLayout, setMoodboardLayout] = useState('grid') // 'grid', 'collage', 'single'
-  const [imageCount, setImageCount] = useState(4)
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [loadingState, setLoadingState] = useState(null)
 
   const brandColor = '#947d61'
   const brandColorLight = '#a68970'
@@ -103,7 +95,6 @@ const MoodboardGenerator = () => {
     'Warm Whites',
   ]
 
-  // Updated aspect ratios based on Gemini 2.5 Flash Image support
   const ratios = [
     'Square (1:1)',
     'Landscape (16:9)',
@@ -116,32 +107,6 @@ const MoodboardGenerator = () => {
     'Classic (5:4)',
     'Photo (3:2)',
   ]
-
-  const layouts = [
-    { name: 'Grid', value: 'grid', description: 'Equal-sized grid layout' },
-    {
-      name: 'Collage',
-      value: 'collage',
-      description: 'Mixed-size artistic layout',
-    },
-    { name: 'Single', value: 'single', description: 'One large image' },
-  ]
-
-  const getAspectRatioClass = (ratio) => {
-    const ratioMap = {
-      'Square (1:1)': 'aspect-square',
-      'Landscape (16:9)': 'aspect-video',
-      'Landscape (4:3)': 'aspect-[4/3]',
-      'Portrait (9:16)': 'aspect-[9/16]',
-      'Portrait (3:4)': 'aspect-[3/4]',
-      'Wide (2:1)': 'aspect-[2/1]',
-      'Tall (1:2)': 'aspect-[1/2]',
-      'Cinema (21:9)': 'aspect-[21/9]',
-      'Classic (5:4)': 'aspect-[5/4]',
-      'Photo (3:2)': 'aspect-[3/2]',
-    }
-    return ratioMap[ratio] || 'aspect-square'
-  }
 
   const getAspectRatioValue = (ratio) => {
     const ratioValues = {
@@ -160,235 +125,169 @@ const MoodboardGenerator = () => {
   }
 
   const handleGenerate = async () => {
+    if (!changes.trim()) {
+      toast.error('Please describe your design requirements')
+      return
+    }
+
     try {
+      setLoadingState('generating')
+
       const spaceValue =
         spaceTypes.find((s) => s.name === selectedSpace)?.value || 'living_room'
       const styleValue =
         styles.find((s) => s.label === selectedStyle)?.value || 'modern'
       const colorPalette = selectedColor ? [selectedColor] : []
 
-      let customPrompt = changes || ''
-      if (products.length > 0) {
-        customPrompt += ` Include these items: ${products.join(', ')}.`
-      }
+      let customPrompt = changes.trim()
 
-      // Create moodboard with layout and image count
       const createResult = await createMutation.mutateAsync({
         title: `${selectedStyle || 'Modern'} ${selectedSpace}`,
         style: styleValue,
         roomType: spaceValue,
         colorPalette,
         customPrompt,
-        layout: moodboardLayout,
-        imageCount,
+        layout: 'single',
+        imageCount: 1,
         aspectRatio: getAspectRatioValue(selectedRatio),
       })
 
       const moodboardId = createResult.data.moodboard._id
 
-      toast.loading('Generating your moodboard...', { id: 'generate' })
-
       const generateResult = await generateMutation.mutateAsync({
         moodboardId,
         data: {
           customPrompt,
-          imageCount,
+          imageCount: 1,
           aspectRatio: getAspectRatioValue(selectedRatio),
         },
       })
 
       setCurrentMoodboard(generateResult.data.moodboard)
-      toast.success('Moodboard generated successfully!', { id: 'generate' })
+      setLoadingState(null)
+      toast.success('Moodboard generated successfully!')
     } catch (error) {
+      setLoadingState(null)
       toast.error(
-        error.response?.data?.message || 'Failed to generate moodboard',
-        { id: 'generate' }
+        error.response?.data?.message || 'Failed to generate moodboard'
       )
     }
   }
 
-  const handleSelectImage = (index) => {
-    setSelectedImages((prev) => {
-      if (prev.includes(index)) {
-        return prev.filter((i) => i !== index)
-      }
-      return [...prev, index]
-    })
-  }
-
   const handleRegenerateSelected = async () => {
-    if (selectedImages.length === 0) {
-      toast.error('Please select at least one image to regenerate')
-      return
-    }
-
     try {
-      toast.loading('Regenerating selected images...', { id: 'regenerate' })
+      setLoadingState('regenerating')
 
       const result = await regenerateMutation.mutateAsync({
         moodboardId: currentMoodboard._id,
         data: {
-          imageIndices: selectedImages,
+          imageIndices: [0],
           customPrompt: regeneratePrompt,
           aspectRatio: getAspectRatioValue(selectedRatio),
         },
       })
 
       setCurrentMoodboard(result.data.moodboard)
-      setSelectedImages([])
       setRegeneratePrompt('')
-      setShowRegeneratePanel(false)
-      toast.success('Images regenerated successfully!', { id: 'regenerate' })
+      setLoadingState(null)
+      toast.success('Image regenerated successfully!')
     } catch (error) {
+      setLoadingState(null)
       toast.error(
-        error.response?.data?.message || 'Failed to regenerate images',
-        { id: 'regenerate' }
+        error.response?.data?.message || 'Failed to regenerate images'
       )
     }
   }
 
-  const handleEditImage = async (imageIndex) => {
+  const handleEditImage = async () => {
     if (!editPrompt.trim()) {
       toast.error('Please enter edit instructions')
       return
     }
 
     try {
-      toast.loading('Editing image...', { id: 'edit' })
+      setLoadingState('editing')
 
       const result = await editMutation.mutateAsync({
         moodboardId: currentMoodboard._id,
         data: {
-          imageIndex,
+          imageIndex: 0,
           editPrompt,
           aspectRatio: getAspectRatioValue(selectedRatio),
         },
       })
 
       setCurrentMoodboard(result.data.moodboard)
-      setEditingImageIndex(null)
       setEditPrompt('')
-      toast.success('Image edited successfully!', { id: 'edit' })
+      setLoadingState(null)
+      toast.success('Image edited successfully!')
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to edit image', {
-        id: 'edit',
-      })
+      setLoadingState(null)
+      toast.error(error.response?.data?.message || 'Failed to edit image')
     }
   }
 
-  const downloadImage = (imageUrl, index) => {
+  const downloadMoodboard = () => {
+    if (!currentMoodboard?.compositeMoodboard?.url) return
+
     const link = document.createElement('a')
-    link.href = imageUrl
-    link.download = `moodboard-${currentMoodboard._id}-${index}.png`
+    link.href = currentMoodboard.compositeMoodboard.url
+    link.download = `moodboard-${currentMoodboard._id}.png`
     link.click()
   }
 
-  const renderMoodboardLayout = () => {
-    if (!currentMoodboard || !currentMoodboard.generatedImages?.length) {
+  const renderMoodboard = () => {
+    if (!currentMoodboard?.compositeMoodboard?.url) {
       return null
     }
 
-    const images = currentMoodboard.generatedImages
+    const composite = currentMoodboard.compositeMoodboard
 
-    if (moodboardLayout === 'single') {
-      return (
-        <div className='relative group'>
-          <img
-            src={images[0].url}
-            alt='Moodboard'
-            className={`w-full ${getAspectRatioClass(
-              selectedRatio
-            )} object-cover rounded-2xl border border-white/10`}
-          />
-          <MoodboardImageOverlay
-            image={images[0]}
-            index={0}
-            onDownload={() => downloadImage(images[0].url, 0)}
-            onEdit={() => setEditingImageIndex(0)}
-            onSelect={() => handleSelectImage(0)}
-            isSelected={selectedImages.includes(0)}
-          />
-        </div>
-      )
-    }
-
-    if (moodboardLayout === 'collage') {
-      return (
-        <div className='grid grid-cols-6 grid-rows-4 gap-2 h-[600px]'>
-          {images.slice(0, 5).map((img, idx) => {
-            const colSpan = idx === 0 ? 'col-span-4' : 'col-span-2'
-            const rowSpan =
-              idx === 0 ? 'row-span-2' : idx < 3 ? 'row-span-2' : 'row-span-2'
-
-            return (
-              <div key={idx} className={`relative group ${colSpan} ${rowSpan}`}>
-                <img
-                  src={img.url}
-                  alt={`Moodboard ${idx + 1}`}
-                  className='w-full h-full object-cover rounded-lg border border-white/10'
-                />
-                <MoodboardImageOverlay
-                  image={img}
-                  index={idx}
-                  onDownload={() => downloadImage(img.url, idx)}
-                  onEdit={() => setEditingImageIndex(idx)}
-                  onSelect={() => handleSelectImage(idx)}
-                  isSelected={selectedImages.includes(idx)}
-                />
-              </div>
-            )
-          })}
-        </div>
-      )
-    }
-
-    // Default grid layout
     return (
-      <div
-        className={`grid ${
-          imageCount <= 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-2'
-        } gap-4`}
-      >
-        {images.slice(0, imageCount).map((img, idx) => (
-          <div key={idx} className='relative group'>
-            <img
-              src={img.url}
-              alt={`Moodboard ${idx + 1}`}
-              className={`w-full ${getAspectRatioClass(
-                selectedRatio
-              )} object-cover rounded-xl border border-white/10`}
-            />
-            <MoodboardImageOverlay
-              image={img}
-              index={idx}
-              onDownload={() => downloadImage(img.url, idx)}
-              onEdit={() => setEditingImageIndex(idx)}
-              onSelect={() => handleSelectImage(idx)}
-              isSelected={selectedImages.includes(idx)}
-            />
-            {editingImageIndex === idx && (
-              <EditImageModal
-                editPrompt={editPrompt}
-                setEditPrompt={setEditPrompt}
-                onClose={() => setEditingImageIndex(null)}
-                onEdit={() => handleEditImage(idx)}
-                isEditing={editMutation.isPending}
-              />
-            )}
+      <div className='relative group h-full flex items-center justify-center'>
+        <div className='relative max-w-full max-h-full'>
+          <img
+            src={composite.url}
+            alt='Moodboard'
+            className='max-w-full max-h-[calc(100vh-250px)] rounded-2xl border border-white/10 cursor-pointer shadow-2xl'
+            onClick={() => setShowImageModal(true)}
+          />
+
+          <div className='absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setShowImageModal(true)
+              }}
+              className='p-3 bg-black/80 backdrop-blur-sm rounded-lg hover:bg-black transition-colors'
+              title='View full size'
+            >
+              <Maximize2 className='w-5 h-5 text-white' />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                downloadMoodboard()
+              }}
+              className='p-3 bg-black/80 backdrop-blur-sm rounded-lg hover:bg-black transition-colors'
+              title='Download'
+            >
+              <Download className='w-5 h-5 text-white' />
+            </button>
           </div>
-        ))}
+        </div>
       </div>
     )
   }
 
   const isGenerating = createMutation.isPending || generateMutation.isPending
   const isRegenerating = regenerateMutation.isPending
+  const isEditing = editMutation.isPending
 
   return (
     <>
       <TopBar />
       <div className='min-h-screen bg-black overflow-hidden relative'>
-        {/* Background Elements */}
         <div className='absolute inset-0'>
           <div
             className='absolute inset-0 opacity-5'
@@ -402,7 +301,6 @@ const MoodboardGenerator = () => {
           />
         </div>
 
-        {/* Main Content */}
         <div className='relative z-10 min-h-screen pt-24 pb-8'>
           <div className='max-w-7xl mx-auto px-4'>
             <div className='grid lg:grid-cols-12 gap-6'>
@@ -413,71 +311,123 @@ const MoodboardGenerator = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                <div className='bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 lg:p-6 min-h-[600px] sticky top-24'>
-                  {/* Regeneration Controls */}
-                  {currentMoodboard && selectedImages.length > 0 && (
+                <div className='bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 lg:p-6 min-h-[600px] sticky top-24 relative'>
+                  {/* Loading Overlay */}
+                  <AnimatePresence>
+                    {loadingState && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className='absolute inset-0 bg-black/90 backdrop-blur-md rounded-3xl z-50 flex items-center justify-center'
+                      >
+                        <div className='text-center'>
+                          <div className='relative w-24 h-24 mx-auto mb-6'>
+                            <div className='absolute inset-0 rounded-full border-4 border-[#947d61]/20'></div>
+                            <div className='absolute inset-0 rounded-full border-4 border-[#947d61] border-t-transparent animate-spin'></div>
+                            <div className='absolute inset-0 flex items-center justify-center'>
+                              {loadingState === 'generating' && (
+                                <Wand2 className='w-10 h-10 text-[#947d61] animate-pulse' />
+                              )}
+                              {loadingState === 'editing' && (
+                                <Edit3 className='w-10 h-10 text-[#947d61] animate-pulse' />
+                              )}
+                              {loadingState === 'regenerating' && (
+                                <RefreshCw className='w-10 h-10 text-[#947d61] animate-pulse' />
+                              )}
+                            </div>
+                          </div>
+                          <h3 className='text-2xl font-bold text-white mb-3'>
+                            {loadingState === 'generating' &&
+                              'Creating Your Moodboard'}
+                            {loadingState === 'editing' && 'Editing Image'}
+                            {loadingState === 'regenerating' &&
+                              'Regenerating Design'}
+                          </h3>
+                          <p className='text-gray-400 mb-6'>
+                            {loadingState === 'generating' &&
+                              'AI is crafting your perfect interior design...'}
+                            {loadingState === 'editing' &&
+                              'Applying your changes...'}
+                            {loadingState === 'regenerating' &&
+                              'Creating a new variation...'}
+                          </p>
+                          <div className='flex items-center justify-center gap-2'>
+                            <div
+                              className='w-3 h-3 bg-[#947d61] rounded-full animate-bounce'
+                              style={{ animationDelay: '0s' }}
+                            ></div>
+                            <div
+                              className='w-3 h-3 bg-[#947d61] rounded-full animate-bounce'
+                              style={{ animationDelay: '0.2s' }}
+                            ></div>
+                            <div
+                              className='w-3 h-3 bg-[#947d61] rounded-full animate-bounce'
+                              style={{ animationDelay: '0.4s' }}
+                            ></div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Edit Controls */}
+                  {currentMoodboard && !loadingState && (
                     <motion.div
                       initial={{ opacity: 0, y: -20 }}
                       animate={{ opacity: 1, y: 0 }}
                       className='mb-4 p-4 bg-gradient-to-r from-[#947d61]/20 to-[#a68970]/20 rounded-xl border border-[#947d61]/30'
                     >
-                      <div className='flex items-center justify-between mb-3'>
-                        <div>
-                          <h4 className='text-white font-semibold flex items-center gap-2'>
-                            <RefreshCw className='w-4 h-4' />
-                            {selectedImages.length} image(s) selected
-                          </h4>
-                          <p className='text-gray-400 text-xs mt-1'>
-                            Regenerate with new settings or prompt
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setSelectedImages([])}
-                          className='text-gray-400 hover:text-white'
-                        >
-                          <X className='w-4 h-4' />
-                        </button>
-                      </div>
+                      <h4 className='text-white font-semibold flex items-center gap-2 mb-3'>
+                        <Sparkles className='w-4 h-4' />
+                        Refine Your Moodboard
+                      </h4>
 
                       <textarea
-                        value={regeneratePrompt}
-                        onChange={(e) => setRegeneratePrompt(e.target.value)}
-                        placeholder='Optional: Add specific changes for regeneration...'
-                        className='w-full p-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 resize-none h-16 mb-3 text-sm'
+                        value={editPrompt}
+                        onChange={(e) => setEditPrompt(e.target.value)}
+                        placeholder='Describe specific edits (e.g., "change sofa color to navy blue", "add indoor plants")'
+                        className='w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 resize-none h-20 mb-3 text-sm focus:outline-none focus:border-[#947d61]'
                       />
-
                       <button
-                        onClick={handleRegenerateSelected}
-                        disabled={isRegenerating}
-                        className='w-full h-10 px-4 text-white font-semibold rounded-lg bg-gradient-to-r from-[#947d61] to-[#a68970] hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2'
+                        onClick={handleEditImage}
+                        disabled={isEditing || !editPrompt.trim()}
+                        className='w-full h-10 px-4 mb-3 text-white font-semibold rounded-lg bg-gradient-to-r from-[#947d61] to-[#a68970] hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-all'
                       >
-                        {isRegenerating ? (
-                          <>
-                            <Loader2 className='w-4 h-4 animate-spin' />
-                            <span>Regenerating...</span>
-                          </>
-                        ) : (
-                          <>
-                            <RefreshCw className='w-4 h-4' />
-                            <span>Regenerate Selected</span>
-                          </>
-                        )}
+                        <Edit3 className='w-4 h-4' />
+                        <span>Edit Image</span>
                       </button>
+
+                      <div className='border-t border-white/10 pt-3 mt-3'>
+                        <textarea
+                          value={regeneratePrompt}
+                          onChange={(e) => setRegeneratePrompt(e.target.value)}
+                          placeholder='Optional: Add variations for regeneration (e.g., "brighter lighting", "more minimalist")'
+                          className='w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 resize-none h-20 mb-3 text-sm focus:outline-none focus:border-[#947d61]'
+                        />
+
+                        <button
+                          onClick={handleRegenerateSelected}
+                          disabled={isRegenerating}
+                          className='w-full h-10 px-4 text-white font-semibold rounded-lg bg-gradient-to-r from-[#947d61] to-[#a68970] hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-all'
+                        >
+                          <RefreshCw className='w-4 h-4' />
+                          <span>Regenerate</span>
+                        </button>
+                      </div>
                     </motion.div>
                   )}
 
                   {/* Moodboard Display */}
-                  <div className='w-full'>
-                    {currentMoodboard &&
-                    currentMoodboard.generatedImages?.length > 0 ? (
-                      renderMoodboardLayout()
+                  <div className='w-full h-full flex items-center justify-center'>
+                    {currentMoodboard?.compositeMoodboard ? (
+                      renderMoodboard()
                     ) : (
                       <MoodboardPlaceholder
                         isGenerating={isGenerating}
                         selectedSpace={selectedSpace}
                         selectedStyle={selectedStyle}
                         selectedRatio={selectedRatio}
-                        aspectRatioClass={getAspectRatioClass(selectedRatio)}
                       />
                     )}
                   </div>
@@ -491,110 +441,62 @@ const MoodboardGenerator = () => {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
               >
-                <div className='bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 h-[calc(100vh-8rem)]'>
-                  <div className='h-full overflow-y-auto space-y-6 pr-2'>
-                    {/* Step 1: Layout Settings */}
+                <div className='bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 lg:p-6 h-[calc(100vh-8rem)]'>
+                  <div className='h-full overflow-y-auto space-y-6 pr-2 scrollbar-thin scrollbar-thumb-[#947d61] scrollbar-track-transparent'>
+                    {/* Step 1 */}
                     <div>
                       <div className='flex items-center gap-3 mb-4'>
                         <div
-                          className='w-6 h-6 rounded-full flex items-center justify-center text-white font-semibold text-xs'
+                          className='w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
                           style={{
                             background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
                           }}
                         >
                           1
                         </div>
-                        <h3 className='text-lg font-semibold text-white'>
-                          Layout & Format
+                        <h3 className='text-xl font-semibold text-white'>
+                          Aspect Ratio
                         </h3>
                       </div>
 
-                      {/* Layout Type */}
-                      <div className='mb-3'>
-                        <p className='text-gray-300 text-xs mb-2'>
-                          Layout Type
-                        </p>
-                        <div className='grid grid-cols-3 gap-2'>
-                          {layouts.map((layout) => (
-                            <button
-                              key={layout.value}
-                              onClick={() => setMoodboardLayout(layout.value)}
-                              disabled={isGenerating}
-                              className={`p-2 rounded-lg border transition-all text-xs ${
-                                moodboardLayout === layout.value
-                                  ? 'border-[#947d61] bg-[#947d61]/20 text-white'
-                                  : 'border-white/10 bg-white/5 text-gray-300 hover:border-white/20'
-                              }`}
-                            >
-                              {layout.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Image Count */}
-                      {moodboardLayout !== 'single' && (
-                        <div className='mb-3'>
-                          <p className='text-gray-300 text-xs mb-2'>
-                            Number of Images: {imageCount}
-                          </p>
-                          <input
-                            type='range'
-                            min='1'
-                            max='6'
-                            value={imageCount}
-                            onChange={(e) =>
-                              setImageCount(parseInt(e.target.value))
-                            }
-                            disabled={isGenerating}
-                            className='w-full'
-                          />
-                        </div>
-                      )}
-
-                      {/* Aspect Ratio */}
-                      <div className='mb-3'>
-                        <p className='text-gray-300 text-xs mb-2'>
-                          Aspect Ratio
-                        </p>
-                        <select
-                          value={selectedRatio}
-                          onChange={(e) => setSelectedRatio(e.target.value)}
-                          disabled={isGenerating}
-                          className='w-full h-8 px-3 pr-8 bg-white/5 border border-white/10 rounded-lg text-white text-sm appearance-none'
-                        >
-                          {ratios.map((ratio) => (
-                            <option
-                              key={ratio}
-                              value={ratio}
-                              className='bg-gray-900'
-                            >
-                              {ratio}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <select
+                        value={selectedRatio}
+                        onChange={(e) => setSelectedRatio(e.target.value)}
+                        disabled={isGenerating}
+                        className='w-full h-11 px-4 pr-10 bg-white/5 border border-white/10 rounded-xl text-white text-sm appearance-none focus:outline-none focus:border-[#947d61] transition-all cursor-pointer'
+                      >
+                        {ratios.map((ratio) => (
+                          <option
+                            key={ratio}
+                            value={ratio}
+                            className='bg-gray-900'
+                          >
+                            {ratio}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
-                    {/* Step 2: Design Details */}
+                    {/* Step 2 */}
                     <div>
                       <div className='flex items-center gap-3 mb-4'>
                         <div
-                          className='w-6 h-6 rounded-full flex items-center justify-center text-white font-semibold text-xs'
+                          className='w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
                           style={{
                             background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
                           }}
                         >
                           2
                         </div>
-                        <h3 className='text-lg font-semibold text-white'>
+                        <h3 className='text-xl font-semibold text-white'>
                           Design Details
                         </h3>
                       </div>
 
-                      {/* Space Types */}
                       <div className='mb-4'>
-                        <p className='text-gray-300 text-xs mb-2'>Space Type</p>
+                        <p className='text-gray-300 text-sm mb-3 font-medium'>
+                          Space Type
+                        </p>
                         <div className='grid grid-cols-2 gap-2'>
                           {spaceTypes.map((space) => {
                             const IconComponent = space.icon
@@ -603,33 +505,36 @@ const MoodboardGenerator = () => {
                                 key={space.name}
                                 onClick={() => setSelectedSpace(space.name)}
                                 disabled={isGenerating}
-                                className={`h-8 px-2 rounded-lg border transition-all duration-300 flex items-center gap-1.5 disabled:opacity-50 ${
+                                className={`h-10 px-3 rounded-xl border transition-all duration-300 flex items-center gap-2 disabled:opacity-50 ${
                                   selectedSpace === space.name
-                                    ? 'border-[#947d61] bg-[#947d61]/20 text-white'
-                                    : 'border-white/10 bg-white/5 text-gray-300 hover:border-white/20'
+                                    ? 'border-[#947d61] bg-[#947d61]/20 text-white shadow-lg'
+                                    : 'border-white/10 bg-white/5 text-gray-300 hover:border-white/20 hover:bg-white/10'
                                 }`}
                                 whileHover={{ scale: isGenerating ? 1 : 1.02 }}
                                 whileTap={{ scale: isGenerating ? 1 : 0.98 }}
                               >
-                                <IconComponent className='w-3 h-3' />
-                                <span className='text-xs'>{space.name}</span>
+                                <IconComponent className='w-4 h-4' />
+                                <span className='text-sm'>{space.name}</span>
                               </motion.button>
                             )
                           })}
                         </div>
                       </div>
 
-                      {/* Style and Color */}
                       <div className='space-y-3'>
                         <select
                           value={selectedStyle}
                           onChange={(e) => setSelectedStyle(e.target.value)}
                           disabled={isGenerating}
-                          className='w-full h-8 px-3 bg-white/5 border border-white/10 rounded-lg text-white text-sm'
+                          className='w-full h-11 px-4 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#947d61] transition-all cursor-pointer'
                         >
                           <option value=''>Select Style</option>
                           {styles.map((style) => (
-                            <option key={style.value} value={style.label}>
+                            <option
+                              key={style.value}
+                              value={style.label}
+                              className='bg-gray-900'
+                            >
                               {style.label}
                             </option>
                           ))}
@@ -639,11 +544,15 @@ const MoodboardGenerator = () => {
                           value={selectedColor}
                           onChange={(e) => setSelectedColor(e.target.value)}
                           disabled={isGenerating}
-                          className='w-full h-8 px-3 bg-white/5 border border-white/10 rounded-lg text-white text-sm'
+                          className='w-full h-11 px-4 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-[#947d61] transition-all cursor-pointer'
                         >
                           <option value=''>Select Color Palette</option>
                           {colors.map((color) => (
-                            <option key={color} value={color}>
+                            <option
+                              key={color}
+                              value={color}
+                              className='bg-gray-900'
+                            >
                               {color}
                             </option>
                           ))}
@@ -651,49 +560,59 @@ const MoodboardGenerator = () => {
                       </div>
                     </div>
 
-                    {/* Step 3: Products & Customization */}
+                    {/* Step 3 */}
                     <div>
                       <div className='flex items-center gap-3 mb-3'>
                         <div
-                          className='w-6 h-6 rounded-full flex items-center justify-center text-white font-semibold text-xs'
+                          className='w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
                           style={{
                             background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
                           }}
                         >
                           3
                         </div>
-                        <h3 className='text-lg font-semibold text-white'>
-                          Customize
+                        <h3 className='text-xl font-semibold text-white'>
+                          Your Vision
                         </h3>
+                        <span className='text-red-400 text-xs font-semibold'>
+                          *Required
+                        </span>
                       </div>
 
                       <textarea
                         value={changes}
                         onChange={(e) => setChanges(e.target.value)}
                         disabled={isGenerating}
-                        placeholder='Describe any specific requirements...'
-                        className='w-full p-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 resize-none h-16 text-sm'
+                        placeholder='Describe your design vision in detail... (e.g., "Modern living room with large windows, neutral colors, wooden furniture, plants, and natural lighting")'
+                        className={`w-full p-4 bg-white/5 border rounded-xl text-white placeholder-gray-400 resize-none h-32 text-sm focus:outline-none transition-all ${
+                          !changes.trim() && !isGenerating
+                            ? 'border-red-400/50 focus:border-red-400'
+                            : 'border-white/10 focus:border-[#947d61]'
+                        }`}
+                        required
                       />
+                      {!changes.trim() && (
+                        <p className='text-red-400 text-xs mt-2 flex items-center gap-1'>
+                          <span className='w-1 h-1 bg-red-400 rounded-full'></span>
+                          Please describe your desired moodboard
+                        </p>
+                      )}
 
-                      {/* Generate Button */}
                       <motion.button
                         onClick={handleGenerate}
-                        disabled={isGenerating}
-                        className='w-full h-10 px-4 mt-4 text-white font-semibold rounded-xl bg-gradient-to-r from-[#947d61] to-[#a68970] disabled:opacity-50'
-                        whileHover={{ scale: isGenerating ? 1 : 1.02 }}
-                        whileTap={{ scale: isGenerating ? 1 : 0.98 }}
+                        disabled={isGenerating || !changes.trim()}
+                        className='w-full h-12 px-6 mt-4 text-white font-bold rounded-xl bg-gradient-to-r from-[#947d61] to-[#a68970] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all'
+                        whileHover={{
+                          scale: isGenerating || !changes.trim() ? 1 : 1.02,
+                        }}
+                        whileTap={{
+                          scale: isGenerating || !changes.trim() ? 1 : 0.98,
+                        }}
                       >
-                        {isGenerating ? (
-                          <div className='flex items-center justify-center gap-2'>
-                            <Loader2 className='w-4 h-4 animate-spin' />
-                            <span>Generating...</span>
-                          </div>
-                        ) : (
-                          <div className='flex items-center justify-center gap-2'>
-                            <Sparkles className='w-4 h-4' />
-                            <span>Generate Moodboard</span>
-                          </div>
-                        )}
+                        <div className='flex items-center justify-center gap-2'>
+                          <Sparkles className='w-5 h-5' />
+                          <span>Generate Moodboard</span>
+                        </div>
                       </motion.button>
                     </div>
                   </div>
@@ -703,156 +622,78 @@ const MoodboardGenerator = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Modal */}
+      {showImageModal && currentMoodboard?.compositeMoodboard?.url && (
+        <div
+          className='fixed inset-0 bg-black z-50 flex items-center justify-center'
+          onClick={() => setShowImageModal(false)}
+        >
+          {/* Close Button */}
+          <button
+            onClick={() => setShowImageModal(false)}
+            className='absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10'
+          >
+            <X className='w-6 h-6 text-white' />
+          </button>
+
+          {/* Download Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              downloadMoodboard()
+            }}
+            className='absolute top-6 right-20 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full flex items-center gap-2 transition-colors z-10'
+          >
+            <Download className='w-5 h-5 text-white' />
+            <span className='text-white text-sm font-medium'>Download</span>
+          </button>
+
+          {/* Image */}
+          <img
+            src={currentMoodboard.compositeMoodboard.url}
+            alt='Moodboard Full View'
+            className='max-w-[95vw] max-h-[95vh] object-contain'
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </>
   )
 }
 
-// Component for image overlay controls
-const MoodboardImageOverlay = ({
-  image,
-  index,
-  onDownload,
-  onEdit,
-  onSelect,
-  isSelected,
-}) => (
-  <>
-    {/* Selection checkbox */}
-    <div
-      className={`absolute top-2 left-2 w-6 h-6 rounded border-2 flex items-center justify-center cursor-pointer transition-all ${
-        isSelected
-          ? 'bg-[#947d61] border-[#947d61]'
-          : 'bg-black/50 border-white/50 hover:border-white'
-      }`}
-      onClick={onSelect}
-    >
-      {isSelected && (
-        <svg
-          className='w-4 h-4 text-white'
-          fill='currentColor'
-          viewBox='0 0 20 20'
-        >
-          <path
-            fillRule='evenodd'
-            d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z'
-            clipRule='evenodd'
-          />
-        </svg>
-      )}
-    </div>
-
-    {/* Action buttons */}
-    <div className='absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
-      <button
-        onClick={onDownload}
-        className='p-2 bg-black/80 rounded-lg hover:bg-black transition-colors'
-      >
-        <Download className='w-4 h-4 text-white' />
-      </button>
-      <button
-        onClick={onEdit}
-        className='p-2 bg-black/80 rounded-lg hover:bg-black transition-colors'
-      >
-        <Edit3 className='w-4 h-4 text-white' />
-      </button>
-      <button
-        onClick={onSelect}
-        className='p-2 bg-black/80 rounded-lg hover:bg-black transition-colors'
-      >
-        <RefreshCw className='w-4 h-4 text-white' />
-      </button>
-    </div>
-  </>
-)
-
-// Component for edit modal
-const EditImageModal = ({
-  editPrompt,
-  setEditPrompt,
-  onClose,
-  onEdit,
-  isEditing,
-}) => (
-  <div className='absolute inset-0 bg-black/90 rounded-xl p-4 flex flex-col justify-center z-10'>
-    <button
-      onClick={onClose}
-      className='absolute top-2 right-2 p-1 bg-white/10 rounded-lg hover:bg-white/20'
-    >
-      <X className='w-4 h-4 text-white' />
-    </button>
-
-    <h3 className='text-white font-semibold mb-3 text-sm'>Edit Image</h3>
-
-    <textarea
-      value={editPrompt}
-      onChange={(e) => setEditPrompt(e.target.value)}
-      placeholder='Describe edits (e.g., "remove background", "change color to blue")'
-      className='w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 resize-none h-24 text-sm mb-3'
-    />
-
-    <button
-      onClick={onEdit}
-      disabled={isEditing}
-      className='w-full h-10 px-4 text-white font-semibold rounded-lg bg-gradient-to-r from-[#947d61] to-[#a68970] hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2'
-    >
-      {isEditing ? (
-        <>
-          <Loader2 className='w-4 h-4 animate-spin' />
-          <span>Editing...</span>
-        </>
-      ) : (
-        <>
-          <Edit3 className='w-4 h-4' />
-          <span>Apply Edit</span>
-        </>
-      )}
-    </button>
-  </div>
-)
-
-// Component for placeholder
 const MoodboardPlaceholder = ({
   isGenerating,
   selectedSpace,
   selectedStyle,
   selectedRatio,
-  aspectRatioClass,
 }) => (
-  <div
-    className={`${aspectRatioClass} max-w-full bg-gradient-to-br from-white/10 to-white/5 rounded-2xl border border-white/10 flex items-center justify-center`}
-  >
-    <div className='text-center p-4'>
-      {isGenerating ? (
-        <>
-          <div className='w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#947d61] to-[#a68970] rounded-full flex items-center justify-center'>
-            <Loader2 className='w-8 h-8 text-white animate-spin' />
-          </div>
-          <h3 className='text-lg font-semibold text-white mb-2'>
-            Generating Your Moodboard
-          </h3>
-          <p className='text-gray-400 text-sm'>
-            Creating your personalized design...
+  <div className='w-full h-full flex items-center justify-center p-8'>
+    <div className='text-center max-w-md'>
+      <div className='w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-white/10 to-white/5 rounded-2xl flex items-center justify-center'>
+        <Palette className='w-10 h-10 text-gray-400' />
+      </div>
+      <h3 className='text-2xl font-bold text-white mb-3'>Ready to Create</h3>
+      <p className='text-gray-400 mb-4'>
+        Configure your preferences and generate your custom interior design
+        moodboard
+      </p>
+      <div className='text-sm text-gray-500 space-y-1'>
+        <p className='flex items-center justify-center gap-2'>
+          <span className='w-2 h-2 bg-[#947d61] rounded-full'></span>
+          {selectedSpace}
+        </p>
+        {selectedStyle && (
+          <p className='flex items-center justify-center gap-2'>
+            <span className='w-2 h-2 bg-[#947d61] rounded-full'></span>
+            {selectedStyle}
           </p>
-        </>
-      ) : (
-        <>
-          <div className='w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-white/10 to-white/5 rounded-full flex items-center justify-center'>
-            <Palette className='w-8 h-8 text-gray-400' />
-          </div>
-          <h3 className='text-lg font-semibold text-white mb-2'>
-            Your Moodboard Preview
-          </h3>
-          <p className='text-gray-400 text-sm mb-3'>
-            Configure settings and generate
-          </p>
-          <div className='text-xs text-gray-500'>
-            {selectedSpace}
-            {selectedStyle && ` • ${selectedStyle}`}
-            <br />
-            <span className='text-[#947d61]'>{selectedRatio}</span>
-          </div>
-        </>
-      )}
+        )}
+        <p className='flex items-center justify-center gap-2'>
+          <span className='w-2 h-2 bg-[#947d61] rounded-full'></span>
+          {selectedRatio}
+        </p>
+      </div>
     </div>
   </div>
 )

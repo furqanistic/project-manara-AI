@@ -1,3 +1,4 @@
+// File: client/src/hooks/useMoodboard.js
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   createMoodboard,

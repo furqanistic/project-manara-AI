@@ -1,3 +1,4 @@
+// File: client/src/services/moodboardService.js
 import axiosInstance from '../config/config'
 
 // Create a new moodboard
