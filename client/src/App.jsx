@@ -16,6 +16,7 @@ import FloorPlanGenerator from './pages/AIBuilders/FloorPlanGenerator'
 import MoodboardGenerator from './pages/AIBuilders/MoodboardGenerator'
 import AuthPage from './pages/Auth/AuthPage'
 import HomePage from './pages/Home/HomePage'
+import PricingPage from './pages/Pricing/PricingPage'
 import { persistor, store } from './redux/store'
 
 // Create React Query client
@@ -54,6 +55,7 @@ const AppRoutes = () => {
       <Route path='/'>
         <Route index element={<HomePage />} />
         <Route path='/about' element={<AboutPage />} />
+        <Route path='/pricing' element={<PricingPage />} />
         <Route path='/auth' element={<AuthPage />} />
 
         {/* Protected routes - wrap with RequireAuth */}
