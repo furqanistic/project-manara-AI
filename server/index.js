@@ -15,21 +15,24 @@ app.use(cookieParser())
 app.use(express.json({ limit: '50mb' })) // Increased limit for base64 images
 app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
-app.use(
-  cors({
-    origin:
+const corsOptions = {
+  origin: (origin, callback) => {
+    const allowedOrigins =
       process.env.NODE_ENV === 'production'
-        ? [
-            process.env.FRONTEND_URL || 'https://marandesign.ai',
-            'https://api.marandesign.ai',
-          ]
-        : ['http://localhost:5173', 'http://localhost:5174'],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-)
+        ? ['https://manaradesign.ai', 'https://api.manaradesign.ai']
+        : ['http://localhost:5173', 'http://localhost:5174']
 
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}
+app.use(cors(corsOptions))
 // Routes
 app.use('/api/auth/', authRoute)
 app.use('/api/moodboards/', moodboardRoute)
