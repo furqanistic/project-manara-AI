@@ -19,7 +19,10 @@ app.use(
   cors({
     origin:
       process.env.NODE_ENV === 'production'
-        ? process.env.FRONTEND_URL || 'https://ascendaiempire.com/'
+        ? [
+            process.env.FRONTEND_URL || 'https://marandesign.ai',
+            'https://api.marandesign.ai',
+          ]
         : ['http://localhost:5173', 'http://localhost:5174'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
