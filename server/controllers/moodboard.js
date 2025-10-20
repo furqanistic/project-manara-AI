@@ -2,15 +2,25 @@
 import mongoose from 'mongoose'
 import { createError } from '../error.js'
 import Moodboard from '../models/Moodboard.js'
+import { extractColorPalette } from '../services/colorExtractor.js'
 import {
   buildMoodboardPrompt,
   editImage,
   generateImage,
+  generateMoodDescription,
 } from '../services/geminiService.js'
 import {
   createCompositeMoodboard,
   getImageRegions,
 } from '../services/imageCompositor.js'
+
+/**
+ * Helper to parse aspect ratio
+ */
+const parseAspectRatio = (aspectRatio) => {
+  const [width, height] = aspectRatio.split(':').map(Number)
+  return { width, height }
+}
 
 /**
  * Create a new moodboard
@@ -28,6 +38,7 @@ export const createMoodboard = async (req, res, next) => {
       style,
       roomType,
       colorPalette,
+      colorPreferences,
       notes,
       projectId,
       customPrompt,
@@ -46,20 +57,21 @@ export const createMoodboard = async (req, res, next) => {
       return next(createError(401, 'User not authenticated'))
     }
 
-    // Force single layout and image count of 1
+    // Always use collage layout with single composite image
     const moodboardData = {
       userId: req.user._id,
       title: title.trim(),
       prompt: customPrompt || prompt || '',
       style: style || 'modern',
       roomType,
-      colorPalette: colorPalette || [],
+      colorPreferences: colorPreferences || colorPalette || [],
+      colorPalette: [], // Will be filled after generation
       notes,
       projectId,
       status: 'draft',
-      layout: 'single', // Always single
-      imageCount: 1, // Always 1 image
-      aspectRatio: aspectRatio || '1:1',
+      layout: 'collage', // Always collage style
+      imageCount: 1, // Always single composite moodboard
+      aspectRatio: aspectRatio || '16:9',
     }
 
     const [newMoodboard] = await Moodboard.create([moodboardData], { session })
@@ -87,7 +99,6 @@ export const createMoodboard = async (req, res, next) => {
 
 /**
  * Generate moodboard images using Gemini 2.5 Flash Image
- * Creates a single image with exact aspect ratio
  */
 export const generateMoodboardImages = async (req, res, next) => {
   try {
@@ -109,16 +120,19 @@ export const generateMoodboardImages = async (req, res, next) => {
     moodboard.status = 'generating'
     await moodboard.save({ validateBeforeSave: false })
 
+    const numImages = 1 // Always generate single composite moodboard
+    const targetAspectRatio = aspectRatio || moodboard.aspectRatio || '16:9'
+
     // Build enhanced prompt
     const enhancedPrompt =
       customPrompt ||
       buildMoodboardPrompt({
         style: moodboard.style,
         roomType: moodboard.roomType,
-        colorPalette: moodboard.colorPalette,
+        colorPalette: moodboard.colorPreferences, // Use color preferences for prompt
         customPrompt: moodboard.prompt,
-        layout: 'single',
-        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        layout: 'collage', // Always collage style
+        aspectRatio: targetAspectRatio,
       })
 
     // Process reference images if provided
@@ -130,60 +144,77 @@ export const generateMoodboardImages = async (req, res, next) => {
       }))
     }
 
-    console.log('Generating single moodboard image with exact aspect ratio...')
+    console.log('Generating single composite moodboard...')
 
-    // Generate single image with exact aspect ratio
+    // Generate single composite moodboard image
     const result = await generateImage(
       enhancedPrompt,
       processedImages,
-      aspectRatio || moodboard.aspectRatio
+      targetAspectRatio
     )
 
-    // Store the single generated image
+    const imageData = result.images[0].data
+    const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
+
+    // Extract color palette from the generated moodboard
+    const palette = await extractColorPalette(imageData)
+
     const generatedImageEntry = {
-      url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
+      url: imageUrl,
       prompt: enhancedPrompt,
       generatedAt: new Date(),
       metadata: {
         model: 'gemini-2.5-flash-image',
         tokens: 1290,
-        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        aspectRatio: targetAspectRatio,
         index: 0,
-        isIndividual: true,
+        isIndividual: false,
+        colorPalette: palette,
       },
     }
 
-    // For single layout, the composite is the same as the individual image
+    // For single moodboard, the composite IS the generated image
+    const compositeColorPalette = palette
+
+    // Generate mood description using Gemini
+    const moodDescription = await generateMoodDescription({
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: compositeColorPalette,
+      prompt: enhancedPrompt,
+    })
+
     const compositeMoodboardEntry = {
-      url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
+      url: imageUrl,
       prompt: enhancedPrompt,
       generatedAt: new Date(),
       metadata: {
         model: 'gemini-2.5-flash-image',
         tokens: 1290,
-        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        aspectRatio: targetAspectRatio,
         isComposite: true,
-        width: 1024, // Default width, will be adjusted by Sharp
-        height: 1024, // Will be calculated based on aspect ratio
+        width: 1024,
+        height: Math.round(
+          1024 *
+            (parseAspectRatio(targetAspectRatio).height /
+              parseAspectRatio(targetAspectRatio).width)
+        ),
         imageCount: 1,
-        imageRegions: [
-          {
-            index: 0,
-            x: 0,
-            y: 0,
-            width: 1024,
-            height: 1024,
-          },
-        ],
+        imageRegions: [],
+        colorPalette: compositeColorPalette,
+        moodDescription,
       },
     }
 
     moodboard.compositeMoodboard = compositeMoodboardEntry
     moodboard.generatedImages = [generatedImageEntry]
+    moodboard.colorPalette = compositeColorPalette
     moodboard.status = 'completed'
     await moodboard.save()
 
-    console.log('Moodboard generated successfully with exact aspect ratio')
+    console.log(
+      'Composite moodboard generated successfully with color palette and mood'
+    )
 
     res.status(200).json({
       status: 'success',
@@ -209,20 +240,12 @@ export const generateMoodboardImages = async (req, res, next) => {
 }
 
 /**
- * Regenerate the moodboard image
+ * Regenerate the moodboard (creates a new variation)
  */
 export const regenerateMoodboardImages = async (req, res, next) => {
   try {
     const { id } = req.params
     const { imageIndices, customPrompt, aspectRatio } = req.body
-
-    if (
-      !imageIndices ||
-      !Array.isArray(imageIndices) ||
-      imageIndices.length === 0
-    ) {
-      return next(createError(400, 'Image indices are required'))
-    }
 
     const moodboard = await Moodboard.findById(id)
 
@@ -243,9 +266,9 @@ export const regenerateMoodboardImages = async (req, res, next) => {
     const basePrompt = buildMoodboardPrompt({
       style: moodboard.style,
       roomType: moodboard.roomType,
-      colorPalette: moodboard.colorPalette,
+      colorPalette: moodboard.colorPreferences,
       customPrompt: moodboard.prompt,
-      layout: 'single',
+      layout: 'collage',
       aspectRatio: aspectRatio || moodboard.aspectRatio,
     })
 
@@ -253,18 +276,31 @@ export const regenerateMoodboardImages = async (req, res, next) => {
       ? `${basePrompt}. Additional requirements: ${customPrompt}`
       : basePrompt
 
-    console.log('Regenerating moodboard image...')
+    console.log('Regenerating moodboard with new variation...')
 
-    // Regenerate the single image
+    // Regenerate the single composite moodboard
     const result = await generateImage(
       regenerationPrompt,
       [],
       aspectRatio || moodboard.aspectRatio
     )
 
-    // Update the image
+    const imageData = result.images[0].data
+    const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
+
+    // Extract color palette
+    const palette = await extractColorPalette(imageData)
+
+    // Generate new mood description
+    const moodDescription = await generateMoodDescription({
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: palette,
+      prompt: basePrompt,
+    })
+
     const regeneratedImageEntry = {
-      url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
+      url: imageUrl,
       prompt: regenerationPrompt,
       generatedAt: new Date(),
       regenerated: true,
@@ -273,44 +309,45 @@ export const regenerateMoodboardImages = async (req, res, next) => {
         tokens: 1290,
         aspectRatio: aspectRatio || moodboard.aspectRatio,
         index: 0,
-        isIndividual: true,
+        isIndividual: false,
+        colorPalette: palette,
       },
     }
 
     moodboard.generatedImages[0] = regeneratedImageEntry
 
-    // Update composite (same as individual for single layout)
+    // Update composite (same as the generated image)
+    const targetAspectRatio = aspectRatio || moodboard.aspectRatio
     moodboard.compositeMoodboard = {
-      url: regeneratedImageEntry.url,
+      url: imageUrl,
       prompt: basePrompt,
       generatedAt: new Date(),
       metadata: {
         model: 'gemini-2.5-flash-image',
         tokens: 1290,
-        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        aspectRatio: targetAspectRatio,
         isComposite: true,
         width: 1024,
-        height: 1024,
+        height: Math.round(
+          1024 *
+            (parseAspectRatio(targetAspectRatio).height /
+              parseAspectRatio(targetAspectRatio).width)
+        ),
         imageCount: 1,
-        imageRegions: [
-          {
-            index: 0,
-            x: 0,
-            y: 0,
-            width: 1024,
-            height: 1024,
-          },
-        ],
+        imageRegions: [],
+        colorPalette: palette,
+        moodDescription,
       },
     }
 
+    moodboard.colorPalette = palette
     await moodboard.save()
 
     res.status(200).json({
       status: 'success',
       data: {
         moodboard,
-        regeneratedIndices: imageIndices,
+        regeneratedIndices: [0],
       },
     })
   } catch (error) {
@@ -320,7 +357,7 @@ export const regenerateMoodboardImages = async (req, res, next) => {
 }
 
 /**
- * Edit the moodboard image
+ * Edit the moodboard (apply modifications)
  */
 export const editMoodboardImage = async (req, res, next) => {
   try {
@@ -343,14 +380,14 @@ export const editMoodboardImage = async (req, res, next) => {
       )
     }
 
-    if (imageIndex === undefined || !moodboard.generatedImages[imageIndex]) {
-      return next(createError(400, 'Invalid image index'))
+    if (!moodboard.generatedImages || moodboard.generatedImages.length === 0) {
+      return next(createError(400, 'No moodboard image to edit'))
     }
 
-    const existingImage = moodboard.generatedImages[imageIndex]
+    const existingImage = moodboard.generatedImages[0]
     const baseImageData = existingImage.url.split(',')[1]
 
-    console.log('Editing moodboard image...')
+    console.log('Editing moodboard with modifications...')
 
     // Edit the image with exact aspect ratio
     const result = await editImage(
@@ -360,9 +397,22 @@ export const editMoodboardImage = async (req, res, next) => {
       aspectRatio || moodboard.aspectRatio
     )
 
-    // Update the image
+    const imageData = result.images[0].data
+    const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
+
+    // Extract color palette
+    const palette = await extractColorPalette(imageData)
+
+    // Generate new mood description
+    const moodDescription = await generateMoodDescription({
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: palette,
+      prompt: `${existingImage.prompt} | Edited: ${editPrompt}`,
+    })
+
     const editedImageEntry = {
-      url: `data:${result.images[0].mimeType};base64,${result.images[0].data}`,
+      url: imageUrl,
       prompt: `${existingImage.prompt} | Edited: ${editPrompt}`,
       generatedAt: new Date(),
       edited: true,
@@ -370,46 +420,47 @@ export const editMoodboardImage = async (req, res, next) => {
         model: 'gemini-2.5-flash-image',
         tokens: 1290,
         aspectRatio: aspectRatio || moodboard.aspectRatio,
-        index: imageIndex,
+        index: 0,
         editPrompt: editPrompt,
-        isIndividual: true,
+        isIndividual: false,
+        colorPalette: palette,
       },
     }
 
-    moodboard.generatedImages[imageIndex] = editedImageEntry
+    moodboard.generatedImages[0] = editedImageEntry
 
-    // Update composite (same as individual for single layout)
+    // Update composite (same as edited image for single moodboard)
+    const targetAspectRatio = aspectRatio || moodboard.aspectRatio
     moodboard.compositeMoodboard = {
-      url: editedImageEntry.url,
+      url: imageUrl,
       prompt: moodboard.compositeMoodboard?.prompt || '',
       generatedAt: new Date(),
       metadata: {
         model: 'gemini-2.5-flash-image',
         tokens: 1290,
-        aspectRatio: aspectRatio || moodboard.aspectRatio,
+        aspectRatio: targetAspectRatio,
         isComposite: true,
         width: 1024,
-        height: 1024,
+        height: Math.round(
+          1024 *
+            (parseAspectRatio(targetAspectRatio).height /
+              parseAspectRatio(targetAspectRatio).width)
+        ),
         imageCount: 1,
-        imageRegions: [
-          {
-            index: 0,
-            x: 0,
-            y: 0,
-            width: 1024,
-            height: 1024,
-          },
-        ],
+        imageRegions: [],
+        colorPalette: palette,
+        moodDescription,
       },
     }
 
+    moodboard.colorPalette = palette
     await moodboard.save()
 
     res.status(200).json({
       status: 'success',
       data: {
         moodboard,
-        editedIndex: imageIndex,
+        editedIndex: 0,
       },
     })
   } catch (error) {
@@ -418,9 +469,7 @@ export const editMoodboardImage = async (req, res, next) => {
   }
 }
 
-/**
- * Get all moodboards for current user
- */
+// ... rest of the controller methods (getUserMoodboards, getMoodboardById, updateMoodboard, deleteMoodboard) remain the same
 export const getUserMoodboards = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1
@@ -453,9 +502,6 @@ export const getUserMoodboards = async (req, res, next) => {
   }
 }
 
-/**
- * Get single moodboard by ID
- */
 export const getMoodboardById = async (req, res, next) => {
   try {
     const moodboard = await Moodboard.findById(req.params.id).populate(
@@ -486,9 +532,6 @@ export const getMoodboardById = async (req, res, next) => {
   }
 }
 
-/**
- * Update moodboard details
- */
 export const updateMoodboard = async (req, res, next) => {
   try {
     const {
@@ -496,6 +539,7 @@ export const updateMoodboard = async (req, res, next) => {
       style,
       roomType,
       colorPalette,
+      colorPreferences,
       notes,
       status,
       layout,
@@ -517,12 +561,13 @@ export const updateMoodboard = async (req, res, next) => {
     if (title) moodboard.title = title.trim()
     if (style) moodboard.style = style
     if (roomType) moodboard.roomType = roomType
-    if (colorPalette) moodboard.colorPalette = colorPalette
+    if (colorPreferences) moodboard.colorPreferences = colorPreferences
+    // colorPalette is auto-generated, don't allow manual updates
     if (notes !== undefined) moodboard.notes = notes
     if (status) moodboard.status = status
-    // Force single layout
-    moodboard.layout = 'single'
-    moodboard.imageCount = 1
+    if (layout) moodboard.layout = layout
+    if (imageCount)
+      moodboard.imageCount = Math.min(Math.max(parseInt(imageCount), 1), 6)
     if (aspectRatio) moodboard.aspectRatio = aspectRatio
 
     await moodboard.save()

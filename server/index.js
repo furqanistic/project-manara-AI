@@ -5,9 +5,11 @@ import dotenv from 'dotenv'
 import express from 'express'
 import mongoose from 'mongoose'
 // Import routes
+import fs from 'fs'
+import path from 'path'
 import authRoute from './routes/auth.js'
+import floorPlanRoutes from './routes/floorPlan.js'
 import moodboardRoute from './routes/moodboard.js'
-
 const app = express()
 dotenv.config({ quiet: true })
 
@@ -36,6 +38,15 @@ app.use(cors(corsOptions))
 // Routes
 app.use('/api/auth/', authRoute)
 app.use('/api/moodboards/', moodboardRoute)
+app.use('/api/floorplans', floorPlanRoutes)
+
+const uploadsDir = path.join(process.cwd(), 'uploads/furniture')
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true })
+}
+
+// Serve uploaded images
+app.use('/uploads', express.static('uploads'))
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

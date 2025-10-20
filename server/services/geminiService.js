@@ -5,16 +5,19 @@ import sharp from 'sharp'
 dotenv.config({ quiet: true })
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-const GEMINI_MODEL = 'gemini-2.5-flash-image'
+const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image'
+const GEMINI_TEXT_MODEL = 'gemini-2.0-flash-exp'
 const USE_MOCK = process.env.USE_MOCK_GEMINI === 'true'
 
 let genAI = null
-let model = null
+let imageModel = null
+let textModel = null
 
 const initializeGemini = () => {
   if (!genAI && GEMINI_API_KEY && !USE_MOCK) {
     genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
-    model = genAI.getGenerativeModel({ model: GEMINI_MODEL })
+    imageModel = genAI.getGenerativeModel({ model: GEMINI_IMAGE_MODEL })
+    textModel = genAI.getGenerativeModel({ model: GEMINI_TEXT_MODEL })
   }
 }
 
@@ -28,8 +31,6 @@ const parseAspectRatio = (aspectRatio) => {
 
 /**
  * Calculate exact dimensions for a given aspect ratio
- * @param {string} aspectRatio - Aspect ratio (e.g., '16:9')
- * @param {number} baseWidth - Base width to calculate from
  */
 const calculateDimensions = (aspectRatio, baseWidth = 1024) => {
   const { width: widthRatio, height: heightRatio } =
@@ -40,8 +41,6 @@ const calculateDimensions = (aspectRatio, baseWidth = 1024) => {
 
 /**
  * Crop and resize image to exact aspect ratio using Sharp
- * @param {Buffer} imageBuffer - Image buffer
- * @param {string} aspectRatio - Target aspect ratio
  */
 const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
   try {
@@ -50,11 +49,9 @@ const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
       1024
     )
 
-    // Get image metadata
     const metadata = await sharp(imageBuffer).metadata()
     const { width: imgWidth, height: imgHeight } = metadata
 
-    // Calculate current aspect ratio
     const currentRatio = imgWidth / imgHeight
     const targetRatio = targetWidth / targetHeight
 
@@ -64,7 +61,6 @@ const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
       )}), Target: ${targetWidth}x${targetHeight} (${targetRatio.toFixed(2)})`
     )
 
-    // If aspect ratios match (within tolerance), just resize
     if (Math.abs(currentRatio - targetRatio) < 0.01) {
       return await sharp(imageBuffer)
         .resize(targetWidth, targetHeight, {
@@ -75,20 +71,16 @@ const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
         .toBuffer()
     }
 
-    // Calculate crop dimensions to match target ratio
     let cropWidth, cropHeight
 
     if (currentRatio > targetRatio) {
-      // Image is too wide - crop width
       cropHeight = imgHeight
       cropWidth = Math.round(cropHeight * targetRatio)
     } else {
-      // Image is too tall - crop height
       cropWidth = imgWidth
       cropHeight = Math.round(cropWidth / targetRatio)
     }
 
-    // Center crop and resize
     const result = await sharp(imageBuffer)
       .extract({
         left: Math.round((imgWidth - cropWidth) / 2),
@@ -115,10 +107,6 @@ const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
 
 /**
  * Generate images using Gemini 2.5 Flash Image with exact aspect ratio enforcement
- * @param {string} prompt - Text prompt describing the desired image
- * @param {Array} referenceImages - Optional array of base64 encoded images
- * @param {string} aspectRatio - Aspect ratio (e.g., '16:9', '1:1', '4:3')
- * @returns {Promise<Object>} Generated image data with exact aspect ratio
  */
 export const generateImage = async (
   prompt,
@@ -151,7 +139,6 @@ export const generateImage = async (
       1024
     )
 
-    // Build enhanced prompt with aspect ratio guidance
     const enhancedPrompt = `Generate an interior design moodboard image with ${aspectRatio} aspect ratio (${targetWidth}x${targetHeight} pixels). ${prompt}. Ensure the composition fills the entire frame and is optimized for this specific aspect ratio.`
 
     const parts = [{ text: enhancedPrompt }]
@@ -181,7 +168,7 @@ export const generateImage = async (
 
     const systemInstruction = `Generate high-quality interior design images. Maintain the ${aspectRatio} aspect ratio strictly. The output should be photorealistic with professional composition.`
 
-    const result = await model.generateContent({
+    const result = await imageModel.generateContent({
       contents: [
         {
           role: 'user',
@@ -208,13 +195,8 @@ export const generateImage = async (
       if (part.text) {
         text = part.text
       } else if (part.inlineData) {
-        // Convert base64 to buffer
         const imageBuffer = Buffer.from(part.inlineData.data, 'base64')
-
-        // Enforce exact aspect ratio using Sharp
         const croppedBuffer = await enforceAspectRatio(imageBuffer, aspectRatio)
-
-        // Convert back to base64
         const croppedBase64 = croppedBuffer.toString('base64')
 
         images.push({
@@ -249,6 +231,109 @@ export const generateImage = async (
     }
 
     throw new Error(`Failed to generate image: ${error.message}`)
+  }
+}
+
+/**
+ * Generate mood and feeling descriptions for a moodboard
+ */
+export const generateMoodDescription = async ({
+  style,
+  roomType,
+  colorPalette,
+  prompt,
+}) => {
+  try {
+    if (USE_MOCK) {
+      return getMockMoodDescription(style, roomType)
+    }
+
+    if (!GEMINI_API_KEY) {
+      return getMockMoodDescription(style, roomType)
+    }
+
+    initializeGemini()
+
+    const colorNames = colorPalette.map((c) => c.name).join(', ')
+
+    const moodPrompt = `As an interior design expert, analyze this design concept and provide:
+
+Design Details:
+- Style: ${style}
+- Room Type: ${roomType?.replace(/_/g, ' ')}
+- Color Palette: ${colorNames}
+- Design Brief: ${prompt}
+
+Please provide a JSON response with:
+1. "mood" - Single descriptive word for the overall atmosphere (e.g., "Serene", "Energetic", "Sophisticated")
+2. "feeling" - Brief phrase about the emotional experience (e.g., "Calm and Refreshing", "Bold and Dynamic")
+3. "description" - 2-3 sentences describing the design aesthetic and its impact
+4. "keywords" - Array of 4-5 descriptive keywords
+
+Format: { "mood": "...", "feeling": "...", "description": "...", "keywords": ["..."] }`
+
+    const result = await textModel.generateContent(moodPrompt)
+    const response = result.response
+    const text = response.text()
+
+    // Extract JSON from response
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      const moodData = JSON.parse(jsonMatch[0])
+      return {
+        mood: moodData.mood || 'Harmonious',
+        feeling: moodData.feeling || 'Comfortable and Inviting',
+        description:
+          moodData.description ||
+          'A thoughtfully designed space that balances aesthetics with functionality.',
+        keywords: moodData.keywords || [
+          'Modern',
+          'Elegant',
+          'Refined',
+          'Timeless',
+        ],
+      }
+    }
+
+    return getMockMoodDescription(style, roomType)
+  } catch (error) {
+    console.error('Error generating mood description:', error)
+    return getMockMoodDescription(style, roomType)
+  }
+}
+
+/**
+ * Mock mood description for fallback
+ */
+const getMockMoodDescription = (style, roomType) => {
+  const moodMap = {
+    modern: { mood: 'Sleek', feeling: 'Clean and Contemporary' },
+    minimalist: { mood: 'Serene', feeling: 'Calm and Focused' },
+    scandinavian: { mood: 'Cozy', feeling: 'Warm and Inviting' },
+    industrial: { mood: 'Bold', feeling: 'Raw and Authentic' },
+    bohemian: { mood: 'Eclectic', feeling: 'Free-spirited and Artistic' },
+    traditional: { mood: 'Elegant', feeling: 'Timeless and Refined' },
+    contemporary: { mood: 'Sophisticated', feeling: 'Polished and Current' },
+    rustic: { mood: 'Natural', feeling: 'Grounded and Organic' },
+    luxury: { mood: 'Opulent', feeling: 'Sumptuous and Prestigious' },
+  }
+
+  const moodInfo = moodMap[style] || {
+    mood: 'Harmonious',
+    feeling: 'Balanced and Comfortable',
+  }
+
+  return {
+    ...moodInfo,
+    description: `This ${style} ${
+      roomType?.replace(/_/g, ' ') || 'space'
+    } creates an inviting atmosphere through thoughtful design choices and cohesive color harmony.`,
+    keywords: [
+      style.charAt(0).toUpperCase() + style.slice(1),
+      'Refined',
+      'Balanced',
+      'Intentional',
+    ],
   }
 }
 
@@ -307,12 +392,7 @@ const generateMockImage = (prompt, aspectRatio = '1:1') => {
 }
 
 /**
- * Edit an existing image using Gemini's targeted transformation
- * @param {string} prompt - Edit instruction
- * @param {string} imageData - Base64 encoded image to edit
- * @param {string} mimeType - Image MIME type
- * @param {string} aspectRatio - Aspect ratio for the edited image
- * @returns {Promise<Object>} Edited image data with exact aspect ratio
+ * Edit an existing image
  */
 export const editImage = async (
   prompt,
@@ -335,44 +415,7 @@ export const editImage = async (
 }
 
 /**
- * Regenerate specific images with variations
- * @param {Array} imageIndices - Indices of images to regenerate
- * @param {string} basePrompt - Base prompt for regeneration
- * @param {string} customPrompt - Additional custom requirements
- * @param {string} aspectRatio - Aspect ratio for regenerated images
- * @returns {Promise<Array>} Array of regenerated images with exact aspect ratio
- */
-export const regenerateImages = async (
-  imageIndices,
-  basePrompt,
-  customPrompt = '',
-  aspectRatio = '1:1'
-) => {
-  try {
-    const regeneratedImages = []
-
-    for (const index of imageIndices) {
-      const variationPrompt = customPrompt
-        ? `${basePrompt}. Additional: ${customPrompt}. Create variation ${
-            index + 1
-          }.`
-        : `${basePrompt}. Create variation ${index + 1}.`
-
-      const result = await generateImage(variationPrompt, [], aspectRatio)
-      regeneratedImages.push({ index, ...result.images[0] })
-    }
-
-    return regeneratedImages
-  } catch (error) {
-    console.error('Image regeneration error:', error.message)
-    throw error
-  }
-}
-
-/**
- * Build an enhanced moodboard prompt based on user preferences
- * @param {Object} options - Moodboard generation options
- * @returns {string} Enhanced prompt
+ * Build an enhanced moodboard prompt
  */
 export const buildMoodboardPrompt = ({
   style,
@@ -396,12 +439,23 @@ export const buildMoodboardPrompt = ({
   }
 
   if (colorPalette && colorPalette.length > 0) {
-    prompt += `. Use a color palette featuring ${colorPalette.join(', ')}`
+    // Handle both string arrays and color object arrays
+    const colors =
+      Array.isArray(colorPalette) &&
+      typeof colorPalette[0] === 'object' &&
+      colorPalette[0]?.name
+        ? colorPalette.map((c) => c.name).join(', ')
+        : colorPalette.join(', ')
+    prompt += `. Use a color palette featuring ${colors}`
   }
 
   if (layout === 'single') {
     prompt +=
       ', presented as a single comprehensive interior design visualization'
+  } else if (layout === 'grid') {
+    prompt += ', with clean professional composition'
+  } else if (layout === 'collage') {
+    prompt += ', with artistic and dynamic composition'
   }
 
   if (aspectRatio && aspectRatio !== '1:1') {
