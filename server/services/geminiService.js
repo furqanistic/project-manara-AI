@@ -40,7 +40,8 @@ const calculateDimensions = (aspectRatio, baseWidth = 1024) => {
 }
 
 /**
- * Crop and resize image to exact aspect ratio using Sharp
+ * Resize image to target aspect ratio without cropping
+ * Uses 'contain' to fit image within dimensions, preserving all content
  */
 const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
   try {
@@ -52,51 +53,23 @@ const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
     const metadata = await sharp(imageBuffer).metadata()
     const { width: imgWidth, height: imgHeight } = metadata
 
-    const currentRatio = imgWidth / imgHeight
-    const targetRatio = targetWidth / targetHeight
-
     console.log(
-      `Current: ${imgWidth}x${imgHeight} (${currentRatio.toFixed(
-        2
-      )}), Target: ${targetWidth}x${targetHeight} (${targetRatio.toFixed(2)})`
+      `Resizing: ${imgWidth}x${imgHeight} → ${targetWidth}x${targetHeight} (${aspectRatio})`
     )
 
-    if (Math.abs(currentRatio - targetRatio) < 0.01) {
-      return await sharp(imageBuffer)
-        .resize(targetWidth, targetHeight, {
-          fit: 'fill',
-          withoutEnlargement: false,
-        })
-        .png()
-        .toBuffer()
-    }
-
-    let cropWidth, cropHeight
-
-    if (currentRatio > targetRatio) {
-      cropHeight = imgHeight
-      cropWidth = Math.round(cropHeight * targetRatio)
-    } else {
-      cropWidth = imgWidth
-      cropHeight = Math.round(cropWidth / targetRatio)
-    }
-
+    // Use 'contain' to preserve all image content without cropping
+    // This ensures the entire generated image is visible
     const result = await sharp(imageBuffer)
-      .extract({
-        left: Math.round((imgWidth - cropWidth) / 2),
-        top: Math.round((imgHeight - cropHeight) / 2),
-        width: cropWidth,
-        height: cropHeight,
-      })
       .resize(targetWidth, targetHeight, {
-        fit: 'fill',
+        fit: 'contain',
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
         withoutEnlargement: false,
       })
       .png()
       .toBuffer()
 
     console.log(
-      `Enforced aspect ratio: ${aspectRatio} (${targetWidth}x${targetHeight})`
+      `Successfully resized to ${aspectRatio} aspect ratio (${targetWidth}x${targetHeight})`
     )
     return result
   } catch (error) {

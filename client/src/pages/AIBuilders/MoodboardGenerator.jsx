@@ -1,18 +1,12 @@
 // File: client/src/pages/AIBuilders/MoodboardGenerator.jsx
 import TopBar from '@/components/Layout/Topbar'
 import { useCreateMoodboard, useGenerateMoodboard } from '@/hooks/useMoodboard'
-import {
-  DesignNarrativeCard,
-  MaterialsCard,
-  FurnitureCard,
-  LightingConceptCard,
-  ZonesCard,
-  VariantsCard,
-} from '@/components/Moodboard/MoodboardDetails'
+import { MoodboardDetailsPanel } from '@/components/Moodboard/MoodboardDetails'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ChefHat,
   Download,
+  FileDown,
   Globe,
   Heart,
   Home,
@@ -26,7 +20,7 @@ import {
   Wand2,
   X,
 } from 'lucide-react'
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 
 const MoodboardGenerator = () => {
@@ -215,6 +209,51 @@ const MoodboardGenerator = () => {
     toast.success('Moodboard downloaded!')
   }
 
+  const exportMoodboard = () => {
+    if (!currentMoodboard) return
+
+    try {
+      const data = {
+        title: currentMoodboard.title,
+        style: currentMoodboard.style,
+        roomType: currentMoodboard.roomType,
+        createdAt: currentMoodboard.createdAt,
+
+        designNarrative: currentMoodboard.designNarrative,
+
+        moodDescription: currentMoodboard.compositeMoodboard?.metadata?.moodDescription,
+
+        colorPalette: currentMoodboard.colorPalette,
+
+        materials: currentMoodboard.materials,
+
+        furniture: currentMoodboard.furniture,
+
+        lightingConcept: currentMoodboard.lightingConcept,
+
+        zones: currentMoodboard.zones,
+
+        variants: currentMoodboard.variants,
+
+        imageUrl: currentMoodboard.compositeMoodboard?.url,
+      }
+
+      const dataStr = JSON.stringify(data, null, 2)
+      const dataBlob = new Blob([dataStr], { type: 'application/json' })
+      const url = URL.createObjectURL(dataBlob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `moodboard-complete-${currentMoodboard._id}.json`
+      link.click()
+      URL.revokeObjectURL(url)
+
+      toast.success('Moodboard exported successfully!')
+    } catch (error) {
+      console.error('Export error:', error)
+      toast.error('Failed to export moodboard')
+    }
+  }
+
   const renderMoodboard = () => {
     if (!currentMoodboard?.compositeMoodboard?.url) {
       return null
@@ -260,58 +299,34 @@ const MoodboardGenerator = () => {
           </div>
         </div>
 
-        {/* Color Palette & Mood */}
-        {composite.metadata?.colorPalette &&
-          composite.metadata.colorPalette.length > 0 && (
-            <ColorPaletteMoodCard
-              colorPalette={composite.metadata.colorPalette}
-              moodDescription={composite.metadata.moodDescription}
-            />
-          )}
+        {/* Moodboard Details Panel with Tabs */}
+        <MoodboardDetailsPanel moodboard={currentMoodboard} />
 
-        {/* Design Narrative */}
-        {currentMoodboard.designNarrative && (
-          <DesignNarrativeCard narrative={currentMoodboard.designNarrative} />
-        )}
+        {/* Action Buttons */}
+        <div className='flex gap-3'>
+          <motion.button
+            onClick={handleRegenerate}
+            disabled={loadingState === 'generating'}
+            className='flex-1 h-12 px-6 text-white font-bold rounded-xl bg-gradient-to-r from-[#947d61] to-[#a68970] hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-all'
+            whileHover={{ scale: loadingState ? 1 : 1.02 }}
+            whileTap={{ scale: loadingState ? 1 : 0.98 }}
+          >
+            <RefreshCw className='w-5 h-5' />
+            <span>New Variation</span>
+          </motion.button>
 
-        {/* Materials */}
-        {currentMoodboard.materials && (
-          <MaterialsCard materials={currentMoodboard.materials} />
-        )}
-
-        {/* Furniture */}
-        {currentMoodboard.furniture && (
-          <FurnitureCard furniture={currentMoodboard.furniture} />
-        )}
-
-        {/* Lighting Concept */}
-        {currentMoodboard.lightingConcept && (
-          <LightingConceptCard
-            lightingConcept={currentMoodboard.lightingConcept}
-          />
-        )}
-
-        {/* Zones */}
-        {currentMoodboard.zones && currentMoodboard.zones.length > 0 && (
-          <ZonesCard zones={currentMoodboard.zones} />
-        )}
-
-        {/* Variants */}
-        {currentMoodboard.variants && currentMoodboard.variants.length > 0 && (
-          <VariantsCard variants={currentMoodboard.variants} />
-        )}
-
-        {/* Regenerate Button */}
-        <motion.button
-          onClick={handleRegenerate}
-          disabled={loadingState === 'generating'}
-          className='w-full h-12 px-6 text-white font-bold rounded-xl bg-gradient-to-r from-[#947d61] to-[#a68970] hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-all'
-          whileHover={{ scale: loadingState ? 1 : 1.02 }}
-          whileTap={{ scale: loadingState ? 1 : 0.98 }}
-        >
-          <RefreshCw className='w-5 h-5' />
-          <span>Generate New Variation</span>
-        </motion.button>
+          <motion.button
+            onClick={exportMoodboard}
+            disabled={loadingState === 'generating'}
+            className='h-12 px-6 text-white font-bold rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-all'
+            whileHover={{ scale: loadingState ? 1 : 1.02 }}
+            whileTap={{ scale: loadingState ? 1 : 0.98 }}
+            title='Export Complete Moodboard'
+          >
+            <FileDown className='w-5 h-5' />
+            <span>Export</span>
+          </motion.button>
+        </div>
       </div>
     )
   }
