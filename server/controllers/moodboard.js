@@ -8,6 +8,12 @@ import {
   editImage,
   generateImage,
   generateMoodDescription,
+  generateDesignNarrative,
+  generateMaterials,
+  generateFurniture,
+  generateLightingConcept,
+  generateZones,
+  generateVariants,
 } from '../services/geminiService.js'
 import {
   createCompositeMoodboard,
@@ -184,6 +190,35 @@ export const generateMoodboardImages = async (req, res, next) => {
       prompt: enhancedPrompt,
     })
 
+    console.log('Generating comprehensive moodboard data...')
+
+    // Generate all comprehensive moodboard data
+    const aiParams = {
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: compositeColorPalette,
+      prompt: enhancedPrompt,
+    }
+
+    // Generate all data in parallel for efficiency
+    const [
+      designNarrative,
+      materials,
+      furniture,
+      lightingConcept,
+      zones,
+      variants,
+    ] = await Promise.all([
+      generateDesignNarrative(aiParams),
+      generateMaterials(aiParams),
+      generateFurniture(aiParams),
+      generateLightingConcept(aiParams),
+      generateZones(aiParams),
+      generateVariants(aiParams),
+    ])
+
+    console.log('All comprehensive moodboard data generated successfully')
+
     const compositeMoodboardEntry = {
       url: imageUrl,
       prompt: enhancedPrompt,
@@ -209,6 +244,12 @@ export const generateMoodboardImages = async (req, res, next) => {
     moodboard.compositeMoodboard = compositeMoodboardEntry
     moodboard.generatedImages = [generatedImageEntry]
     moodboard.colorPalette = compositeColorPalette
+    moodboard.designNarrative = designNarrative
+    moodboard.materials = materials
+    moodboard.furniture = furniture
+    moodboard.lightingConcept = lightingConcept
+    moodboard.zones = zones
+    moodboard.variants = variants
     moodboard.status = 'completed'
     await moodboard.save()
 

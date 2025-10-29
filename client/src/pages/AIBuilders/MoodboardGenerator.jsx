@@ -1,6 +1,14 @@
 // File: client/src/pages/AIBuilders/MoodboardGenerator.jsx
 import TopBar from '@/components/Layout/Topbar'
 import { useCreateMoodboard, useGenerateMoodboard } from '@/hooks/useMoodboard'
+import {
+  DesignNarrativeCard,
+  MaterialsCard,
+  FurnitureCard,
+  LightingConceptCard,
+  ZonesCard,
+  VariantsCard,
+} from '@/components/Moodboard/MoodboardDetails'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ChefHat,
@@ -260,6 +268,38 @@ const MoodboardGenerator = () => {
               moodDescription={composite.metadata.moodDescription}
             />
           )}
+
+        {/* Design Narrative */}
+        {currentMoodboard.designNarrative && (
+          <DesignNarrativeCard narrative={currentMoodboard.designNarrative} />
+        )}
+
+        {/* Materials */}
+        {currentMoodboard.materials && (
+          <MaterialsCard materials={currentMoodboard.materials} />
+        )}
+
+        {/* Furniture */}
+        {currentMoodboard.furniture && (
+          <FurnitureCard furniture={currentMoodboard.furniture} />
+        )}
+
+        {/* Lighting Concept */}
+        {currentMoodboard.lightingConcept && (
+          <LightingConceptCard
+            lightingConcept={currentMoodboard.lightingConcept}
+          />
+        )}
+
+        {/* Zones */}
+        {currentMoodboard.zones && currentMoodboard.zones.length > 0 && (
+          <ZonesCard zones={currentMoodboard.zones} />
+        )}
+
+        {/* Variants */}
+        {currentMoodboard.variants && currentMoodboard.variants.length > 0 && (
+          <VariantsCard variants={currentMoodboard.variants} />
+        )}
 
         {/* Regenerate Button */}
         <motion.button

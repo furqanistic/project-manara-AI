@@ -415,6 +415,598 @@ export const editImage = async (
 }
 
 /**
+ * Generate comprehensive design narrative
+ */
+export const generateDesignNarrative = async ({
+  style,
+  roomType,
+  colorPalette,
+  prompt,
+}) => {
+  try {
+    if (USE_MOCK) {
+      return getMockDesignNarrative(style, roomType)
+    }
+
+    if (!GEMINI_API_KEY) {
+      return getMockDesignNarrative(style, roomType)
+    }
+
+    initializeGemini()
+
+    const colorNames = colorPalette.map((c) => c.name).join(', ')
+
+    const narrativePrompt = `As an interior design expert, create a comprehensive design narrative for:
+
+Design Details:
+- Style: ${style}
+- Room Type: ${roomType?.replace(/_/g, ' ')}
+- Color Palette: ${colorNames}
+- Design Brief: ${prompt}
+
+Please provide a JSON response with:
+1. "narrative" - 1-2 compelling sentences describing the overall design concept and approach (150-250 characters)
+2. "vibe" - The emotional atmosphere this design creates (20-40 words)
+3. "lifestyle" - How this design serves the client's lifestyle (20-40 words)
+
+Format: { "narrative": "...", "vibe": "...", "lifestyle": "..." }`
+
+    const result = await textModel.generateContent(narrativePrompt)
+    const response = result.response
+    const text = response.text()
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      const narrativeData = JSON.parse(jsonMatch[0])
+      return {
+        narrative: narrativeData.narrative || '',
+        vibe: narrativeData.vibe || '',
+        lifestyle: narrativeData.lifestyle || '',
+      }
+    }
+
+    return getMockDesignNarrative(style, roomType)
+  } catch (error) {
+    console.error('Error generating design narrative:', error)
+    return getMockDesignNarrative(style, roomType)
+  }
+}
+
+/**
+ * Generate materials specifications
+ */
+export const generateMaterials = async ({
+  style,
+  roomType,
+  colorPalette,
+  prompt,
+}) => {
+  try {
+    if (USE_MOCK) {
+      return getMockMaterials(style, roomType)
+    }
+
+    if (!GEMINI_API_KEY) {
+      return getMockMaterials(style, roomType)
+    }
+
+    initializeGemini()
+
+    const colorNames = colorPalette.map((c) => c.name).join(', ')
+
+    const materialsPrompt = `As an interior design expert, specify materials for:
+
+Design Details:
+- Style: ${style}
+- Room Type: ${roomType?.replace(/_/g, ' ')}
+- Color Palette: ${colorNames}
+- Design Brief: ${prompt}
+
+Provide a JSON response with material specifications for:
+1. "floors" - 1-2 flooring options (type, finish, color, texture, maintenance, source)
+2. "walls" - 1-2 wall finish options (type, finish, color, texture, maintenance, source)
+3. "tiles" - 1-2 tile options if applicable (type, finish, color, texture, maintenance, source)
+4. "fabrics" - 2-3 fabric swatches (type, color, texture, maintenance, source)
+5. "metals" - 1-2 metal finishes (type, finish, notes)
+6. "woods" - 1-2 wood finishes (type, finish, color, texture, notes)
+
+For each material include: type (required), finish, color, texture, maintenance (low/medium/high), source/brand, notes
+
+Format: { "floors": [...], "walls": [...], "tiles": [...], "fabrics": [...], "metals": [...], "woods": [...] }`
+
+    const result = await textModel.generateContent(materialsPrompt)
+    const response = result.response
+    const text = response.text()
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0])
+    }
+
+    return getMockMaterials(style, roomType)
+  } catch (error) {
+    console.error('Error generating materials:', error)
+    return getMockMaterials(style, roomType)
+  }
+}
+
+/**
+ * Generate furniture specifications
+ */
+export const generateFurniture = async ({
+  style,
+  roomType,
+  colorPalette,
+  prompt,
+}) => {
+  try {
+    if (USE_MOCK) {
+      return getMockFurniture(style, roomType)
+    }
+
+    if (!GEMINI_API_KEY) {
+      return getMockFurniture(style, roomType)
+    }
+
+    initializeGemini()
+
+    const colorNames = colorPalette.map((c) => c.name).join(', ')
+
+    const furniturePrompt = `As an interior design expert, specify furniture for:
+
+Design Details:
+- Style: ${style}
+- Room Type: ${roomType?.replace(/_/g, ' ')}
+- Color Palette: ${colorNames}
+- Design Brief: ${prompt}
+
+Provide a JSON response with:
+1. "heroPieces" - 3-5 must-have furniture pieces with:
+   - name (required)
+   - category (seating/tables/storage/beds/lighting/decor/other)
+   - dimensions (length, width, height in cm)
+   - scaleNotes (how it fits the space)
+   - source (where to buy/brand)
+   - brand
+   - placement (where in room)
+   - isHero: true
+
+2. "alternates" - 1-2 alternative options per category with same structure, isHero: false
+
+Format: { "heroPieces": [...], "alternates": [...] }`
+
+    const result = await textModel.generateContent(furniturePrompt)
+    const response = result.response
+    const text = response.text()
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0])
+    }
+
+    return getMockFurniture(style, roomType)
+  } catch (error) {
+    console.error('Error generating furniture:', error)
+    return getMockFurniture(style, roomType)
+  }
+}
+
+/**
+ * Generate lighting concept
+ */
+export const generateLightingConcept = async ({
+  style,
+  roomType,
+  colorPalette,
+  prompt,
+}) => {
+  try {
+    if (USE_MOCK) {
+      return getMockLighting(style, roomType)
+    }
+
+    if (!GEMINI_API_KEY) {
+      return getMockLighting(style, roomType)
+    }
+
+    initializeGemini()
+
+    const colorNames = colorPalette.map((c) => c.name).join(', ')
+
+    const lightingPrompt = `As an interior design expert, create a lighting concept for:
+
+Design Details:
+- Style: ${style}
+- Room Type: ${roomType?.replace(/_/g, ' ')}
+- Color Palette: ${colorNames}
+- Design Brief: ${prompt}
+
+Provide a JSON response with:
+1. "ambient" - 1-2 ambient lighting fixtures (name, type, placement, kelvin, lumens, notes, source)
+2. "task" - 1-2 task lighting fixtures (same structure)
+3. "accent" - 1-2 accent lighting fixtures (same structure)
+4. "dayMood" - {description: how space feels during day, lightingNotes: natural light strategy}
+5. "nightMood" - {description: how space feels at night, lightingNotes: artificial lighting strategy}
+
+Types: pendant, chandelier, recessed, wall_sconce, floor_lamp, table_lamp, track, strip, other
+Kelvin range: 2700K (warm) to 5000K (cool)
+
+Format: { "ambient": [...], "task": [...], "accent": [...], "dayMood": {...}, "nightMood": {...} }`
+
+    const result = await textModel.generateContent(lightingPrompt)
+    const response = result.response
+    const text = response.text()
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0])
+    }
+
+    return getMockLighting(style, roomType)
+  } catch (error) {
+    console.error('Error generating lighting:', error)
+    return getMockLighting(style, roomType)
+  }
+}
+
+/**
+ * Generate zones/layout diagram
+ */
+export const generateZones = async ({ style, roomType, prompt }) => {
+  try {
+    if (USE_MOCK) {
+      return getMockZones(roomType)
+    }
+
+    if (!GEMINI_API_KEY) {
+      return getMockZones(roomType)
+    }
+
+    initializeGemini()
+
+    const zonesPrompt = `As an interior design expert, define functional zones for:
+
+Design Details:
+- Style: ${style}
+- Room Type: ${roomType?.replace(/_/g, ' ')}
+- Design Brief: ${prompt}
+
+Provide a JSON response with 2-4 zones, each with:
+- name (required, e.g., "Seating Area", "Dining Zone")
+- purpose (what happens here)
+- focalPoint (visual anchor)
+- flowDirection (how people move through)
+
+Format: [{ "name": "...", "purpose": "...", "focalPoint": "...", "flowDirection": "..." }, ...]`
+
+    const result = await textModel.generateContent(zonesPrompt)
+    const response = result.response
+    const text = response.text()
+
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0])
+    }
+
+    return getMockZones(roomType)
+  } catch (error) {
+    console.error('Error generating zones:', error)
+    return getMockZones(roomType)
+  }
+}
+
+/**
+ * Generate variant options (A/B alternatives)
+ */
+export const generateVariants = async ({
+  style,
+  roomType,
+  colorPalette,
+  prompt,
+}) => {
+  try {
+    if (USE_MOCK) {
+      return getMockVariants(style)
+    }
+
+    if (!GEMINI_API_KEY) {
+      return getMockVariants(style)
+    }
+
+    initializeGemini()
+
+    const colorNames = colorPalette.map((c) => c.name).join(', ')
+
+    const variantsPrompt = `As an interior design expert, create 2 design variants for:
+
+Design Details:
+- Style: ${style}
+- Room Type: ${roomType?.replace(/_/g, ' ')}
+- Color Palette: ${colorNames}
+- Design Brief: ${prompt}
+
+Provide a JSON response with 2 variant options (e.g., "Option A: Warm Minimal" vs "Option B: Textured Minimal"):
+Each variant should have:
+- name (required, e.g., "Option A: Warm Minimal")
+- description (how this variant differs)
+- differences (array of 3-4 key differences)
+
+Format: [{ "name": "...", "description": "...", "differences": ["...", "..."] }, ...]`
+
+    const result = await textModel.generateContent(variantsPrompt)
+    const response = result.response
+    const text = response.text()
+
+    const jsonMatch = text.match(/\[[\s\S]*\]/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0])
+    }
+
+    return getMockVariants(style)
+  } catch (error) {
+    console.error('Error generating variants:', error)
+    return getMockVariants(style)
+  }
+}
+
+// Mock data functions for fallback
+const getMockDesignNarrative = (style, roomType) => ({
+  narrative: `This ${style} ${
+    roomType?.replace(/_/g, ' ') || 'space'
+  } embraces a thoughtful balance of form and function, creating an environment that feels both intentional and welcoming.`,
+  vibe: `A refined atmosphere that combines ${style} aesthetics with comfortable, livable design elements that invite daily use.`,
+  lifestyle: `Designed for modern living, this space supports both relaxation and productivity while maintaining a cohesive aesthetic that reflects personal style.`,
+})
+
+const getMockMaterials = (style, roomType) => ({
+  floors: [
+    {
+      type: 'Engineered Hardwood',
+      finish: 'Matte',
+      color: 'Natural Oak',
+      texture: 'Smooth with subtle grain',
+      maintenance: 'medium',
+      source: 'Local flooring supplier',
+      notes: 'Durable and timeless',
+    },
+  ],
+  walls: [
+    {
+      type: 'Paint',
+      finish: 'Eggshell',
+      color: 'Warm White',
+      texture: 'Smooth',
+      maintenance: 'low',
+      source: 'Benjamin Moore',
+      notes: 'Easy to maintain',
+    },
+  ],
+  tiles: [
+    {
+      type: 'Ceramic',
+      finish: 'Glazed',
+      color: 'Neutral Gray',
+      texture: 'Smooth',
+      maintenance: 'low',
+      source: 'Local tile shop',
+      notes: 'Water-resistant',
+    },
+  ],
+  fabrics: [
+    {
+      type: 'Linen',
+      color: 'Natural',
+      texture: 'Textured weave',
+      maintenance: 'medium',
+      source: 'Fabric store',
+      notes: 'Breathable and elegant',
+    },
+    {
+      type: 'Cotton',
+      color: 'Soft Gray',
+      texture: 'Smooth',
+      maintenance: 'low',
+      source: 'Fabric store',
+      notes: 'Easy care',
+    },
+  ],
+  metals: [
+    {
+      type: 'Brass',
+      finish: 'Brushed',
+      notes: 'Warm metallic accent',
+    },
+  ],
+  woods: [
+    {
+      type: 'Walnut',
+      finish: 'Natural',
+      color: 'Rich brown',
+      texture: 'Visible grain',
+      notes: 'Adds warmth and depth',
+    },
+  ],
+})
+
+const getMockFurniture = (style, roomType) => ({
+  heroPieces: [
+    {
+      name: 'Sectional Sofa',
+      category: 'seating',
+      dimensions: { length: 240, width: 160, height: 85, unit: 'cm' },
+      scaleNotes: 'Anchors the space, proportional to room size',
+      source: 'West Elm',
+      brand: 'West Elm',
+      placement: 'Against main wall',
+      isHero: true,
+    },
+    {
+      name: 'Coffee Table',
+      category: 'tables',
+      dimensions: { length: 120, width: 60, height: 45, unit: 'cm' },
+      scaleNotes: 'Centered in seating area',
+      source: 'CB2',
+      brand: 'CB2',
+      placement: 'Center of seating zone',
+      isHero: true,
+    },
+    {
+      name: 'Statement Floor Lamp',
+      category: 'lighting',
+      dimensions: { length: 40, width: 40, height: 165, unit: 'cm' },
+      scaleNotes: 'Provides ambient lighting',
+      source: 'Lumens',
+      brand: 'Lumens',
+      placement: 'Corner accent',
+      isHero: true,
+    },
+  ],
+  alternates: [
+    {
+      name: 'Modular Sofa',
+      category: 'seating',
+      dimensions: { length: 220, width: 150, height: 80, unit: 'cm' },
+      scaleNotes: 'Alternative configuration',
+      source: 'Article',
+      brand: 'Article',
+      placement: 'Against main wall',
+      isHero: false,
+    },
+  ],
+})
+
+const getMockLighting = (style, roomType) => ({
+  ambient: [
+    {
+      name: 'Recessed LED Ceiling Lights',
+      type: 'recessed',
+      placement: 'Evenly spaced ceiling',
+      kelvin: 3000,
+      lumens: 800,
+      notes: 'Dimmable for mood control',
+      source: 'Philips Hue',
+    },
+  ],
+  task: [
+    {
+      name: 'Reading Floor Lamp',
+      type: 'floor_lamp',
+      placement: 'Next to seating',
+      kelvin: 3500,
+      lumens: 600,
+      notes: 'Adjustable arm',
+      source: 'Lamps Plus',
+    },
+  ],
+  accent: [
+    {
+      name: 'LED Strip Lighting',
+      type: 'strip',
+      placement: 'Under shelving',
+      kelvin: 2700,
+      lumens: 400,
+      notes: 'Creates ambient glow',
+      source: 'Govee',
+    },
+  ],
+  dayMood: {
+    description: 'Bright and airy with natural light flooding the space',
+    lightingNotes:
+      'Maximize natural light through windows, use sheer curtains to diffuse harsh sunlight',
+  },
+  nightMood: {
+    description: 'Warm and intimate with layered lighting',
+    lightingNotes:
+      'Combine ambient ceiling lights (dimmed to 50%), task lighting for functionality, and accent lighting for atmosphere',
+  },
+})
+
+const getMockZones = (roomType) => {
+  const zoneMap = {
+    living_room: [
+      {
+        name: 'Seating Area',
+        purpose: 'Conversation and relaxation',
+        focalPoint: 'Fireplace or TV',
+        flowDirection: 'Open circulation around furniture',
+      },
+      {
+        name: 'Reading Nook',
+        purpose: 'Quiet retreat',
+        focalPoint: 'Window view',
+        flowDirection: 'Semi-private corner',
+      },
+    ],
+    bedroom: [
+      {
+        name: 'Sleeping Zone',
+        purpose: 'Rest and sleep',
+        focalPoint: 'Bed as centerpiece',
+        flowDirection: 'Clear path to bed',
+      },
+      {
+        name: 'Dressing Area',
+        purpose: 'Getting ready',
+        focalPoint: 'Wardrobe or closet',
+        flowDirection: 'Access to storage',
+      },
+    ],
+    kitchen: [
+      {
+        name: 'Cooking Zone',
+        purpose: 'Food preparation',
+        focalPoint: 'Stove and countertop',
+        flowDirection: 'Work triangle flow',
+      },
+      {
+        name: 'Dining Area',
+        purpose: 'Meals and gathering',
+        focalPoint: 'Dining table',
+        flowDirection: 'Easy access from kitchen',
+      },
+    ],
+  }
+
+  return (
+    zoneMap[roomType] || [
+      {
+        name: 'Main Area',
+        purpose: 'Primary function',
+        focalPoint: 'Central feature',
+        flowDirection: 'Natural circulation',
+      },
+    ]
+  )
+}
+
+const getMockVariants = (style) => [
+  {
+    name: `Option A: Warm ${
+      style.charAt(0).toUpperCase() + style.slice(1)
+    }`,
+    description: 'Emphasizes warmth through wood tones and soft textures',
+    differences: [
+      'Warmer color temperature (3000K lighting)',
+      'Natural wood finishes',
+      'Textured fabrics (linen, wool)',
+      'Earthy accent colors',
+    ],
+  },
+  {
+    name: `Option B: Cool ${
+      style.charAt(0).toUpperCase() + style.slice(1)
+    }`,
+    description: 'Focuses on clean lines and cooler tones',
+    differences: [
+      'Cooler color temperature (4000K lighting)',
+      'Metal and glass accents',
+      'Smooth, sleek fabrics',
+      'Neutral to cool accent colors',
+    ],
+  },
+]
+
+/**
  * Build an enhanced moodboard prompt
  */
 export const buildMoodboardPrompt = ({

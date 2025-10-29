@@ -47,6 +47,194 @@ const MoodDescriptionSchema = new mongoose.Schema(
   { _id: false }
 )
 
+// Design Narrative Schema - comprehensive design story
+const DesignNarrativeSchema = new mongoose.Schema(
+  {
+    narrative: {
+      type: String,
+      default: '',
+    },
+    vibe: {
+      type: String,
+      default: '',
+    },
+    lifestyle: {
+      type: String,
+      default: '',
+    },
+  },
+  { _id: false }
+)
+
+// Materials Schema
+const MaterialItemSchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      required: true,
+    },
+    finish: String,
+    color: String,
+    texture: String,
+    maintenance: {
+      type: String,
+      enum: ['low', 'medium', 'high'],
+      default: 'medium',
+    },
+    source: String,
+    notes: String,
+  },
+  { _id: false }
+)
+
+const MaterialsSchema = new mongoose.Schema(
+  {
+    floors: [MaterialItemSchema],
+    walls: [MaterialItemSchema],
+    tiles: [MaterialItemSchema],
+    fabrics: [MaterialItemSchema],
+    metals: [MaterialItemSchema],
+    woods: [MaterialItemSchema],
+  },
+  { _id: false }
+)
+
+// Furniture Schema
+const FurnitureItemSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+    },
+    category: {
+      type: String,
+      enum: [
+        'seating',
+        'tables',
+        'storage',
+        'beds',
+        'lighting',
+        'decor',
+        'other',
+      ],
+      default: 'other',
+    },
+    dimensions: {
+      length: Number,
+      width: Number,
+      height: Number,
+      unit: {
+        type: String,
+        enum: ['cm', 'inch', 'ft'],
+        default: 'cm',
+      },
+    },
+    scaleNotes: String,
+    source: String,
+    brand: String,
+    imageUrl: String,
+    placement: String,
+    isHero: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: false }
+)
+
+const FurnitureSchema = new mongoose.Schema(
+  {
+    heroPieces: [FurnitureItemSchema],
+    alternates: [FurnitureItemSchema],
+  },
+  { _id: false }
+)
+
+// Lighting Schema
+const LightingItemSchema = new mongoose.Schema(
+  {
+    name: String,
+    type: {
+      type: String,
+      enum: [
+        'pendant',
+        'chandelier',
+        'recessed',
+        'wall_sconce',
+        'floor_lamp',
+        'table_lamp',
+        'track',
+        'strip',
+        'other',
+      ],
+    },
+    placement: String,
+    kelvin: {
+      type: Number,
+      min: 1000,
+      max: 10000,
+    },
+    lumens: Number,
+    notes: String,
+    source: String,
+  },
+  { _id: false }
+)
+
+const LightingConceptSchema = new mongoose.Schema(
+  {
+    ambient: [LightingItemSchema],
+    task: [LightingItemSchema],
+    accent: [LightingItemSchema],
+    dayMood: {
+      description: String,
+      lightingNotes: String,
+    },
+    nightMood: {
+      description: String,
+      lightingNotes: String,
+    },
+  },
+  { _id: false }
+)
+
+// Zone/Layout Schema
+const ZoneSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+    },
+    purpose: String,
+    focalPoint: String,
+    flowDirection: String,
+    dimensions: {
+      x: Number,
+      y: Number,
+      width: Number,
+      height: Number,
+    },
+  },
+  { _id: false }
+)
+
+// Variant Schema for A/B options
+const VariantSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+    },
+    description: String,
+    differences: [String],
+    imageUrl: String,
+    colorPalette: [ColorPaletteSchema],
+    materials: MaterialsSchema,
+    furniture: FurnitureSchema,
+  },
+  { _id: false }
+)
+
 const ImageRegionSchema = new mongoose.Schema(
   {
     index: Number,
@@ -242,6 +430,36 @@ const MoodboardSchema = new mongoose.Schema(
     },
     lastViewedAt: {
       type: Date,
+    },
+    // Design Narrative - comprehensive design story (1-2 sentences)
+    designNarrative: {
+      type: DesignNarrativeSchema,
+      default: () => ({}),
+    },
+    // Materials - floor, wall, tiles, fabrics with maintenance level
+    materials: {
+      type: MaterialsSchema,
+      default: () => ({}),
+    },
+    // Furniture - hero pieces and alternates with scale notes
+    furniture: {
+      type: FurnitureSchema,
+      default: () => ({}),
+    },
+    // Lighting - ambient/task/accent with day vs night mood
+    lightingConcept: {
+      type: LightingConceptSchema,
+      default: () => ({}),
+    },
+    // Zones - layout diagram with flow and focal points
+    zones: {
+      type: [ZoneSchema],
+      default: [],
+    },
+    // Variants - A/B options for design alternatives
+    variants: {
+      type: [VariantSchema],
+      default: [],
     },
   },
   {
