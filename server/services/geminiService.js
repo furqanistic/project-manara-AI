@@ -483,11 +483,11 @@ export const generateMaterials = async ({
 }) => {
   try {
     if (USE_MOCK) {
-      return getMockMaterials(style, roomType)
+      return normalizeMaterialsData(getMockMaterials(style, roomType))
     }
 
     if (!GEMINI_API_KEY) {
-      return getMockMaterials(style, roomType)
+      return normalizeMaterialsData(getMockMaterials(style, roomType))
     }
 
     initializeGemini()
@@ -510,7 +510,7 @@ Provide a JSON response with material specifications for:
 5. "metals" - 1-2 metal finishes (type, finish, notes)
 6. "woods" - 1-2 wood finishes (type, finish, color, texture, notes)
 
-For each material include: type (required), finish, color, texture, maintenance (low/medium/high), source/brand, notes
+IMPORTANT: For maintenance field, use ONLY lowercase values: "low", "medium", or "high" (no other text)
 
 Format: { "floors": [...], "walls": [...], "tiles": [...], "fabrics": [...], "metals": [...], "woods": [...] }`
 
@@ -520,13 +520,14 @@ Format: { "floors": [...], "walls": [...], "tiles": [...], "fabrics": [...], "me
 
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
+      const materialsData = JSON.parse(jsonMatch[0])
+      return normalizeMaterialsData(materialsData)
     }
 
-    return getMockMaterials(style, roomType)
+    return normalizeMaterialsData(getMockMaterials(style, roomType))
   } catch (error) {
     console.error('Error generating materials:', error)
-    return getMockMaterials(style, roomType)
+    return normalizeMaterialsData(getMockMaterials(style, roomType))
   }
 }
 
@@ -827,6 +828,39 @@ const getMockMaterials = (style, roomType) => ({
     },
   ],
 })
+
+/**
+ * Normalize materials data to ensure maintenance values are lowercase
+ */
+const normalizeMaterialsData = (materials) => {
+  if (!materials) return materials
+
+  const normalizeMaintenance = (item) => {
+    if (item && item.maintenance) {
+      // Extract just low/medium/high from strings like "High (washable)"
+      const maintenanceValue = item.maintenance.toLowerCase().trim()
+      if (maintenanceValue.includes('low')) {
+        item.maintenance = 'low'
+      } else if (maintenanceValue.includes('medium')) {
+        item.maintenance = 'medium'
+      } else if (maintenanceValue.includes('high')) {
+        item.maintenance = 'high'
+      } else {
+        item.maintenance = 'medium' // default fallback
+      }
+    }
+    return item
+  }
+
+  return {
+    floors: materials.floors?.map(normalizeMaintenance) || [],
+    walls: materials.walls?.map(normalizeMaintenance) || [],
+    tiles: materials.tiles?.map(normalizeMaintenance) || [],
+    fabrics: materials.fabrics?.map(normalizeMaintenance) || [],
+    metals: materials.metals || [],
+    woods: materials.woods || [],
+  }
+}
 
 const getMockFurniture = (style, roomType) => ({
   heroPieces: [
