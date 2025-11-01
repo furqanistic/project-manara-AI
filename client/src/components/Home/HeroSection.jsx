@@ -137,7 +137,7 @@ const HeroSection = () => {
             className='w-48 h-48 rounded-full opacity-20'
             style={{
               background:
-                'radial-gradient(circle, rgba(147, 124, 96, 0.3) 0%, transparent 70%)',
+                'radial-gradient(circle, #937c604d 0%, transparent 70%)',
               filter: 'blur(20px)',
             }}
           />

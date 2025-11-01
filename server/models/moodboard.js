@@ -47,7 +47,6 @@ const MoodDescriptionSchema = new mongoose.Schema(
   { _id: false }
 )
 
-// Design Narrative Schema - comprehensive design story
 const DesignNarrativeSchema = new mongoose.Schema(
   {
     narrative: {
@@ -66,7 +65,6 @@ const DesignNarrativeSchema = new mongoose.Schema(
   { _id: false }
 )
 
-// Materials Schema
 const MaterialItemSchema = new mongoose.Schema(
   {
     type: {
@@ -99,7 +97,6 @@ const MaterialsSchema = new mongoose.Schema(
   { _id: false }
 )
 
-// Furniture Schema
 const FurnitureItemSchema = new mongoose.Schema(
   {
     name: {
@@ -150,7 +147,6 @@ const FurnitureSchema = new mongoose.Schema(
   { _id: false }
 )
 
-// Lighting Schema
 const LightingItemSchema = new mongoose.Schema(
   {
     name: String,
@@ -198,7 +194,6 @@ const LightingConceptSchema = new mongoose.Schema(
   { _id: false }
 )
 
-// Zone/Layout Schema
 const ZoneSchema = new mongoose.Schema(
   {
     name: {
@@ -218,7 +213,6 @@ const ZoneSchema = new mongoose.Schema(
   { _id: false }
 )
 
-// Variant Schema for A/B options
 const VariantSchema = new mongoose.Schema(
   {
     name: {
@@ -313,6 +307,11 @@ const MoodboardSchema = new mongoose.Schema(
         'eclectic',
         'mid-century',
         'luxury',
+        'art-deco',
+        'mediterranean',
+        'japanese',
+        'industrial-chic',
+        'transitional',
         'custom',
       ],
       default: 'modern',
@@ -326,17 +325,23 @@ const MoodboardSchema = new mongoose.Schema(
         'bathroom',
         'dining_room',
         'office',
+        'home_office',
         'outdoor',
-        'entryway',
+        'hallway',
+        'kids_room',
+        'commercial',
+        'restaurant',
         'other',
       ],
     },
-    // User-selected color preferences (simple strings)
     colorPreferences: {
       type: [String],
       default: [],
     },
-    // Extracted color palette (full color objects with hex, rgb, etc.)
+    paletteColors: {
+      type: [String],
+      default: [],
+    },
     colorPalette: {
       type: [ColorPaletteSchema],
       default: [],
@@ -344,13 +349,13 @@ const MoodboardSchema = new mongoose.Schema(
     layout: {
       type: String,
       enum: ['grid', 'collage', 'single'],
-      default: 'grid',
+      default: 'collage',
     },
     imageCount: {
       type: Number,
       min: 1,
       max: 6,
-      default: 4,
+      default: 1,
     },
     aspectRatio: {
       type: String,
@@ -366,7 +371,7 @@ const MoodboardSchema = new mongoose.Schema(
         '5:4',
         '3:2',
       ],
-      default: '1:1',
+      default: '16:9',
     },
     referenceImages: [
       {
@@ -374,7 +379,6 @@ const MoodboardSchema = new mongoose.Schema(
         description: String,
       },
     ],
-    // Individual generated images (stored for editing)
     generatedImages: [
       {
         url: String,
@@ -394,7 +398,6 @@ const MoodboardSchema = new mongoose.Schema(
         metadata: GeneratedImageMetadataSchema,
       },
     ],
-    // Composite moodboard (the final combined image)
     compositeMoodboard: {
       url: String,
       prompt: String,
@@ -419,7 +422,6 @@ const MoodboardSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    // Analytics
     viewCount: {
       type: Number,
       default: 0,
@@ -431,32 +433,26 @@ const MoodboardSchema = new mongoose.Schema(
     lastViewedAt: {
       type: Date,
     },
-    // Design Narrative - comprehensive design story (1-2 sentences)
     designNarrative: {
       type: DesignNarrativeSchema,
       default: () => ({}),
     },
-    // Materials - floor, wall, tiles, fabrics with maintenance level
     materials: {
       type: MaterialsSchema,
       default: () => ({}),
     },
-    // Furniture - hero pieces and alternates with scale notes
     furniture: {
       type: FurnitureSchema,
       default: () => ({}),
     },
-    // Lighting - ambient/task/accent with day vs night mood
     lightingConcept: {
       type: LightingConceptSchema,
       default: () => ({}),
     },
-    // Zones - layout diagram with flow and focal points
     zones: {
       type: [ZoneSchema],
       default: [],
     },
-    // Variants - A/B options for design alternatives
     variants: {
       type: [VariantSchema],
       default: [],
@@ -469,40 +465,34 @@ const MoodboardSchema = new mongoose.Schema(
   }
 )
 
-// Compound indexes for better query performance
 MoodboardSchema.index({ userId: 1, createdAt: -1 })
 MoodboardSchema.index({ userId: 1, status: 1 })
 MoodboardSchema.index({ projectId: 1, createdAt: -1 })
 MoodboardSchema.index({ isDeleted: 1, userId: 1 })
 
-// Query middleware to exclude deleted moodboards by default
 MoodboardSchema.pre(/^find/, function (next) {
   this.find({ isDeleted: { $ne: true } })
   next()
 })
 
-// Instance method to increment view count
 MoodboardSchema.methods.incrementViewCount = async function () {
   this.viewCount += 1
   this.lastViewedAt = new Date()
   await this.save({ validateBeforeSave: false })
 }
 
-// Instance method to increment download count
 MoodboardSchema.methods.incrementDownloadCount = async function () {
   this.downloadCount += 1
   await this.save({ validateBeforeSave: false })
 }
 
-// Virtual for dominant color
 MoodboardSchema.virtual('dominantColor').get(function () {
   if (this.colorPalette && this.colorPalette.length > 0) {
     return this.colorPalette[0].hex
   }
-  return '#947d61' // Default brand color
+  return '#937c60'
 })
 
-// Virtual for mood summary
 MoodboardSchema.virtual('moodSummary').get(function () {
   if (this.compositeMoodboard?.metadata?.moodDescription) {
     const mood = this.compositeMoodboard.metadata.moodDescription

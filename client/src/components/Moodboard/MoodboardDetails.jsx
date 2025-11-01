@@ -1,15 +1,8 @@
 // File: client/src/components/Moodboard/MoodboardDetails.jsx
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-  FileText,
-  Package,
-  Sofa,
-  Lightbulb,
-  Map,
-  GitCompare,
-  Download,
-} from 'lucide-react'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Lightbulb, Map, Package, Sofa, TextIcon } from 'lucide-react'
 import React, { useState } from 'react'
+import { BRAND_COLOR } from './Moodboardconfig'
 
 // Main Moodboard Details with Tabs
 export const MoodboardDetailsPanel = ({ moodboard }) => {
@@ -18,28 +11,27 @@ export const MoodboardDetailsPanel = ({ moodboard }) => {
   if (!moodboard) return null
 
   const tabs = [
-    { id: 'overview', label: 'Overview', icon: FileText },
+    { id: 'overview', label: 'Overview', icon: TextIcon },
     { id: 'materials', label: 'Materials', icon: Package },
     { id: 'furniture', label: 'Furniture', icon: Sofa },
     { id: 'lighting', label: 'Lighting', icon: Lightbulb },
     { id: 'layout', label: 'Layout', icon: Map },
-    { id: 'variants', label: 'Options', icon: GitCompare },
   ]
 
   return (
     <div className='w-full'>
       {/* Tab Navigation */}
-      <div className='flex gap-2 mb-6 overflow-x-auto pb-2'>
+      <div className='flex gap-1 mb-8 overflow-x-auto pb-2 border-b border-gray-200'>
         {tabs.map((tab) => {
           const Icon = tab.icon
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition-all whitespace-nowrap border-b-2 ${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-[#947d61] to-[#a68970] text-white shadow-lg'
-                  : 'bg-white/5 text-white/60 hover:bg-white/10 hover:text-white/80'
+                  ? 'text-gray-900 border-gray-900'
+                  : 'text-gray-500 border-transparent hover:text-gray-700'
               }`}
             >
               <Icon className='w-4 h-4' />
@@ -69,9 +61,6 @@ export const MoodboardDetailsPanel = ({ moodboard }) => {
             <LightingTab lightingConcept={moodboard.lightingConcept} />
           )}
           {activeTab === 'layout' && <LayoutTab zones={moodboard.zones} />}
-          {activeTab === 'variants' && (
-            <VariantsTab variants={moodboard.variants} />
-          )}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -86,56 +75,60 @@ const OverviewTab = ({ moodboard }) => {
     moodboard.compositeMoodboard?.metadata?.moodDescription
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-8'>
       {/* Design Narrative */}
       {narrative && narrative.narrative && (
-        <div className='bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10'>
-          <h3 className='text-2xl font-bold text-white mb-4'>
-            Design Narrative
+        <section>
+          <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+            Design Concept
           </h3>
-          <p className='text-white/90 text-lg leading-relaxed mb-6'>
+          <p className='text-gray-700 leading-relaxed text-base mb-6'>
             {narrative.narrative}
           </p>
 
           <div className='grid md:grid-cols-2 gap-4'>
             {narrative.vibe && (
-              <div className='bg-white/5 rounded-xl p-4'>
-                <h4 className='text-sm font-semibold text-[#947d61] mb-2'>
+              <div className='p-4 bg-gray-50 rounded-lg border border-gray-200'>
+                <h4 className='text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide'>
                   The Vibe
                 </h4>
-                <p className='text-white/80'>{narrative.vibe}</p>
+                <p className='text-gray-800'>{narrative.vibe}</p>
               </div>
             )}
             {narrative.lifestyle && (
-              <div className='bg-white/5 rounded-xl p-4'>
-                <h4 className='text-sm font-semibold text-[#947d61] mb-2'>
+              <div className='p-4 bg-gray-50 rounded-lg border border-gray-200'>
+                <h4 className='text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide'>
                   Lifestyle Fit
                 </h4>
-                <p className='text-white/80'>{narrative.lifestyle}</p>
+                <p className='text-gray-800'>{narrative.lifestyle}</p>
               </div>
             )}
           </div>
-        </div>
+        </section>
       )}
 
       {/* Mood & Colors */}
       {(moodDescription || colorPalette.length > 0) && (
-        <div className='bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-6 border border-white/10'>
+        <section className='space-y-6'>
           {moodDescription && (
-            <div className='mb-6'>
-              <div className='flex items-center gap-3 mb-3'>
-                <h3 className='text-2xl font-bold text-white'>
+            <div>
+              <div className='mb-4'>
+                <h3 className='text-lg font-semibold text-gray-900 mb-2'>
                   {moodDescription.mood}
                 </h3>
-                <span className='text-white/60'>• {moodDescription.feeling}</span>
+                <p className='text-sm text-gray-600'>
+                  {moodDescription.feeling}
+                </p>
               </div>
-              <p className='text-white/80 mb-4'>{moodDescription.description}</p>
+              <p className='text-gray-700 leading-relaxed mb-4'>
+                {moodDescription.description}
+              </p>
               {moodDescription.keywords && (
                 <div className='flex flex-wrap gap-2'>
                   {moodDescription.keywords.map((keyword, index) => (
                     <span
                       key={index}
-                      className='px-3 py-1 bg-[#947d61]/20 border border-[#947d61]/30 rounded-full text-sm text-white/80'
+                      className='px-3 py-1 bg-gray-100 border border-gray-300 rounded-full text-sm text-gray-700'
                     >
                       {keyword}
                     </span>
@@ -147,29 +140,29 @@ const OverviewTab = ({ moodboard }) => {
 
           {colorPalette.length > 0 && (
             <div>
-              <h4 className='text-lg font-semibold text-white mb-3'>
+              <h4 className='text-base font-semibold text-gray-900 mb-4'>
                 Color Palette
               </h4>
               <div className='grid grid-cols-5 gap-3'>
                 {colorPalette.map((color, index) => (
                   <div key={index} className='group'>
                     <div
-                      className='w-full aspect-square rounded-xl shadow-lg cursor-pointer transition-transform hover:scale-105 mb-2'
+                      className='w-full aspect-square rounded-lg shadow-sm border border-gray-200 cursor-pointer transition-transform hover:shadow-md'
                       style={{ backgroundColor: color.hex }}
                       title={`${color.name} - ${color.hex}`}
                     />
-                    <div className='text-center'>
-                      <div className='text-xs font-medium text-white/80'>
+                    <div className='mt-2'>
+                      <div className='text-xs font-medium text-gray-900'>
                         {color.name}
                       </div>
-                      <div className='text-xs text-white/50'>{color.hex}</div>
+                      <div className='text-xs text-gray-500'>{color.hex}</div>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
-        </div>
+        </section>
       )}
     </div>
   )
@@ -177,69 +170,76 @@ const OverviewTab = ({ moodboard }) => {
 
 // Materials Tab
 const MaterialsTab = ({ materials }) => {
-  if (!materials) return <EmptyState message='No materials specified' />
+  if (
+    !materials ||
+    Object.keys(materials).every(
+      (k) => !materials[k] || materials[k].length === 0
+    )
+  ) {
+    return <EmptyState message='No materials specified' />
+  }
 
   const categories = [
-    { key: 'floors', label: 'Flooring', icon: '🏠' },
-    { key: 'walls', label: 'Walls', icon: '🎨' },
-    { key: 'tiles', label: 'Tiles', icon: '⬜' },
-    { key: 'fabrics', label: 'Fabrics', icon: '🧵' },
-    { key: 'metals', label: 'Metals', icon: '⚙️' },
-    { key: 'woods', label: 'Woods', icon: '🌳' },
+    { key: 'floors', label: 'Flooring' },
+    { key: 'walls', label: 'Walls' },
+    { key: 'tiles', label: 'Tiles' },
+    { key: 'fabrics', label: 'Fabrics' },
+    { key: 'metals', label: 'Metals' },
+    { key: 'woods', label: 'Woods' },
   ]
 
   const maintenanceColors = {
-    low: 'bg-green-500/20 text-green-400 border-green-500/30',
-    medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
-    high: 'bg-red-500/20 text-red-400 border-red-500/30',
+    low: 'bg-green-50 text-green-700 border-green-200',
+    medium: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+    high: 'bg-red-50 text-red-700 border-red-200',
   }
 
   return (
-    <div className='grid md:grid-cols-2 gap-6'>
+    <div className='space-y-8'>
       {categories.map((category) => {
         const items = materials[category.key]
         if (!items || items.length === 0) return null
 
         return (
-          <div
-            key={category.key}
-            className='bg-gradient-to-br from-white/10 to-white/5 rounded-2xl p-5 border border-white/10'
-          >
-            <h3 className='text-lg font-bold text-white mb-4 flex items-center gap-2'>
-              <span className='text-2xl'>{category.icon}</span>
+          <section key={category.key}>
+            <h3 className='text-lg font-semibold text-gray-900 mb-4'>
               {category.label}
             </h3>
 
-            <div className='space-y-4'>
+            <div className='space-y-3'>
               {items.map((item, idx) => (
-                <div key={idx} className='bg-white/5 rounded-xl p-4 space-y-2'>
-                  <div className='font-semibold text-white text-lg'>
+                <div
+                  key={idx}
+                  className='p-4 bg-gray-50 border border-gray-200 rounded-lg'
+                >
+                  <div className='font-semibold text-gray-900 mb-3'>
                     {item.type}
                   </div>
 
-                  <div className='grid grid-cols-2 gap-2 text-sm'>
+                  <div className='grid grid-cols-2 gap-3 text-sm mb-3'>
                     {item.finish && (
-                      <div className='text-white/70'>
-                        <span className='text-white/50'>Finish:</span>{' '}
-                        {item.finish}
+                      <div>
+                        <span className='text-gray-600'>Finish: </span>
+                        <span className='text-gray-900'>{item.finish}</span>
                       </div>
                     )}
                     {item.color && (
-                      <div className='text-white/70'>
-                        <span className='text-white/50'>Color:</span> {item.color}
+                      <div>
+                        <span className='text-gray-600'>Color: </span>
+                        <span className='text-gray-900'>{item.color}</span>
                       </div>
                     )}
                   </div>
 
                   {item.texture && (
-                    <div className='text-sm text-white/70'>
-                      <span className='text-white/50'>Texture:</span>{' '}
-                      {item.texture}
+                    <div className='text-sm mb-3'>
+                      <span className='text-gray-600'>Texture: </span>
+                      <span className='text-gray-900'>{item.texture}</span>
                     </div>
                   )}
 
                   {item.maintenance && (
-                    <div className='pt-2'>
+                    <div className='mb-3'>
                       <span
                         className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${
                           maintenanceColors[item.maintenance]
@@ -251,20 +251,20 @@ const MaterialsTab = ({ materials }) => {
                   )}
 
                   {item.source && (
-                    <div className='text-xs text-white/50 pt-2 border-t border-white/10'>
-                      {item.source}
+                    <div className='text-xs text-gray-500 pt-2 border-t border-gray-200'>
+                      Source: {item.source}
                     </div>
                   )}
 
                   {item.notes && (
-                    <div className='text-xs text-white/60 italic'>
+                    <div className='text-xs text-gray-600 mt-2 italic'>
                       {item.notes}
                     </div>
                   )}
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )
       })}
     </div>
@@ -277,30 +277,29 @@ const FurnitureTab = ({ furniture }) => {
     return <EmptyState message='No furniture specified' />
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-8'>
       {/* Hero Pieces */}
-      <div>
-        <h3 className='text-xl font-bold text-white mb-4 flex items-center gap-2'>
-          <span className='w-3 h-3 bg-yellow-400 rounded-full'></span>
-          Must-Have Pieces
-        </h3>
+      <section>
+        <h3 className='text-lg font-semibold text-gray-900 mb-4'>Key Pieces</h3>
         <div className='grid md:grid-cols-2 gap-4'>
           {furniture.heroPieces.map((piece, idx) => (
             <div
               key={idx}
-              className='bg-gradient-to-br from-yellow-500/10 to-orange-500/5 rounded-2xl p-5 border border-yellow-400/20'
+              className='p-5 bg-gray-50 border border-gray-200 rounded-lg'
             >
               <div className='mb-3'>
-                <h4 className='font-bold text-white text-xl'>{piece.name}</h4>
-                <p className='text-white/60 text-sm capitalize'>
+                <h4 className='font-semibold text-gray-900 text-base'>
+                  {piece.name}
+                </h4>
+                <p className='text-gray-600 text-sm capitalize mt-1'>
                   {piece.category}
                 </p>
               </div>
 
               {piece.dimensions && (
-                <div className='bg-white/10 rounded-lg p-3 mb-3'>
-                  <div className='text-sm text-white/50 mb-1'>Dimensions</div>
-                  <div className='text-white font-mono'>
+                <div className='bg-white rounded p-3 mb-3 border border-gray-200'>
+                  <div className='text-xs text-gray-600 mb-1'>Dimensions</div>
+                  <div className='text-sm font-mono text-gray-900'>
                     {piece.dimensions.length} × {piece.dimensions.width} ×{' '}
                     {piece.dimensions.height} {piece.dimensions.unit || 'cm'}
                   </div>
@@ -308,17 +307,17 @@ const FurnitureTab = ({ furniture }) => {
               )}
 
               {piece.scaleNotes && (
-                <p className='text-sm text-white/70 mb-3 italic'>
+                <p className='text-sm text-gray-700 mb-3 italic'>
                   "{piece.scaleNotes}"
                 </p>
               )}
 
-              <div className='flex items-center justify-between text-sm pt-3 border-t border-white/10'>
+              <div className='flex items-center justify-between text-xs pt-3 border-t border-gray-200'>
                 {piece.placement && (
-                  <span className='text-white/60'>{piece.placement}</span>
+                  <span className='text-gray-600'>{piece.placement}</span>
                 )}
                 {piece.source && (
-                  <span className='text-white/50'>
+                  <span className='text-gray-500'>
                     {piece.brand && `${piece.brand} • `}
                     {piece.source}
                   </span>
@@ -327,35 +326,36 @@ const FurnitureTab = ({ furniture }) => {
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Alternates */}
       {furniture.alternates && furniture.alternates.length > 0 && (
-        <div>
-          <h3 className='text-xl font-bold text-white mb-4 flex items-center gap-2'>
-            <span className='w-3 h-3 bg-blue-400 rounded-full'></span>
+        <section>
+          <h3 className='text-lg font-semibold text-gray-900 mb-4'>
             Alternative Options
           </h3>
           <div className='grid md:grid-cols-3 gap-4'>
             {furniture.alternates.map((piece, idx) => (
               <div
                 key={idx}
-                className='bg-white/5 rounded-xl p-4 border border-white/10'
+                className='p-4 bg-gray-50 border border-gray-200 rounded-lg'
               >
-                <h4 className='font-semibold text-white mb-1'>{piece.name}</h4>
-                <p className='text-white/50 text-sm mb-3 capitalize'>
+                <h4 className='font-semibold text-gray-900 mb-1'>
+                  {piece.name}
+                </h4>
+                <p className='text-gray-600 text-sm mb-3 capitalize'>
                   {piece.category}
                 </p>
 
                 {piece.dimensions && (
-                  <div className='text-xs text-white/60 mb-2 font-mono'>
+                  <div className='text-xs text-gray-600 mb-2 font-mono'>
                     {piece.dimensions.length}×{piece.dimensions.width}×
                     {piece.dimensions.height} {piece.dimensions.unit || 'cm'}
                   </div>
                 )}
 
                 {piece.source && (
-                  <div className='text-xs text-white/50'>
+                  <div className='text-xs text-gray-500'>
                     {piece.brand && `${piece.brand} • `}
                     {piece.source}
                   </div>
@@ -363,7 +363,7 @@ const FurnitureTab = ({ furniture }) => {
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
     </div>
   )
@@ -380,97 +380,102 @@ const LightingTab = ({ lightingConcept }) => {
     lightingConcept.accent?.length > 0
 
   return (
-    <div className='space-y-6'>
+    <div className='space-y-8'>
       {/* Day vs Night */}
       {(lightingConcept.dayMood || lightingConcept.nightMood) && (
-        <div className='grid md:grid-cols-2 gap-4'>
-          {lightingConcept.dayMood && (
-            <div className='bg-gradient-to-br from-orange-500/10 to-yellow-500/5 rounded-2xl p-5 border border-orange-400/20'>
-              <div className='text-4xl mb-3'>☀️</div>
-              <h3 className='text-xl font-bold text-white mb-2'>Daytime</h3>
-              <p className='text-white/80 mb-3'>
-                {lightingConcept.dayMood.description}
-              </p>
-              {lightingConcept.dayMood.lightingNotes && (
-                <p className='text-sm text-white/60 italic'>
-                  {lightingConcept.dayMood.lightingNotes}
+        <section>
+          <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+            Lighting Moods
+          </h3>
+          <div className='grid md:grid-cols-2 gap-4'>
+            {lightingConcept.dayMood && (
+              <div className='p-5 bg-amber-50 border border-amber-200 rounded-lg'>
+                <h4 className='text-base font-semibold text-gray-900 mb-2'>
+                  Daytime
+                </h4>
+                <p className='text-gray-700 text-sm mb-3'>
+                  {lightingConcept.dayMood.description}
                 </p>
-              )}
-            </div>
-          )}
+                {lightingConcept.dayMood.lightingNotes && (
+                  <p className='text-xs text-gray-600 italic'>
+                    {lightingConcept.dayMood.lightingNotes}
+                  </p>
+                )}
+              </div>
+            )}
 
-          {lightingConcept.nightMood && (
-            <div className='bg-gradient-to-br from-indigo-500/10 to-purple-500/5 rounded-2xl p-5 border border-indigo-400/20'>
-              <div className='text-4xl mb-3'>🌙</div>
-              <h3 className='text-xl font-bold text-white mb-2'>Nighttime</h3>
-              <p className='text-white/80 mb-3'>
-                {lightingConcept.nightMood.description}
-              </p>
-              {lightingConcept.nightMood.lightingNotes && (
-                <p className='text-sm text-white/60 italic'>
-                  {lightingConcept.nightMood.lightingNotes}
+            {lightingConcept.nightMood && (
+              <div className='p-5 bg-slate-50 border border-slate-200 rounded-lg'>
+                <h4 className='text-base font-semibold text-gray-900 mb-2'>
+                  Nighttime
+                </h4>
+                <p className='text-gray-700 text-sm mb-3'>
+                  {lightingConcept.nightMood.description}
                 </p>
-              )}
-            </div>
-          )}
-        </div>
+                {lightingConcept.nightMood.lightingNotes && (
+                  <p className='text-xs text-gray-600 italic'>
+                    {lightingConcept.nightMood.lightingNotes}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {/* Lighting Types */}
       {hasLighting && (
-        <div className='grid md:grid-cols-3 gap-4'>
-          {lightingConcept.ambient?.length > 0 && (
-            <LightingCategory
-              title='Ambient'
-              lights={lightingConcept.ambient}
-              color='blue'
-            />
-          )}
-          {lightingConcept.task?.length > 0 && (
-            <LightingCategory
-              title='Task'
-              lights={lightingConcept.task}
-              color='green'
-            />
-          )}
-          {lightingConcept.accent?.length > 0 && (
-            <LightingCategory
-              title='Accent'
-              lights={lightingConcept.accent}
-              color='purple'
-            />
-          )}
-        </div>
+        <section>
+          <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+            Light Fixtures
+          </h3>
+          <div className='grid md:grid-cols-3 gap-4'>
+            {lightingConcept.ambient?.length > 0 && (
+              <LightingCategory
+                title='Ambient'
+                lights={lightingConcept.ambient}
+              />
+            )}
+            {lightingConcept.task?.length > 0 && (
+              <LightingCategory title='Task' lights={lightingConcept.task} />
+            )}
+            {lightingConcept.accent?.length > 0 && (
+              <LightingCategory
+                title='Accent'
+                lights={lightingConcept.accent}
+              />
+            )}
+          </div>
+        </section>
       )}
     </div>
   )
 }
 
-const LightingCategory = ({ title, lights, color }) => {
-  const colorClasses = {
-    blue: 'from-blue-500/10 to-blue-500/5 border-blue-400/20',
-    green: 'from-green-500/10 to-green-500/5 border-green-400/20',
-    purple: 'from-purple-500/10 to-purple-500/5 border-purple-400/20',
-  }
-
+const LightingCategory = ({ title, lights }) => {
   return (
-    <div
-      className={`bg-gradient-to-br ${colorClasses[color]} rounded-2xl p-5 border`}
-    >
-      <h4 className='font-bold text-white mb-4'>{title}</h4>
+    <div className='bg-gray-50 border border-gray-200 rounded-lg p-4'>
+      <h4 className='font-semibold text-gray-900 mb-4'>{title}</h4>
       <div className='space-y-3'>
         {lights.map((light, idx) => (
-          <div key={idx} className='bg-white/5 rounded-lg p-3'>
-            <div className='font-medium text-white mb-1'>{light.name}</div>
+          <div
+            key={idx}
+            className='bg-white rounded p-3 border border-gray-200'
+          >
+            <div className='font-medium text-gray-900 text-sm mb-1'>
+              {light.name}
+            </div>
             {light.placement && (
-              <div className='text-sm text-white/60 mb-2'>{light.placement}</div>
+              <div className='text-xs text-gray-600 mb-2'>
+                {light.placement}
+              </div>
             )}
-            <div className='flex gap-2 text-xs text-white/50'>
+            <div className='flex gap-2 text-xs text-gray-500'>
               {light.kelvin && <span>{light.kelvin}K</span>}
               {light.lumens && <span>• {light.lumens}lm</span>}
             </div>
             {light.notes && (
-              <div className='text-xs text-white/50 mt-2 italic'>
+              <div className='text-xs text-gray-600 mt-2 italic'>
                 {light.notes}
               </div>
             )}
@@ -491,29 +496,37 @@ const LayoutTab = ({ zones }) => {
       {zones.map((zone, idx) => (
         <div
           key={idx}
-          className='bg-gradient-to-br from-cyan-500/10 to-blue-500/5 rounded-2xl p-5 border border-cyan-400/20'
+          className='p-5 bg-gray-50 border border-gray-200 rounded-lg'
         >
-          <h3 className='text-xl font-bold text-white mb-3'>{zone.name}</h3>
+          <h3 className='text-base font-semibold text-gray-900 mb-4'>
+            {zone.name}
+          </h3>
 
-          <div className='space-y-3'>
+          <div className='space-y-4'>
             {zone.purpose && (
               <div>
-                <div className='text-sm text-white/50 mb-1'>Purpose</div>
-                <div className='text-white/80'>{zone.purpose}</div>
+                <div className='text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1'>
+                  Purpose
+                </div>
+                <div className='text-gray-900 text-sm'>{zone.purpose}</div>
               </div>
             )}
 
             {zone.focalPoint && (
               <div>
-                <div className='text-sm text-white/50 mb-1'>Focal Point</div>
-                <div className='text-white/80'>{zone.focalPoint}</div>
+                <div className='text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1'>
+                  Focal Point
+                </div>
+                <div className='text-gray-900 text-sm'>{zone.focalPoint}</div>
               </div>
             )}
 
             {zone.flowDirection && (
-              <div className='bg-white/5 rounded-lg p-3'>
-                <div className='text-xs text-white/50 mb-1'>Flow</div>
-                <div className='text-sm text-white/70 italic'>
+              <div>
+                <div className='text-xs text-gray-600 uppercase tracking-wide font-semibold mb-1'>
+                  Flow
+                </div>
+                <div className='text-gray-900 text-sm italic'>
                   {zone.flowDirection}
                 </div>
               </div>
@@ -525,51 +538,9 @@ const LayoutTab = ({ zones }) => {
   )
 }
 
-// Variants Tab
-const VariantsTab = ({ variants }) => {
-  if (!variants || variants.length === 0)
-    return <EmptyState message='No design variants available' />
-
-  return (
-    <div className='grid md:grid-cols-2 gap-6'>
-      {variants.map((variant, idx) => (
-        <div
-          key={idx}
-          className='bg-gradient-to-br from-pink-500/10 to-purple-500/5 rounded-2xl p-6 border border-pink-400/20'
-        >
-          <h3 className='text-2xl font-bold text-white mb-3'>{variant.name}</h3>
-
-          {variant.description && (
-            <p className='text-white/80 mb-4'>{variant.description}</p>
-          )}
-
-          {variant.differences && variant.differences.length > 0 && (
-            <div>
-              <div className='text-sm font-semibold text-white/60 mb-3'>
-                Key Differences
-              </div>
-              <ul className='space-y-2'>
-                {variant.differences.map((diff, diffIdx) => (
-                  <li
-                    key={diffIdx}
-                    className='flex items-start gap-2 text-white/70'
-                  >
-                    <span className='text-pink-400 mt-1'>•</span>
-                    <span>{diff}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
-
 // Empty State
 const EmptyState = ({ message }) => (
-  <div className='text-center py-12 text-white/50'>
-    <p>{message}</p>
+  <div className='text-center py-12 text-gray-500'>
+    <p className='text-sm'>{message}</p>
   </div>
 )

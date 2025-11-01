@@ -1,18 +1,19 @@
 // File: client/src/pages/AIBuilders/MoodboardGenerator.jsx
 import TopBar from '@/components/Layout/Topbar'
 import { useCreateMoodboard, useGenerateMoodboard } from '@/hooks/useMoodboard'
-import { MoodboardDetailsPanel } from '@/components/Moodboard/MoodboardDetails'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
+  ArrowLeft,
+  ArrowRight,
+  CheckCircle2,
   ChefHat,
   Download,
-  FileDown,
-  Globe,
-  Heart,
+  Edit3,
+  FileText,
   Home,
   Layers,
+  Lightbulb,
   Maximize2,
-  Palette,
   RefreshCw,
   Sofa,
   Sparkles,
@@ -20,92 +21,33 @@ import {
   Wand2,
   X,
 } from 'lucide-react'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useState } from 'react'
 import { toast } from 'react-hot-toast'
+import {
+  BRAND_COLOR,
+  BRAND_COLOR_DARK,
+  BRAND_COLOR_LIGHT,
+  COLOR_PALETTES,
+  DESIGN_STYLES,
+  SPACE_TYPES,
+  getColorDescriptionForPalette,
+} from '../../components/Moodboard/Moodboardconfig.js'
 
 const MoodboardGenerator = () => {
+  const [currentStep, setCurrentStep] = useState(0)
   const [selectedSpace, setSelectedSpace] = useState('Living Room')
   const [selectedStyle, setSelectedStyle] = useState('')
-  const [selectedColor, setSelectedColor] = useState('')
-  const [selectedRatio, setSelectedRatio] = useState('Landscape (16:9)')
+  const [selectedColor, setSelectedColor] = useState('Neutral Tones')
   const [changes, setChanges] = useState('')
-  const [isMobile, setIsMobile] = useState(false)
   const [currentMoodboard, setCurrentMoodboard] = useState(null)
   const [showImageModal, setShowImageModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [loadingState, setLoadingState] = useState(null)
 
-  const brandColor = '#947d61'
-  const brandColorLight = '#a68970'
-
-  // React Query hooks
   const createMutation = useCreateMoodboard()
   const generateMutation = useGenerateMoodboard()
 
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
-
-  const spaceTypes = [
-    { name: 'Living Room', icon: Sofa, value: 'living_room' },
-    { name: 'Bedroom', icon: Home, value: 'bedroom' },
-    { name: 'Kitchen', icon: ChefHat, value: 'kitchen' },
-    { name: 'Dining Room', icon: Utensils, value: 'dining_room' },
-    { name: 'Bathroom', icon: Home, value: 'bathroom' },
-    { name: 'Office', icon: Layers, value: 'office' },
-    { name: 'Balcony', icon: Globe, value: 'outdoor' },
-    { name: 'Kids Room', icon: Heart, value: 'bedroom' },
-  ]
-
-  const styles = [
-    { label: 'Modern Minimalist', value: 'minimalist' },
-    { label: 'Scandinavian', value: 'scandinavian' },
-    { label: 'Industrial', value: 'industrial' },
-    { label: 'Bohemian', value: 'bohemian' },
-    { label: 'Mid-Century Modern', value: 'mid-century' },
-    { label: 'Traditional', value: 'traditional' },
-    { label: 'Contemporary', value: 'contemporary' },
-    { label: 'Rustic', value: 'rustic' },
-    { label: 'Luxury', value: 'luxury' },
-  ]
-
-  const colors = [
-    'Neutral Tones',
-    'Warm Earth',
-    'Cool Blues',
-    'Monochrome',
-    'Vibrant Accents',
-    'Pastel Palette',
-    'Deep & Rich',
-    'Natural Green',
-    'Soft Grays',
-    'Warm Whites',
-  ]
-
-  const ratios = [
-    'Landscape (16:9)',
-    'Wide (21:9)',
-    'Classic (4:3)',
-    'Square (1:1)',
-  ]
-
-  const getAspectRatioValue = (ratio) => {
-    const ratioValues = {
-      'Square (1:1)': '1:1',
-      'Landscape (16:9)': '16:9',
-      'Classic (4:3)': '4:3',
-      'Wide (21:9)': '21:9',
-    }
-    return ratioValues[ratio] || '16:9'
-  }
-
   const handleGenerate = async () => {
-    console.log('🚀 Generate button clicked!')
-
     if (!changes.trim()) {
       toast.error('Please describe your design requirements')
       return
@@ -115,49 +57,46 @@ const MoodboardGenerator = () => {
       setLoadingState('generating')
 
       const spaceValue =
-        spaceTypes.find((s) => s.name === selectedSpace)?.value || 'living_room'
+        SPACE_TYPES.find((s) => s.name === selectedSpace)?.value ||
+        'living_room'
       const styleValue =
-        styles.find((s) => s.label === selectedStyle)?.value || 'modern'
-      const colorPreferences = selectedColor ? [selectedColor] : []
+        DESIGN_STYLES.find((s) => s.label === selectedStyle)?.value || 'modern'
+
+      const colorDescription = getColorDescriptionForPalette(selectedColor)
 
       const createPayload = {
         title: `${selectedStyle || 'Modern'} ${selectedSpace}`,
         style: styleValue,
         roomType: spaceValue,
-        colorPreferences,
+        colorPreferences: [selectedColor],
         customPrompt: changes.trim(),
-        layout: 'collage', // Always collage style like reference image
-        imageCount: 1, // Single composite moodboard
-        aspectRatio: getAspectRatioValue(selectedRatio),
+        layout: 'collage',
+        imageCount: 1,
+        aspectRatio: '16:9',
       }
-
-      console.log('📦 Creating moodboard with:', createPayload)
 
       const createResult = await createMutation.mutateAsync(createPayload)
-      console.log('✅ Moodboard created:', createResult)
-
       const moodboardId = createResult.data.moodboard._id
 
-      const generatePayload = {
-        customPrompt: changes.trim(),
-        imageCount: 1,
-        aspectRatio: getAspectRatioValue(selectedRatio),
-      }
+      const enhancedCustomPrompt = `${changes.trim()}. Color scheme: ${colorDescription}`
 
-      console.log('🎨 Generating moodboard:', moodboardId, generatePayload)
+      const generatePayload = {
+        customPrompt: enhancedCustomPrompt,
+        imageCount: 1,
+        aspectRatio: '16:9',
+      }
 
       const generateResult = await generateMutation.mutateAsync({
         moodboardId,
         data: generatePayload,
       })
 
-      console.log('✅ Moodboard generated:', generateResult)
-
       setCurrentMoodboard(generateResult.data.moodboard)
       setLoadingState(null)
       toast.success('Moodboard generated successfully!')
+      setCurrentStep(3)
     } catch (error) {
-      console.error('❌ Generation error:', error)
+      console.error('Generation error:', error)
       setLoadingState(null)
       toast.error(
         error.response?.data?.message ||
@@ -175,12 +114,16 @@ const MoodboardGenerator = () => {
 
     try {
       setLoadingState('generating')
-      console.log('🔄 Regenerating moodboard')
+
+      const colorDescription = getColorDescriptionForPalette(selectedColor)
+      const enhancedCustomPrompt = changes.trim()
+        ? `${changes.trim()}. Color scheme: ${colorDescription}`
+        : currentMoodboard.prompt
 
       const generatePayload = {
-        customPrompt: changes.trim() || currentMoodboard.prompt,
+        customPrompt: enhancedCustomPrompt,
         imageCount: 1,
-        aspectRatio: getAspectRatioValue(selectedRatio),
+        aspectRatio: '16:9',
       }
 
       const generateResult = await generateMutation.mutateAsync({
@@ -192,576 +135,1560 @@ const MoodboardGenerator = () => {
       setLoadingState(null)
       toast.success('Moodboard regenerated successfully!')
     } catch (error) {
-      console.error('❌ Regeneration error:', error)
+      console.error('Regeneration error:', error)
       setLoadingState(null)
       toast.error('Failed to regenerate moodboard')
     }
   }
 
-  const downloadMoodboard = () => {
+  const downloadMoodboardImage = () => {
     if (!currentMoodboard?.compositeMoodboard?.url) return
 
-    console.log('💾 Downloading moodboard')
     const link = document.createElement('a')
     link.href = currentMoodboard.compositeMoodboard.url
     link.download = `moodboard-${currentMoodboard._id}.png`
+    document.body.appendChild(link)
     link.click()
-    toast.success('Moodboard downloaded!')
+    document.body.removeChild(link)
+    toast.success('Image downloaded successfully!')
   }
 
-  const exportMoodboard = () => {
+  const downloadMoodboardPDF = async () => {
     if (!currentMoodboard) return
 
     try {
-      const data = {
-        title: currentMoodboard.title,
-        style: currentMoodboard.style,
-        roomType: currentMoodboard.roomType,
-        createdAt: currentMoodboard.createdAt,
+      const jsPDF = (await import('jspdf')).default
+      const html2canvas = (await import('html2canvas')).default
 
-        designNarrative: currentMoodboard.designNarrative,
+      toast.loading('Generating PDF...', { id: 'pdf-generation' })
 
-        moodDescription: currentMoodboard.compositeMoodboard?.metadata?.moodDescription,
+      const pdf = new jsPDF('p', 'mm', 'a4')
+      const pageWidth = pdf.internal.pageSize.getWidth()
+      const pageHeight = pdf.internal.pageSize.getHeight()
+      const margin = 15
 
-        colorPalette: currentMoodboard.colorPalette,
+      // Title
+      pdf.setFontSize(24)
+      pdf.setTextColor(147, 124, 96)
+      pdf.text(currentMoodboard.title, margin, 20)
 
-        materials: currentMoodboard.materials,
+      // Date
+      pdf.setFontSize(10)
+      pdf.setTextColor(100, 100, 100)
+      pdf.text(
+        `Created: ${new Date(currentMoodboard.createdAt).toLocaleDateString()}`,
+        margin,
+        28
+      )
 
-        furniture: currentMoodboard.furniture,
-
-        lightingConcept: currentMoodboard.lightingConcept,
-
-        zones: currentMoodboard.zones,
-
-        variants: currentMoodboard.variants,
-
-        imageUrl: currentMoodboard.compositeMoodboard?.url,
+      // Image
+      if (currentMoodboard.compositeMoodboard?.url) {
+        const imgData = currentMoodboard.compositeMoodboard.url
+        const imgWidth = pageWidth - 2 * margin
+        const imgHeight = (imgWidth * 9) / 16
+        pdf.addImage(imgData, 'PNG', margin, 35, imgWidth, imgHeight)
       }
 
-      const dataStr = JSON.stringify(data, null, 2)
-      const dataBlob = new Blob([dataStr], { type: 'application/json' })
-      const url = URL.createObjectURL(dataBlob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `moodboard-complete-${currentMoodboard._id}.json`
-      link.click()
-      URL.revokeObjectURL(url)
+      let yPosition = 35 + ((pageWidth - 2 * margin) * 9) / 16 + 15
 
-      toast.success('Moodboard exported successfully!')
+      // Style and Room Type
+      pdf.setFontSize(12)
+      pdf.setTextColor(0, 0, 0)
+      pdf.text(`Style: ${currentMoodboard.style}`, margin, yPosition)
+      yPosition += 7
+      pdf.text(`Room Type: ${currentMoodboard.roomType}`, margin, yPosition)
+      yPosition += 10
+
+      // Design Narrative
+      if (currentMoodboard.designNarrative?.narrative) {
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage()
+          yPosition = 20
+        }
+
+        pdf.setFontSize(14)
+        pdf.setTextColor(147, 124, 96)
+        pdf.text('Design Narrative', margin, yPosition)
+        yPosition += 7
+
+        pdf.setFontSize(10)
+        pdf.setTextColor(0, 0, 0)
+        const narrativeLines = pdf.splitTextToSize(
+          currentMoodboard.designNarrative.narrative,
+          pageWidth - 2 * margin
+        )
+        pdf.text(narrativeLines, margin, yPosition)
+        yPosition += narrativeLines.length * 5 + 10
+      }
+
+      // Color Palette
+      if (currentMoodboard.colorPalette?.length > 0) {
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage()
+          yPosition = 20
+        }
+
+        pdf.setFontSize(14)
+        pdf.setTextColor(147, 124, 96)
+        pdf.text('Color Palette', margin, yPosition)
+        yPosition += 10
+
+        currentMoodboard.colorPalette.slice(0, 5).forEach((color, idx) => {
+          const hexColor = color.hex.replace('#', '')
+          const r = parseInt(hexColor.substr(0, 2), 16)
+          const g = parseInt(hexColor.substr(2, 2), 16)
+          const b = parseInt(hexColor.substr(4, 2), 16)
+
+          pdf.setFillColor(r, g, b)
+          pdf.rect(margin + idx * 35, yPosition, 30, 15, 'F')
+
+          pdf.setFontSize(8)
+          pdf.setTextColor(0, 0, 0)
+          pdf.text(color.name, margin + idx * 35, yPosition + 20)
+          pdf.text(color.hex, margin + idx * 35, yPosition + 25)
+        })
+
+        yPosition += 35
+      }
+
+      // Materials
+      if (currentMoodboard.materials) {
+        const materialsEntries = Object.entries(currentMoodboard.materials)
+        const hasContent = materialsEntries.some(
+          ([_, items]) => items && items.length > 0
+        )
+
+        if (hasContent) {
+          pdf.addPage()
+          yPosition = 20
+
+          pdf.setFontSize(16)
+          pdf.setTextColor(147, 124, 96)
+          pdf.text('Materials', margin, yPosition)
+          yPosition += 10
+
+          materialsEntries.forEach(([key, items]) => {
+            if (!items || items.length === 0) return
+
+            if (yPosition > pageHeight - 30) {
+              pdf.addPage()
+              yPosition = 20
+            }
+
+            pdf.setFontSize(12)
+            pdf.setTextColor(0, 0, 0)
+            pdf.text(
+              key.charAt(0).toUpperCase() + key.slice(1).replace('_', ' '),
+              margin,
+              yPosition
+            )
+            yPosition += 7
+
+            items.forEach((item) => {
+              if (yPosition > pageHeight - 20) {
+                pdf.addPage()
+                yPosition = 20
+              }
+
+              pdf.setFontSize(10)
+              pdf.text(`• ${item.type}`, margin + 5, yPosition)
+              yPosition += 5
+            })
+
+            yPosition += 5
+          })
+        }
+      }
+
+      // Furniture
+      if (currentMoodboard.furniture?.heroPieces?.length > 0) {
+        pdf.addPage()
+        yPosition = 20
+
+        pdf.setFontSize(16)
+        pdf.setTextColor(147, 124, 96)
+        pdf.text('Furniture', margin, yPosition)
+        yPosition += 10
+
+        currentMoodboard.furniture.heroPieces.forEach((piece) => {
+          if (yPosition > pageHeight - 30) {
+            pdf.addPage()
+            yPosition = 20
+          }
+
+          pdf.setFontSize(12)
+          pdf.setTextColor(0, 0, 0)
+          pdf.text(`• ${piece.name}`, margin, yPosition)
+          yPosition += 6
+
+          pdf.setFontSize(10)
+          pdf.setTextColor(100, 100, 100)
+          pdf.text(`  Category: ${piece.category}`, margin, yPosition)
+          yPosition += 10
+        })
+      }
+
+      pdf.save(`moodboard-${currentMoodboard._id}.pdf`)
+      toast.success('PDF downloaded successfully!', { id: 'pdf-generation' })
     } catch (error) {
-      console.error('Export error:', error)
-      toast.error('Failed to export moodboard')
+      console.error('Error generating PDF:', error)
+      toast.error('Failed to generate PDF', { id: 'pdf-generation' })
     }
   }
 
-  const renderMoodboard = () => {
-    if (!currentMoodboard?.compositeMoodboard?.url) {
-      return null
-    }
-
-    const composite = currentMoodboard.compositeMoodboard
-
-    return (
-      <div className='relative group h-full flex flex-col gap-4'>
-        {/* Moodboard Image */}
-        <div className='relative max-w-full'>
-          <div className='relative inline-block'>
-            <img
-              src={composite.url}
-              alt='Moodboard'
-              className='max-w-full max-h-[calc(100vh-350px)] rounded-2xl border border-white/10 shadow-2xl cursor-pointer'
-              onClick={() => setShowImageModal(true)}
-            />
-
-            {/* Action buttons */}
-            <div className='absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowImageModal(true)
-                }}
-                className='p-3 bg-black/80 backdrop-blur-sm rounded-lg hover:bg-black transition-colors'
-                title='View full size'
-              >
-                <Maximize2 className='w-5 h-5 text-white' />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  downloadMoodboard()
-                }}
-                className='p-3 bg-black/80 backdrop-blur-sm rounded-lg hover:bg-black transition-colors'
-                title='Download'
-              >
-                <Download className='w-5 h-5 text-white' />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Moodboard Details Panel with Tabs */}
-        <MoodboardDetailsPanel moodboard={currentMoodboard} />
-
-        {/* Action Buttons */}
-        <div className='flex gap-3'>
-          <motion.button
-            onClick={handleRegenerate}
-            disabled={loadingState === 'generating'}
-            className='flex-1 h-12 px-6 text-white font-bold rounded-xl bg-gradient-to-r from-[#947d61] to-[#a68970] hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-all'
-            whileHover={{ scale: loadingState ? 1 : 1.02 }}
-            whileTap={{ scale: loadingState ? 1 : 0.98 }}
-          >
-            <RefreshCw className='w-5 h-5' />
-            <span>New Variation</span>
-          </motion.button>
-
-          <motion.button
-            onClick={exportMoodboard}
-            disabled={loadingState === 'generating'}
-            className='h-12 px-6 text-white font-bold rounded-xl bg-gradient-to-r from-purple-600 to-purple-700 hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2 transition-all'
-            whileHover={{ scale: loadingState ? 1 : 1.02 }}
-            whileTap={{ scale: loadingState ? 1 : 0.98 }}
-            title='Export Complete Moodboard'
-          >
-            <FileDown className='w-5 h-5' />
-            <span>Export</span>
-          </motion.button>
-        </div>
-      </div>
-    )
-  }
+  const steps = [
+    { number: 1, title: 'Space' },
+    { number: 2, title: 'Style' },
+    { number: 3, title: 'Colors' },
+    { number: 4, title: 'Vision' },
+  ]
 
   const isGenerating = createMutation.isPending || generateMutation.isPending
 
   return (
     <>
       <TopBar />
-      <div className='min-h-screen bg-black overflow-hidden relative'>
-        {/* Background pattern */}
-        <div className='absolute inset-0'>
-          <div
-            className='absolute inset-0 opacity-5'
-            style={{
-              backgroundImage: `
-                linear-gradient(${brandColor}40 1px, transparent 1px),
-                linear-gradient(90deg, ${brandColor}40 1px, transparent 1px)
-              `,
-              backgroundSize: isMobile ? '40px 40px' : '60px 60px',
-            }}
+      {loadingState === 'generating' && <BeautifulLoader />}
+      <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'>
+        {currentStep < 3 ? (
+          <WizardFlow
+            currentStep={currentStep}
+            setCurrentStep={setCurrentStep}
+            steps={steps}
+            selectedSpace={selectedSpace}
+            setSelectedSpace={setSelectedSpace}
+            selectedStyle={selectedStyle}
+            setSelectedStyle={setSelectedStyle}
+            selectedColor={selectedColor}
+            setSelectedColor={setSelectedColor}
+            changes={changes}
+            setChanges={setChanges}
+            onGenerate={handleGenerate}
+            isGenerating={isGenerating}
           />
-        </div>
-
-        <div className='relative z-10 min-h-screen pt-24 pb-8'>
-          <div className='max-w-7xl mx-auto px-4'>
-            <div className='grid lg:grid-cols-12 gap-6'>
-              {/* Left Preview Area */}
-              <motion.div
-                className='lg:col-span-7'
-                initial={{ opacity: 0, x: -50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-              >
-                <div className='bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4 lg:p-6 min-h-[600px] sticky top-24 relative'>
-                  {/* Loading Overlay */}
-                  <AnimatePresence>
-                    {loadingState && (
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className='absolute inset-0 bg-black/90 backdrop-blur-md rounded-3xl z-50 flex items-center justify-center'
-                      >
-                        <LoadingAnimation />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Moodboard Display */}
-                  <div className='w-full h-full flex items-center justify-center'>
-                    {currentMoodboard?.compositeMoodboard ? (
-                      renderMoodboard()
-                    ) : (
-                      <MoodboardPlaceholder
-                        selectedSpace={selectedSpace}
-                        selectedStyle={selectedStyle}
-                        selectedRatio={selectedRatio}
-                      />
-                    )}
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Right Configuration Panel */}
-              <motion.div
-                className='lg:col-span-5'
-                initial={{ opacity: 0, x: 50 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: 0.3 }}
-              >
-                <ConfigurationPanel
-                  selectedSpace={selectedSpace}
-                  setSelectedSpace={setSelectedSpace}
-                  selectedStyle={selectedStyle}
-                  setSelectedStyle={setSelectedStyle}
-                  selectedColor={selectedColor}
-                  setSelectedColor={setSelectedColor}
-                  selectedRatio={selectedRatio}
-                  setSelectedRatio={setSelectedRatio}
-                  changes={changes}
-                  setChanges={setChanges}
-                  onGenerate={handleGenerate}
-                  isGenerating={isGenerating}
-                  spaceTypes={spaceTypes}
-                  styles={styles}
-                  colors={colors}
-                  ratios={ratios}
-                  brandColor={brandColor}
-                  brandColorLight={brandColorLight}
-                />
-              </motion.div>
-            </div>
-          </div>
-        </div>
+        ) : (
+          <ResultView
+            currentMoodboard={currentMoodboard}
+            onRegenerate={handleRegenerate}
+            onDownload={downloadMoodboardImage}
+            onDownloadPDF={downloadMoodboardPDF}
+            onBackToCreate={() => setCurrentStep(0)}
+            loadingState={loadingState}
+            showImageModal={showImageModal}
+            setShowImageModal={setShowImageModal}
+            showEditModal={showEditModal}
+            setShowEditModal={setShowEditModal}
+            setCurrentMoodboard={setCurrentMoodboard}
+          />
+        )}
       </div>
-
-      {/* Image Modal */}
-      {showImageModal && currentMoodboard?.compositeMoodboard?.url && (
-        <ImageModal
-          imageUrl={currentMoodboard.compositeMoodboard.url}
-          onClose={() => setShowImageModal(false)}
-          onDownload={downloadMoodboard}
-        />
-      )}
     </>
   )
 }
 
-// Supporting Components
-const LoadingAnimation = () => (
-  <div className='text-center'>
-    <div className='relative w-24 h-24 mx-auto mb-6'>
-      <div className='absolute inset-0 rounded-full border-4 border-[#947d61]/20'></div>
-      <div className='absolute inset-0 rounded-full border-4 border-[#947d61] border-t-transparent animate-spin'></div>
-      <div className='absolute inset-0 flex items-center justify-center'>
-        <Wand2 className='w-10 h-10 text-[#947d61] animate-pulse' />
-      </div>
-    </div>
-    <h3 className='text-2xl font-bold text-white mb-3'>
-      Creating Your Moodboard
-    </h3>
-    <p className='text-gray-400 mb-6'>
-      AI is crafting your professional interior design collage...
-    </p>
-    <div className='flex items-center justify-center gap-2'>
-      {[0, 0.2, 0.4].map((delay, i) => (
-        <div
-          key={i}
-          className='w-3 h-3 bg-[#947d61] rounded-full animate-bounce'
-          style={{ animationDelay: `${delay}s` }}
-        ></div>
-      ))}
-    </div>
-  </div>
-)
-
-const ColorPaletteMoodCard = ({ colorPalette, moodDescription }) => (
+const BeautifulLoader = () => (
   <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    className='bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6'
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className='fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-gray-900/95 via-black/95 to-gray-900/95 backdrop-blur-sm'
   >
-    {/* Mood Description */}
-    {moodDescription && (
-      <div className='mb-6'>
-        <div className='flex items-center gap-2 mb-3'>
-          <Sparkles className='w-5 h-5 text-[#947d61]' />
-          <h3 className='text-lg font-semibold text-white'>
-            {moodDescription.mood}
-          </h3>
-          <span className='text-gray-400 text-sm'>
-            • {moodDescription.feeling}
-          </span>
-        </div>
-        <p className='text-gray-300 text-sm mb-3'>
-          {moodDescription.description}
+    <div className='text-center'>
+      <motion.div
+        className='relative w-32 h-32 mx-auto mb-8'
+        animate={{
+          scale: [1, 1.1, 1],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+      >
+        {/* Outer rotating ring */}
+        <motion.div
+          className='absolute inset-0 rounded-full border-4 border-transparent'
+          style={{
+            borderTopColor: BRAND_COLOR,
+            borderRightColor: BRAND_COLOR_LIGHT,
+          }}
+          animate={{ rotate: 360 }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        />
+
+        {/* Middle rotating ring */}
+        <motion.div
+          className='absolute inset-3 rounded-full border-4 border-transparent'
+          style={{
+            borderBottomColor: BRAND_COLOR_LIGHT,
+            borderLeftColor: BRAND_COLOR,
+          }}
+          animate={{ rotate: -360 }}
+          transition={{
+            duration: 2,
+            repeat: Infinity,
+            ease: 'linear',
+          }}
+        />
+
+        {/* Inner pulsing circle */}
+        <motion.div
+          className='absolute inset-6 rounded-full flex items-center justify-center'
+          style={{
+            background: `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR_LIGHT})`,
+          }}
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.8, 1, 0.8],
+          }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        >
+          <Sparkles className='w-8 h-8 text-white' />
+        </motion.div>
+
+        {/* Orbiting dots */}
+        {[0, 120, 240].map((angle, i) => (
+          <motion.div
+            key={i}
+            className='absolute w-3 h-3 rounded-full'
+            style={{
+              backgroundColor: BRAND_COLOR,
+              top: '50%',
+              left: '50%',
+              transformOrigin: '0 0',
+            }}
+            animate={{
+              rotate: [angle, angle + 360],
+              x: [40, 40],
+              y: [-1.5, -1.5],
+            }}
+            transition={{
+              duration: 3,
+              repeat: Infinity,
+              ease: 'linear',
+              delay: i * 0.3,
+            }}
+          />
+        ))}
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <h2 className='text-3xl font-bold text-white mb-3'>
+          Creating Your Moodboard
+        </h2>
+        <p className='text-gray-300 text-lg mb-6'>
+          Our AI is crafting your perfect design...
         </p>
-        <div className='flex flex-wrap gap-2'>
-          {moodDescription.keywords?.map((keyword, index) => (
-            <span
-              key={index}
-              className='px-3 py-1 bg-[#947d61]/20 border border-[#947d61]/30 rounded-full text-xs text-gray-300'
+
+        {/* Animated progress steps */}
+        <div className='flex items-center justify-center gap-3 mb-8'>
+          {['Analyzing', 'Designing', 'Rendering'].map((step, i) => (
+            <motion.div
+              key={step}
+              className='flex items-center gap-2'
+              initial={{ opacity: 0.3 }}
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                delay: i * 0.4,
+              }}
             >
-              {keyword}
-            </span>
+              <div
+                className='w-2 h-2 rounded-full'
+                style={{ backgroundColor: BRAND_COLOR }}
+              />
+              <span className='text-sm text-gray-400'>{step}</span>
+            </motion.div>
           ))}
         </div>
-      </div>
-    )}
 
-    {/* Color Palette */}
-    <div>
-      <div className='flex items-center gap-2 mb-3'>
-        <Palette className='w-5 h-5 text-[#947d61]' />
-        <h3 className='text-lg font-semibold text-white'>Color Palette</h3>
-      </div>
-      <div className='grid grid-cols-5 gap-2'>
-        {colorPalette.map((color, index) => (
-          <div key={index} className='group relative'>
-            <div
-              className='w-full aspect-square rounded-lg shadow-md cursor-pointer transition-transform hover:scale-110'
-              style={{ backgroundColor: color.hex }}
-              title={`${color.name} - ${color.percentage}%`}
-            />
-            <div className='absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/90 text-white text-xs px-2 py-1 rounded whitespace-nowrap pointer-events-none z-10'>
-              {color.name}
-              <br />
-              {color.hex}
-            </div>
-          </div>
-        ))}
-      </div>
+        {/* Loading bar */}
+        <div className='w-64 h-1 bg-gray-800 rounded-full overflow-hidden mx-auto'>
+          <motion.div
+            className='h-full rounded-full'
+            style={{
+              background: `linear-gradient(90deg, ${BRAND_COLOR}, ${BRAND_COLOR_LIGHT})`,
+            }}
+            animate={{
+              x: ['-100%', '100%'],
+            }}
+            transition={{
+              duration: 1.5,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+          />
+        </div>
+      </motion.div>
     </div>
   </motion.div>
 )
 
-const ConfigurationPanel = ({
+const WizardFlow = ({
+  currentStep,
+  setCurrentStep,
+  steps,
   selectedSpace,
   setSelectedSpace,
   selectedStyle,
   setSelectedStyle,
   selectedColor,
   setSelectedColor,
-  selectedRatio,
-  setSelectedRatio,
   changes,
   setChanges,
   onGenerate,
   isGenerating,
-  spaceTypes,
-  styles,
-  colors,
-  ratios,
-  brandColor,
-  brandColorLight,
-}) => (
-  <div className='bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 lg:p-6 max-h-[calc(100vh-8rem)] overflow-y-auto'>
-    <div className='space-y-6'>
-      {/* Aspect Ratio */}
-      <div>
-        <div className='flex items-center gap-3 mb-4'>
-          <div
-            className='w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
-            style={{
-              background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
-            }}
-          >
-            1
-          </div>
-          <h3 className='text-xl font-semibold text-white'>Moodboard Size</h3>
-        </div>
-        <select
-          value={selectedRatio}
-          onChange={(e) => setSelectedRatio(e.target.value)}
-          disabled={isGenerating}
-          className='w-full h-11 px-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#947d61]'
-        >
-          {ratios.map((ratio) => (
-            <option key={ratio} value={ratio} className='bg-gray-900'>
-              {ratio}
-            </option>
+}) => {
+  const canProceed = () => {
+    switch (currentStep) {
+      case 0:
+        return !!selectedSpace
+      case 1:
+        return !!selectedStyle
+      case 2:
+        return !!selectedColor && changes.trim().length > 0
+      default:
+        return false
+    }
+  }
+
+  return (
+    <div className='h-screen flex flex-col pt-28'>
+      <div className='max-w-6xl mx-auto px-6 w-full flex-shrink-0'>
+        <div className='flex items-center justify-between mb-8'>
+          {steps.map((step, idx) => (
+            <div key={step.number} className='flex items-center flex-1'>
+              <motion.div
+                className='flex items-center w-full'
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: idx * 0.1 }}
+              >
+                <div
+                  className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all flex-shrink-0`}
+                  style={{
+                    backgroundColor:
+                      currentStep >= idx ? BRAND_COLOR : '#e5e7eb',
+                    color: currentStep >= idx ? 'white' : '#9ca3af',
+                  }}
+                >
+                  {currentStep > idx ? (
+                    <CheckCircle2 className='w-5 h-5' />
+                  ) : (
+                    step.number
+                  )}
+                </div>
+                <span
+                  className='ml-3 text-sm font-semibold'
+                  style={{
+                    color: currentStep >= idx ? BRAND_COLOR : '#9ca3af',
+                  }}
+                >
+                  {step.title}
+                </span>
+                {idx < steps.length - 1 && (
+                  <div
+                    className={`flex-1 h-0.5 mx-4 rounded transition-all`}
+                    style={{
+                      backgroundColor:
+                        currentStep > idx ? BRAND_COLOR : '#e5e7eb',
+                    }}
+                  />
+                )}
+              </motion.div>
+            </div>
           ))}
-        </select>
+        </div>
       </div>
 
-      {/* Space Type */}
-      <div>
-        <div className='flex items-center gap-3 mb-4'>
-          <div
-            className='w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
-            style={{
-              background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
-            }}
-          >
-            2
-          </div>
-          <h3 className='text-xl font-semibold text-white'>Space Type</h3>
-        </div>
-        <div className='grid grid-cols-2 gap-2'>
-          {spaceTypes.map((space) => {
-            const IconComponent = space.icon
-            return (
+      <div className='flex-1 overflow-y-auto'>
+        <div className='max-w-6xl mx-auto px-6 pb-6'>
+          <AnimatePresence mode='wait'>
+            <motion.div
+              key={currentStep}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.3 }}
+              className='bg-white rounded-2xl shadow-xl p-10'
+            >
+              {currentStep === 0 && (
+                <StepSpace
+                  selectedSpace={selectedSpace}
+                  setSelectedSpace={setSelectedSpace}
+                />
+              )}
+
+              {currentStep === 1 && (
+                <StepStyle
+                  selectedStyle={selectedStyle}
+                  setSelectedStyle={setSelectedStyle}
+                />
+              )}
+
+              {currentStep === 2 && (
+                <StepColorsAndVision
+                  selectedColor={selectedColor}
+                  setSelectedColor={setSelectedColor}
+                  changes={changes}
+                  setChanges={setChanges}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+
+          <div className='flex gap-4 mt-6 justify-between'>
+            <button
+              onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+              disabled={currentStep === 0 || isGenerating}
+              className='flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 transition-all'
+            >
+              <ArrowLeft className='w-5 h-5' />
+              Back
+            </button>
+
+            {currentStep < 2 ? (
               <button
-                key={space.name}
-                onClick={() => setSelectedSpace(space.name)}
-                disabled={isGenerating}
-                className={`h-10 px-3 rounded-xl border transition-all flex items-center gap-2 ${
-                  selectedSpace === space.name
-                    ? 'border-[#947d61] bg-[#947d61]/20 text-white'
-                    : 'border-white/10 bg-white/5 text-gray-300 hover:border-white/20'
-                }`}
+                onClick={() => setCurrentStep(currentStep + 1)}
+                disabled={!canProceed() || isGenerating}
+                className='flex items-center gap-2 px-8 py-3 rounded-lg font-semibold text-white hover:shadow-lg disabled:opacity-50 transition-all'
+                style={{ backgroundColor: BRAND_COLOR }}
+                onMouseEnter={(e) =>
+                  (e.target.style.backgroundColor = BRAND_COLOR_DARK)
+                }
+                onMouseLeave={(e) =>
+                  (e.target.style.backgroundColor = BRAND_COLOR)
+                }
               >
-                <IconComponent className='w-4 h-4' />
-                <span className='text-sm'>{space.name}</span>
+                Next
+                <ArrowRight className='w-5 h-5' />
               </button>
-            )
-          })}
-        </div>
-      </div>
-
-      {/* Style & Color */}
-      <div>
-        <div className='flex items-center gap-3 mb-4'>
-          <div
-            className='w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
-            style={{
-              background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
-            }}
-          >
-            3
-          </div>
-          <h3 className='text-xl font-semibold text-white'>Style & Colors</h3>
-        </div>
-        <div className='space-y-3'>
-          <select
-            value={selectedStyle}
-            onChange={(e) => setSelectedStyle(e.target.value)}
-            disabled={isGenerating}
-            className='w-full h-11 px-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#947d61]'
-          >
-            <option value=''>Select Style</option>
-            {styles.map((style) => (
-              <option
-                key={style.value}
-                value={style.label}
-                className='bg-gray-900'
+            ) : (
+              <button
+                onClick={onGenerate}
+                disabled={!canProceed() || isGenerating}
+                className='flex items-center gap-2 px-8 py-3 rounded-lg font-semibold text-white hover:shadow-lg disabled:opacity-50 transition-all'
+                style={{
+                  background: `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR_LIGHT})`,
+                }}
               >
-                {style.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={selectedColor}
-            onChange={(e) => setSelectedColor(e.target.value)}
-            disabled={isGenerating}
-            className='w-full h-11 px-4 bg-white/5 border border-white/10 rounded-xl text-white focus:outline-none focus:border-[#947d61]'
-          >
-            <option value=''>Select Color Palette (Optional)</option>
-            {colors.map((color) => (
-              <option key={color} value={color} className='bg-gray-900'>
-                {color}
-              </option>
-            ))}
-          </select>
+                {isGenerating ? (
+                  <>
+                    <div className='w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin' />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className='w-5 h-5' />
+                    Generate Moodboard
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const StepSpace = ({ selectedSpace, setSelectedSpace }) => {
+  const IconMap = {
+    Sofa: Sofa,
+    Home: Home,
+    ChefHat: ChefHat,
+    Utensils: Utensils,
+    Lightbulb: Lightbulb,
+    Layers: Layers,
+  }
+
+  return (
+    <div>
+      <div className='text-center mb-10'>
+        <h2 className='text-4xl font-bold text-gray-900 mb-3'>
+          What space are you decorating?
+        </h2>
+        <p className='text-lg text-gray-600'>
+          Select the room or area for your design project
+        </p>
+      </div>
+
+      <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
+        {SPACE_TYPES.map((space) => {
+          const IconComponent = IconMap[space.icon] || Home
+
+          return (
+            <motion.button
+              key={space.name}
+              onClick={() => setSelectedSpace(space.name)}
+              whileHover={{ scale: 1.05, y: -5 }}
+              whileTap={{ scale: 0.95 }}
+              className={`relative p-6 rounded-2xl border-2 transition-all text-center group overflow-hidden`}
+              style={{
+                borderColor:
+                  selectedSpace === space.name ? BRAND_COLOR : '#e5e7eb',
+                backgroundColor:
+                  selectedSpace === space.name
+                    ? `${BRAND_COLOR}10`
+                    : 'transparent',
+              }}
+            >
+              {selectedSpace === space.name && (
+                <motion.div
+                  layoutId='selected-space'
+                  className='absolute inset-0 rounded-2xl'
+                  style={{
+                    background: `linear-gradient(135deg, ${BRAND_COLOR}15, ${BRAND_COLOR_LIGHT}15)`,
+                  }}
+                  transition={{ type: 'spring', bounce: 0.2, duration: 0.6 }}
+                />
+              )}
+
+              <div className='relative z-10'>
+                <div
+                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all shadow-lg`}
+                  style={{
+                    backgroundColor:
+                      selectedSpace === space.name ? BRAND_COLOR : '#f3f4f6',
+                    color: selectedSpace === space.name ? 'white' : '#6b7280',
+                  }}
+                >
+                  <IconComponent className='w-8 h-8' />
+                </div>
+                <h3 className='font-bold text-gray-900 text-base mb-1'>
+                  {space.name}
+                </h3>
+                <p className='text-sm text-gray-500'>{space.description}</p>
+              </div>
+
+              {selectedSpace === space.name && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className='absolute top-3 right-3 z-20'
+                >
+                  <div
+                    className='w-6 h-6 rounded-full flex items-center justify-center'
+                    style={{ backgroundColor: BRAND_COLOR }}
+                  >
+                    <CheckCircle2 className='w-4 h-4 text-white' />
+                  </div>
+                </motion.div>
+              )}
+            </motion.button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
+  const styleCategories = {
+    Modern: ['Modern Minimalist', 'Contemporary', 'Scandinavian', 'Industrial'],
+    Classic: ['Traditional', 'Transitional', 'Mid-Century Modern'],
+    Eclectic: ['Bohemian', 'Art Deco', 'Industrial Chic'],
+    Natural: ['Rustic', 'Coastal', 'Mediterranean', 'Japanese'],
+    Luxury: ['Luxury'],
+  }
+
+  return (
+    <div>
+      <div className='text-center mb-10'>
+        <h2 className='text-4xl font-bold text-gray-900 mb-3'>
+          What's your design style?
+        </h2>
+        <p className='text-lg text-gray-600'>
+          Choose the aesthetic that resonates with you
+        </p>
+      </div>
+
+      <div className='space-y-8'>
+        {Object.entries(styleCategories).map(([category, styles]) => (
+          <div key={category}>
+            <h3 className='text-lg font-bold text-gray-700 mb-4 flex items-center gap-2'>
+              <div
+                className='w-1 h-6 rounded-full'
+                style={{ backgroundColor: BRAND_COLOR }}
+              />
+              {category}
+            </h3>
+            <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
+              {DESIGN_STYLES.filter((style) =>
+                styles.includes(style.label)
+              ).map((style) => (
+                <motion.button
+                  key={style.value}
+                  onClick={() => setSelectedStyle(style.label)}
+                  whileHover={{ scale: 1.05, y: -3 }}
+                  whileTap={{ scale: 0.95 }}
+                  className={`relative p-5 rounded-xl border-2 transition-all text-center group overflow-hidden`}
+                  style={{
+                    borderColor:
+                      selectedStyle === style.label ? BRAND_COLOR : '#e5e7eb',
+                    backgroundColor:
+                      selectedStyle === style.label
+                        ? `${BRAND_COLOR}10`
+                        : 'white',
+                  }}
+                >
+                  {selectedStyle === style.label && (
+                    <motion.div
+                      layoutId='selected-style'
+                      className='absolute inset-0 rounded-xl'
+                      style={{
+                        background: `linear-gradient(135deg, ${BRAND_COLOR}20, ${BRAND_COLOR_LIGHT}20)`,
+                      }}
+                      transition={{
+                        type: 'spring',
+                        bounce: 0.2,
+                        duration: 0.6,
+                      }}
+                    />
+                  )}
+
+                  <div className='relative z-10'>
+                    <h3 className='font-bold text-gray-900 text-base mb-2'>
+                      {style.label}
+                    </h3>
+                    <p className='text-xs text-gray-600'>{style.description}</p>
+                  </div>
+
+                  {selectedStyle === style.label && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      className='absolute top-2 right-2 z-20'
+                    >
+                      <div
+                        className='w-6 h-6 rounded-full flex items-center justify-center shadow-lg'
+                        style={{ backgroundColor: BRAND_COLOR }}
+                      >
+                        <CheckCircle2 className='w-4 h-4 text-white' />
+                      </div>
+                    </motion.div>
+                  )}
+
+                  <div
+                    className='absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity'
+                    style={{
+                      background: `linear-gradient(135deg, transparent, ${BRAND_COLOR}05)`,
+                    }}
+                  />
+                </motion.button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const StepColorsAndVision = ({
+  selectedColor,
+  setSelectedColor,
+  changes,
+  setChanges,
+}) => (
+  <div>
+    <div className='text-center mb-10'>
+      <h2 className='text-4xl font-bold text-gray-900 mb-3'>
+        Colors & Your Vision
+      </h2>
+      <p className='text-lg text-gray-600'>
+        Select your palette and describe your design
+      </p>
+    </div>
+
+    <div className='grid lg:grid-cols-2 gap-8'>
+      <div>
+        <label className='block text-sm font-semibold text-gray-900 mb-4'>
+          Color Palette
+        </label>
+        <div className='grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2'>
+          {COLOR_PALETTES.map((palette) => (
+            <motion.button
+              key={palette.name}
+              onClick={() => setSelectedColor(palette.name)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={`p-3 rounded-xl border-2 transition-all text-left`}
+              style={{
+                borderColor:
+                  selectedColor === palette.name ? BRAND_COLOR : '#e5e7eb',
+                backgroundColor:
+                  selectedColor === palette.name ? `${BRAND_COLOR}15` : 'white',
+              }}
+            >
+              <div className='flex items-start justify-between mb-2'>
+                <h3 className='font-semibold text-gray-900 text-sm'>
+                  {palette.name}
+                </h3>
+                {selectedColor === palette.name && (
+                  <div
+                    className='w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0'
+                    style={{ backgroundColor: BRAND_COLOR }}
+                  >
+                    <CheckCircle2 className='w-4 h-4 text-white' />
+                  </div>
+                )}
+              </div>
+              <div className='flex gap-1'>
+                {palette.colors.map((color, idx) => (
+                  <div
+                    key={idx}
+                    className='flex-1 h-8 rounded'
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </motion.button>
+          ))}
         </div>
       </div>
 
-      {/* Vision */}
       <div>
-        <div className='flex items-center gap-3 mb-3'>
-          <div
-            className='w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm'
-            style={{
-              background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
-            }}
-          >
-            4
-          </div>
-          <h3 className='text-xl font-semibold text-white'>Your Vision</h3>
-          <span className='text-red-400 text-xs font-semibold'>*Required</span>
-        </div>
+        <label className='block text-sm font-semibold text-gray-900 mb-4'>
+          Your Design Vision *
+        </label>
         <textarea
           value={changes}
           onChange={(e) => setChanges(e.target.value)}
-          disabled={isGenerating}
-          placeholder='Describe your design vision in detail... (e.g., "Modern living room with large windows, neutral colors, wooden furniture, plants, and natural lighting")'
-          className={`w-full p-4 bg-white/5 border rounded-xl text-white placeholder-gray-400 resize-none h-32 text-sm focus:outline-none transition-all ${
-            !changes.trim() && !isGenerating
-              ? 'border-red-400/50 focus:border-red-400'
-              : 'border-white/10 focus:border-[#947d61]'
-          }`}
+          placeholder='Describe your design vision in detail. For example: "Modern office with natural wood elements, warm lighting, comfortable seating, plants, and professional minimalist aesthetic..."'
+          className='w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none resize-none h-[400px] text-gray-900 placeholder-gray-400'
+          style={{
+            borderColor: changes.trim() ? BRAND_COLOR : '#e5e7eb',
+          }}
         />
-        {!changes.trim() && (
-          <p className='text-red-400 text-xs mt-2 flex items-center gap-1'>
-            <span className='w-1 h-1 bg-red-400 rounded-full'></span>
-            Please describe your desired moodboard
-          </p>
-        )}
-        <button
-          onClick={onGenerate}
-          disabled={isGenerating || !changes.trim()}
-          className='w-full h-12 px-6 mt-4 text-white font-bold rounded-xl bg-gradient-to-r from-[#947d61] to-[#a68970] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2'
-        >
-          <Sparkles className='w-5 h-5' />
-          <span>Generate Moodboard</span>
-        </button>
+        <p className='text-xs text-gray-500 mt-2'>
+          {changes.length} characters • More details = better results
+        </p>
       </div>
     </div>
   </div>
 )
 
-const MoodboardPlaceholder = ({
-  selectedSpace,
-  selectedStyle,
-  selectedRatio,
-}) => (
-  <div className='text-center p-8'>
-    <Palette className='w-16 h-16 mx-auto mb-4 text-gray-400' />
-    <h3 className='text-2xl font-bold text-white mb-3'>Ready to Create</h3>
-    <p className='text-gray-400 mb-4'>
-      Professional collage-style moodboard with multiple images, colors, and
-      mood
-    </p>
-    <div className='text-sm text-gray-500 space-y-1'>
-      <p className='flex items-center justify-center gap-2'>
-        <span className='w-2 h-2 bg-[#947d61] rounded-full'></span>
-        {selectedSpace}
-      </p>
-      {selectedStyle && (
-        <p className='flex items-center justify-center gap-2'>
-          <span className='w-2 h-2 bg-[#947d61] rounded-full'></span>
-          {selectedStyle}
-        </p>
+const ResultView = ({
+  currentMoodboard,
+  onRegenerate,
+  onDownload,
+  onDownloadPDF,
+  onBackToCreate,
+  loadingState,
+  showImageModal,
+  setShowImageModal,
+  showEditModal,
+  setShowEditModal,
+  setCurrentMoodboard,
+}) => {
+  const [activeTab, setActiveTab] = useState('overview')
+
+  if (!currentMoodboard?.compositeMoodboard?.url) {
+    return (
+      <div className='min-h-screen pt-32 pb-12'>
+        <div className='max-w-4xl mx-auto px-4'>
+          <div className='text-center py-20'>
+            <div
+              className='w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4'
+              style={{ backgroundColor: `${BRAND_COLOR}20` }}
+            >
+              <Sparkles className='w-8 h-8' style={{ color: BRAND_COLOR }} />
+            </div>
+            <h2 className='text-2xl font-bold text-gray-900 mb-2'>
+              Generating Your Moodboard
+            </h2>
+            <p className='text-gray-600 mb-8'>
+              Our AI is creating your beautiful design collage...
+            </p>
+            <LoadingAnimation />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const tabs = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'materials', label: 'Materials' },
+    { id: 'furniture', label: 'Furniture' },
+    { id: 'lighting', label: 'Lighting' },
+    { id: 'layout', label: 'Layout' },
+  ]
+
+  return (
+    <div className='min-h-screen pt-32 pb-12'>
+      <div className='max-w-7xl mx-auto px-4'>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className='mb-8 flex items-center justify-between'
+        >
+          <div>
+            <h1 className='text-4xl font-bold text-gray-900 mb-2'>
+              {currentMoodboard.title}
+            </h1>
+            <p className='text-gray-500'>
+              Created on{' '}
+              {new Date(currentMoodboard.createdAt).toLocaleDateString()}
+            </p>
+          </div>
+          <button
+            onClick={onBackToCreate}
+            className='px-6 py-3 rounded-lg font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-all'
+          >
+            Create New
+          </button>
+        </motion.div>
+
+        <div className='grid lg:grid-cols-3 gap-8'>
+          <div className='lg:col-span-2 space-y-8'>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className='relative group bg-black rounded-2xl overflow-hidden shadow-lg'
+            >
+              <img
+                src={currentMoodboard.compositeMoodboard.url}
+                alt='Moodboard'
+                className='w-full h-full object-contain cursor-pointer hover:opacity-95 transition-opacity'
+                onClick={() => setShowImageModal(true)}
+              />
+
+              <div className='absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity'>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowImageModal(true)}
+                  className='p-3 bg-white/95 hover:bg-white rounded-lg shadow-lg transition-all'
+                  title='View full size'
+                >
+                  <Maximize2
+                    className='w-5 h-5'
+                    style={{ color: BRAND_COLOR }}
+                  />
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setShowEditModal(true)}
+                  className='p-3 bg-white/95 hover:bg-white rounded-lg shadow-lg transition-all'
+                  title='Edit moodboard'
+                >
+                  <Edit3 className='w-5 h-5' style={{ color: BRAND_COLOR }} />
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={onDownload}
+                  className='p-3 bg-white/95 hover:bg-white rounded-lg shadow-lg transition-all'
+                  title='Download'
+                >
+                  <Download
+                    className='w-5 h-5'
+                    style={{ color: BRAND_COLOR }}
+                  />
+                </motion.button>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className='bg-white rounded-2xl shadow-lg overflow-hidden'
+            >
+              <div className='border-b border-gray-200 px-6 pt-6'>
+                <div className='flex gap-2 overflow-x-auto'>
+                  {tabs.map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`px-4 py-3 font-medium transition-all whitespace-nowrap relative`}
+                      style={{
+                        color: activeTab === tab.id ? BRAND_COLOR : '#9ca3af',
+                      }}
+                    >
+                      {tab.label}
+                      {activeTab === tab.id && (
+                        <div
+                          className='absolute bottom-0 left-0 right-0 h-0.5'
+                          style={{ backgroundColor: BRAND_COLOR }}
+                        />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className='p-6'>
+                <AnimatePresence mode='wait'>
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <TabContent
+                      tabId={activeTab}
+                      moodboard={currentMoodboard}
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </motion.div>
+          </div>
+
+          <div className='space-y-6'>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+              className='bg-white rounded-2xl shadow-lg p-6 sticky top-32'
+            >
+              <h3 className='text-lg font-bold text-gray-900 mb-4'>Actions</h3>
+
+              <div className='space-y-3'>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowEditModal(true)}
+                  className='w-full flex items-center justify-center gap-2 px-4 py-3 text-white font-semibold rounded-lg transition-all'
+                  style={{ backgroundColor: BRAND_COLOR }}
+                  onMouseEnter={(e) =>
+                    (e.target.style.backgroundColor = BRAND_COLOR_DARK)
+                  }
+                  onMouseLeave={(e) =>
+                    (e.target.style.backgroundColor = BRAND_COLOR)
+                  }
+                >
+                  <Edit3 className='w-5 h-5' />
+                  Edit Moodboard
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={onRegenerate}
+                  disabled={loadingState === 'generating'}
+                  className='w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all disabled:opacity-50'
+                >
+                  <RefreshCw className='w-5 h-5' />
+                  New Variation
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={onDownload}
+                  className='w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all'
+                >
+                  <Download className='w-5 h-5' />
+                  Download Image
+                </motion.button>
+
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={onDownloadPDF}
+                  className='w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all'
+                >
+                  <FileText className='w-5 h-5' />
+                  Download PDF
+                </motion.button>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+              className='space-y-4'
+            >
+              <div className='bg-white rounded-xl p-5 shadow-lg'>
+                <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2'>
+                  Design Style
+                </p>
+                <p className='text-sm font-semibold text-gray-900'>
+                  {currentMoodboard.style}
+                </p>
+              </div>
+
+              <div className='bg-white rounded-xl p-5 shadow-lg'>
+                <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2'>
+                  Room Type
+                </p>
+                <p className='text-sm font-semibold text-gray-900'>
+                  {currentMoodboard.roomType}
+                </p>
+              </div>
+
+              {currentMoodboard.colorPalette?.length > 0 && (
+                <div className='bg-white rounded-xl p-5 shadow-lg'>
+                  <p className='text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3'>
+                    Color Palette
+                  </p>
+                  <div className='flex gap-2'>
+                    {currentMoodboard.colorPalette
+                      .slice(0, 5)
+                      .map((color, idx) => (
+                        <div
+                          key={idx}
+                          className='flex-1 h-10 rounded-lg shadow border border-gray-200 cursor-pointer hover:shadow-md transition-shadow'
+                          style={{ backgroundColor: color.hex }}
+                          title={`${color.name} - ${color.hex}`}
+                        />
+                      ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        </div>
+      </div>
+
+      {showImageModal && currentMoodboard?.compositeMoodboard?.url && (
+        <ImageModal
+          imageUrl={currentMoodboard.compositeMoodboard.url}
+          onClose={() => setShowImageModal(false)}
+          onDownload={onDownload}
+        />
       )}
-      <p className='flex items-center justify-center gap-2'>
-        <span className='w-2 h-2 bg-[#947d61] rounded-full'></span>
-        {selectedRatio}
-      </p>
-      <p className='flex items-center justify-center gap-2'>
-        <span className='w-2 h-2 bg-[#947d61] rounded-full'></span>
-        Collage Style with Color Palette
-      </p>
+
+      {showEditModal && (
+        <EditModal
+          moodboard={currentMoodboard}
+          onClose={() => setShowEditModal(false)}
+          onSave={(updatedMoodboard) => {
+            setCurrentMoodboard(updatedMoodboard)
+            setShowEditModal(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+const EditModal = ({ moodboard, onClose, onSave }) => {
+  const [editPrompt, setEditPrompt] = useState('')
+  const [isEditing, setIsEditing] = useState(false)
+
+  const handleEdit = async () => {
+    if (!editPrompt.trim()) {
+      toast.error('Please describe the changes you want')
+      return
+    }
+
+    setIsEditing(true)
+    try {
+      const response = await fetch(`/api/moodboards/${moodboard._id}/edit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          imageIndex: 0,
+          editPrompt: editPrompt.trim(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (data.status === 'success') {
+        toast.success('Moodboard edited successfully!')
+        onSave(data.data.moodboard)
+      } else {
+        throw new Error(data.message || 'Failed to edit moodboard')
+      }
+    } catch (error) {
+      console.error('Edit error:', error)
+      toast.error(error.message || 'Failed to edit moodboard')
+    } finally {
+      setIsEditing(false)
+    }
+  }
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className='fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4'
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        onClick={(e) => e.stopPropagation()}
+        className='bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8'
+      >
+        <div className='flex items-center justify-between mb-6'>
+          <h2 className='text-2xl font-bold text-gray-900'>
+            Edit Your Moodboard
+          </h2>
+          <button
+            onClick={onClose}
+            className='p-2 hover:bg-gray-100 rounded-lg transition-colors'
+          >
+            <X className='w-6 h-6 text-gray-500' />
+          </button>
+        </div>
+
+        <div className='mb-6'>
+          <label className='block text-sm font-semibold text-gray-900 mb-3'>
+            Describe Your Changes
+          </label>
+          <textarea
+            value={editPrompt}
+            onChange={(e) => setEditPrompt(e.target.value)}
+            placeholder='Example: "Make it more minimalist", "Add more plants", "Use warmer tones", "Focus on natural materials"...'
+            className='w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none resize-none h-40 text-gray-900 placeholder-gray-400'
+            style={{
+              borderColor: editPrompt.trim() ? BRAND_COLOR : '#e5e7eb',
+            }}
+          />
+          <p className='text-xs text-gray-500 mt-2'>
+            Be specific about what you'd like to change
+          </p>
+        </div>
+
+        <div className='flex gap-3'>
+          <button
+            onClick={onClose}
+            disabled={isEditing}
+            className='flex-1 px-6 py-3 rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 transition-all'
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleEdit}
+            disabled={!editPrompt.trim() || isEditing}
+            className='flex-1 px-6 py-3 rounded-lg font-semibold text-white disabled:opacity-50 transition-all'
+            style={{
+              background: `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR_LIGHT})`,
+            }}
+          >
+            {isEditing ? (
+              <>
+                <div className='w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block mr-2' />
+                Editing...
+              </>
+            ) : (
+              <>Apply Changes</>
+            )}
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+const TabContent = ({ tabId, moodboard }) => {
+  const narrative = moodboard.designNarrative
+  const colorPalette = moodboard.colorPalette || []
+  const moodDescription =
+    moodboard.compositeMoodboard?.metadata?.moodDescription
+
+  if (tabId === 'overview') {
+    return (
+      <div className='space-y-6'>
+        {narrative?.narrative && (
+          <div className='bg-gray-50 rounded-xl p-6 border border-gray-200'>
+            <h3 className='text-lg font-bold text-gray-900 mb-4'>
+              Design Narrative
+            </h3>
+            <p className='text-gray-700 leading-relaxed mb-4'>
+              {narrative.narrative}
+            </p>
+
+            <div className='grid md:grid-cols-2 gap-4'>
+              {narrative.vibe && (
+                <div className='bg-white rounded-lg p-4 border border-gray-200'>
+                  <h4 className='text-sm font-semibold text-gray-900 mb-2'>
+                    The Vibe
+                  </h4>
+                  <p className='text-gray-700 text-sm'>{narrative.vibe}</p>
+                </div>
+              )}
+              {narrative.lifestyle && (
+                <div className='bg-white rounded-lg p-4 border border-gray-200'>
+                  <h4 className='text-sm font-semibold text-gray-900 mb-2'>
+                    Lifestyle Fit
+                  </h4>
+                  <p className='text-gray-700 text-sm'>{narrative.lifestyle}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {(moodDescription || colorPalette.length > 0) && (
+          <div className='bg-gray-50 rounded-xl p-6 border border-gray-200'>
+            {moodDescription && (
+              <div className='mb-6'>
+                <h3 className='text-lg font-bold text-gray-900 mb-2'>
+                  {moodDescription.mood}
+                </h3>
+                <p className='text-sm text-gray-600 mb-3'>
+                  {moodDescription.feeling}
+                </p>
+                <p className='text-gray-700'>{moodDescription.description}</p>
+              </div>
+            )}
+
+            {colorPalette.length > 0 && (
+              <div>
+                <h4 className='text-lg font-bold text-gray-900 mb-4'>
+                  Color Palette
+                </h4>
+                <div className='grid grid-cols-5 gap-3'>
+                  {colorPalette.map((color, index) => (
+                    <div key={index} className='text-center'>
+                      <div
+                        className='w-full h-20 rounded-lg shadow-md border border-gray-200 mb-2 cursor-pointer hover:shadow-lg transition-shadow'
+                        style={{ backgroundColor: color.hex }}
+                        title={`${color.name} - ${color.hex}`}
+                      />
+                      <div className='text-xs font-medium text-gray-900'>
+                        {color.name}
+                      </div>
+                      <div className='text-xs text-gray-500'>{color.hex}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  if (tabId === 'materials') {
+    return (
+      <div className='space-y-4'>
+        {moodboard.materials ? (
+          Object.entries(moodboard.materials).map(([key, items]) => {
+            if (!items || items.length === 0) return null
+            return (
+              <div key={key}>
+                <h4 className='font-semibold text-gray-900 mb-3 capitalize'>
+                  {key.replace('_', ' ')}
+                </h4>
+                <div className='space-y-3'>
+                  {items.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className='bg-gray-50 rounded-lg p-4 border border-gray-200'
+                    >
+                      <div className='font-medium text-gray-900'>
+                        {item.type}
+                      </div>
+                      {item.finish && (
+                        <div className='text-sm text-gray-600'>
+                          Finish: {item.finish}
+                        </div>
+                      )}
+                      {item.texture && (
+                        <div className='text-sm text-gray-600'>
+                          Texture: {item.texture}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })
+        ) : (
+          <p className='text-gray-500'>No materials specified</p>
+        )}
+      </div>
+    )
+  }
+
+  if (tabId === 'furniture') {
+    return (
+      <div>
+        {moodboard.furniture?.heroPieces?.length ? (
+          <div className='space-y-3'>
+            {moodboard.furniture.heroPieces.map((piece, idx) => (
+              <div
+                key={idx}
+                className='bg-gray-50 rounded-lg p-4 border border-gray-200'
+              >
+                <h4 className='font-semibold text-gray-900 mb-1'>
+                  {piece.name}
+                </h4>
+                <p className='text-sm text-gray-600 capitalize mb-2'>
+                  {piece.category}
+                </p>
+                {piece.dimensions && (
+                  <div className='text-sm text-gray-700 font-mono'>
+                    {piece.dimensions.length} × {piece.dimensions.width} ×{' '}
+                    {piece.dimensions.height} {piece.dimensions.unit || 'cm'}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className='text-gray-500'>No furniture specified</p>
+        )}
+      </div>
+    )
+  }
+
+  if (tabId === 'lighting') {
+    return (
+      <div className='space-y-4'>
+        {moodboard.lightingConcept ? (
+          <div className='grid md:grid-cols-2 gap-4'>
+            {moodboard.lightingConcept.dayMood && (
+              <div className='bg-gray-50 rounded-lg p-4 border border-gray-200'>
+                <h3 className='font-semibold text-gray-900 mb-2'>Daytime</h3>
+                <p className='text-sm text-gray-700'>
+                  {moodboard.lightingConcept.dayMood.description}
+                </p>
+              </div>
+            )}
+            {moodboard.lightingConcept.nightMood && (
+              <div className='bg-gray-50 rounded-lg p-4 border border-gray-200'>
+                <h3 className='font-semibold text-gray-900 mb-2'>Nighttime</h3>
+                <p className='text-sm text-gray-700'>
+                  {moodboard.lightingConcept.nightMood.description}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className='text-gray-500'>No lighting concept specified</p>
+        )}
+      </div>
+    )
+  }
+
+  if (tabId === 'layout') {
+    return (
+      <div className='grid md:grid-cols-2 gap-4'>
+        {moodboard.zones?.length ? (
+          moodboard.zones.map((zone, idx) => (
+            <div
+              key={idx}
+              className='bg-gray-50 rounded-lg p-4 border border-gray-200'
+            >
+              <h3 className='font-semibold text-gray-900 mb-3'>{zone.name}</h3>
+              <div className='space-y-2'>
+                {zone.purpose && (
+                  <div>
+                    <div className='text-xs text-gray-500 mb-1'>Purpose</div>
+                    <div className='text-sm text-gray-700'>{zone.purpose}</div>
+                  </div>
+                )}
+                {zone.focalPoint && (
+                  <div>
+                    <div className='text-xs text-gray-500 mb-1'>
+                      Focal Point
+                    </div>
+                    <div className='text-sm text-gray-700'>
+                      {zone.focalPoint}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        ) : (
+          <p className='text-gray-500'>No layout zones specified</p>
+        )}
+      </div>
+    )
+  }
+
+  return null
+}
+
+const LoadingAnimation = () => (
+  <div className='flex flex-col items-center gap-6'>
+    <div className='relative w-20 h-20'>
+      <div className='absolute inset-0 rounded-full border-4 border-gray-200'></div>
+      <div
+        className='absolute inset-0 rounded-full border-4 border-t-transparent animate-spin'
+        style={{ borderTopColor: BRAND_COLOR }}
+      ></div>
+      <div className='absolute inset-0 flex items-center justify-center'>
+        <Wand2
+          className='w-8 h-8 animate-pulse'
+          style={{ color: BRAND_COLOR }}
+        />
+      </div>
+    </div>
+    <div className='flex gap-1'>
+      {[0, 0.2, 0.4].map((delay, i) => (
+        <div
+          key={i}
+          className='w-2 h-2 rounded-full animate-bounce'
+          style={{ backgroundColor: BRAND_COLOR, animationDelay: `${delay}s` }}
+        ></div>
+      ))}
     </div>
   </div>
 )
 
 const ImageModal = ({ imageUrl, onClose, onDownload }) => (
-  <div
-    className='fixed inset-0 bg-black z-50 flex items-center justify-center'
+  <motion.div
+    initial={{ opacity: 0 }}
+    animate={{ opacity: 1 }}
+    exit={{ opacity: 0 }}
+    className='fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4'
     onClick={onClose}
   >
-    <button
-      onClick={onClose}
-      className='absolute top-6 right-6 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10'
-    >
-      <X className='w-6 h-6 text-white' />
-    </button>
-    <button
-      onClick={(e) => {
-        e.stopPropagation()
-        onDownload()
-      }}
-      className='absolute top-6 right-20 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full flex items-center gap-2 transition-colors z-10'
-    >
-      <Download className='w-5 h-5 text-white' />
-      <span className='text-white text-sm font-medium'>Download</span>
-    </button>
-    <img
-      src={imageUrl}
-      alt='Full View'
-      className='max-w-[95vw] max-h-[95vh] object-contain'
+    <motion.div
+      initial={{ scale: 0.9 }}
+      animate={{ scale: 1 }}
+      exit={{ scale: 0.9 }}
       onClick={(e) => e.stopPropagation()}
-    />
-  </div>
+      className='relative max-w-5xl'
+    >
+      <button
+        onClick={onClose}
+        className='absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10'
+      >
+        <X className='w-6 h-6 text-white' />
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          onDownload()
+        }}
+        className='absolute top-4 right-16 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full flex items-center gap-2 transition-colors z-10'
+      >
+        <Download className='w-5 h-5 text-white' />
+        <span className='text-white text-sm font-medium'>Download</span>
+      </button>
+      <img
+        src={imageUrl}
+        alt='Full View'
+        className='max-w-[95vw] max-h-[95vh] object-contain rounded-lg'
+      />
+    </motion.div>
+  </motion.div>
 )
 
 export default MoodboardGenerator

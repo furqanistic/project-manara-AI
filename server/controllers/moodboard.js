@@ -6,14 +6,14 @@ import { extractColorPalette } from '../services/colorExtractor.js'
 import {
   buildMoodboardPrompt,
   editImage,
-  generateImage,
-  generateMoodDescription,
   generateDesignNarrative,
-  generateMaterials,
   generateFurniture,
+  generateImage,
   generateLightingConcept,
-  generateZones,
+  generateMaterials,
+  generateMoodDescription,
   generateVariants,
+  generateZones,
 } from '../services/geminiService.js'
 import {
   createCompositeMoodboard,
@@ -26,6 +26,17 @@ import {
 const parseAspectRatio = (aspectRatio) => {
   const [width, height] = aspectRatio.split(':').map(Number)
   return { width, height }
+}
+
+/**
+ * Build color palette instruction for prompt
+ */
+const buildColorPalettePrompt = (colors) => {
+  if (!colors || colors.length === 0) return ''
+
+  return `Color palette (must use these exact colors): ${colors.join(
+    ', '
+  )}. Incorporate these colors prominently in the design.`
 }
 
 /**
@@ -51,6 +62,7 @@ export const createMoodboard = async (req, res, next) => {
       layout,
       imageCount,
       aspectRatio,
+      paletteColors,
     } = req.body
 
     if (!title) {
@@ -71,6 +83,7 @@ export const createMoodboard = async (req, res, next) => {
       style: style || 'modern',
       roomType,
       colorPreferences: colorPreferences || colorPalette || [],
+      paletteColors: paletteColors || [], // Store actual hex colors
       colorPalette: [], // Will be filled after generation
       notes,
       projectId,
@@ -109,7 +122,13 @@ export const createMoodboard = async (req, res, next) => {
 export const generateMoodboardImages = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { customPrompt, referenceImages, imageCount, aspectRatio } = req.body
+    const {
+      customPrompt,
+      referenceImages,
+      imageCount,
+      aspectRatio,
+      paletteColors,
+    } = req.body
 
     const moodboard = await Moodboard.findById(id)
 
@@ -129,17 +148,26 @@ export const generateMoodboardImages = async (req, res, next) => {
     const numImages = 1 // Always generate single composite moodboard
     const targetAspectRatio = aspectRatio || moodboard.aspectRatio || '16:9'
 
-    // Build enhanced prompt
-    const enhancedPrompt =
-      customPrompt ||
-      buildMoodboardPrompt({
-        style: moodboard.style,
-        roomType: moodboard.roomType,
-        colorPalette: moodboard.colorPreferences, // Use color preferences for prompt
-        customPrompt: moodboard.prompt,
-        layout: 'collage', // Always collage style
-        aspectRatio: targetAspectRatio,
-      })
+    // Build enhanced prompt with color palette
+    let basePrompt = buildMoodboardPrompt({
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: moodboard.colorPreferences,
+      customPrompt: moodboard.prompt,
+      layout: 'collage',
+      aspectRatio: targetAspectRatio,
+    })
+
+    // Add color palette instruction if colors are provided
+    const colorsToUse = paletteColors || moodboard.paletteColors
+    if (colorsToUse && colorsToUse.length > 0) {
+      const colorPaletteInstruction = buildColorPalettePrompt(colorsToUse)
+      basePrompt = `${basePrompt}. ${colorPaletteInstruction}`
+    }
+
+    const enhancedPrompt = customPrompt
+      ? `${basePrompt}. User requirements: ${customPrompt}`
+      : basePrompt
 
     // Process reference images if provided
     let processedImages = []
@@ -151,6 +179,7 @@ export const generateMoodboardImages = async (req, res, next) => {
     }
 
     console.log('Generating single composite moodboard...')
+    console.log('Enhanced prompt:', enhancedPrompt)
 
     // Generate single composite moodboard image
     const result = await generateImage(
@@ -286,7 +315,7 @@ export const generateMoodboardImages = async (req, res, next) => {
 export const regenerateMoodboardImages = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { imageIndices, customPrompt, aspectRatio } = req.body
+    const { imageIndices, customPrompt, aspectRatio, paletteColors } = req.body
 
     const moodboard = await Moodboard.findById(id)
 
@@ -304,7 +333,7 @@ export const regenerateMoodboardImages = async (req, res, next) => {
     }
 
     // Build base prompt
-    const basePrompt = buildMoodboardPrompt({
+    let basePrompt = buildMoodboardPrompt({
       style: moodboard.style,
       roomType: moodboard.roomType,
       colorPalette: moodboard.colorPreferences,
@@ -312,6 +341,13 @@ export const regenerateMoodboardImages = async (req, res, next) => {
       layout: 'collage',
       aspectRatio: aspectRatio || moodboard.aspectRatio,
     })
+
+    // Add color palette instruction
+    const colorsToUse = paletteColors || moodboard.paletteColors
+    if (colorsToUse && colorsToUse.length > 0) {
+      const colorPaletteInstruction = buildColorPalettePrompt(colorsToUse)
+      basePrompt = `${basePrompt}. ${colorPaletteInstruction}`
+    }
 
     const regenerationPrompt = customPrompt
       ? `${basePrompt}. Additional requirements: ${customPrompt}`
@@ -403,7 +439,7 @@ export const regenerateMoodboardImages = async (req, res, next) => {
 export const editMoodboardImage = async (req, res, next) => {
   try {
     const { id } = req.params
-    const { imageIndex, editPrompt, aspectRatio } = req.body
+    const { imageIndex, editPrompt, aspectRatio, paletteColors } = req.body
 
     if (!editPrompt) {
       return next(createError(400, 'Edit prompt is required'))
@@ -428,11 +464,19 @@ export const editMoodboardImage = async (req, res, next) => {
     const existingImage = moodboard.generatedImages[0]
     const baseImageData = existingImage.url.split(',')[1]
 
+    // Build edit prompt with color constraints
+    let fullEditPrompt = editPrompt
+    const colorsToUse = paletteColors || moodboard.paletteColors
+    if (colorsToUse && colorsToUse.length > 0) {
+      const colorPaletteInstruction = buildColorPalettePrompt(colorsToUse)
+      fullEditPrompt = `${editPrompt}. ${colorPaletteInstruction}`
+    }
+
     console.log('Editing moodboard with modifications...')
 
     // Edit the image with exact aspect ratio
     const result = await editImage(
-      editPrompt,
+      fullEditPrompt,
       baseImageData,
       'image/png',
       aspectRatio || moodboard.aspectRatio
@@ -510,7 +554,7 @@ export const editMoodboardImage = async (req, res, next) => {
   }
 }
 
-// ... rest of the controller methods (getUserMoodboards, getMoodboardById, updateMoodboard, deleteMoodboard) remain the same
+// ... rest of the controller methods
 export const getUserMoodboards = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1
@@ -603,7 +647,6 @@ export const updateMoodboard = async (req, res, next) => {
     if (style) moodboard.style = style
     if (roomType) moodboard.roomType = roomType
     if (colorPreferences) moodboard.colorPreferences = colorPreferences
-    // colorPalette is auto-generated, don't allow manual updates
     if (notes !== undefined) moodboard.notes = notes
     if (status) moodboard.status = status
     if (layout) moodboard.layout = layout
