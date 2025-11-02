@@ -28,7 +28,7 @@ const TopBar = () => {
   const brandColor = '#937c60'
   const brandColorLight = '#a68970'
 
-  // Only track scroll for blur/shadow effect — no background detection
+  // Track scroll for shadow effect
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20)
@@ -38,7 +38,7 @@ const TopBar = () => {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // Click outside handler (unchanged)
+  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (event) => {
       const isOutsideDropdowns = Object.values(dropdownRefs.current).every(
@@ -85,13 +85,13 @@ const TopBar = () => {
     }
   }
 
-  // ✅ Unified text & interaction colors that work on ANY background
-  const textColor = 'text-white'
-  const hoverTextColor = 'hover:text-white'
-  const hoverBg = 'hover:bg-white/10'
-  const borderColor = 'border-white/20'
-  const dropdownBg = 'bg-black/80'
-  const buttonBg = 'bg-white/5'
+  // Colors for white background
+  const textColor = 'text-gray-800'
+  const hoverTextColor = 'hover:text-gray-900'
+  const hoverBg = 'hover:bg-gray-100'
+  const borderColor = 'border-gray-200'
+  const dropdownBg = 'bg-white'
+  const buttonBg = 'bg-gray-50'
 
   return (
     <div className='fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8 pt-4'>
@@ -100,13 +100,10 @@ const TopBar = () => {
           ref={mobileMenuRef}
           className={`relative transition-all duration-300 ease-out rounded-full px-6 py-3 ${
             isScrolled
-              ? 'bg-black/80 backdrop-blur-xl border border-white/20 shadow-2xl'
-              : 'bg-black/20 backdrop-blur-2xl border border-white/10'
+              ? 'bg-white border border-gray-200 shadow-lg'
+              : 'bg-white border border-gray-100'
           }`}
         >
-          {/* Subtle top highlight */}
-          <div className='absolute inset-x-0 top-0 h-px rounded-full bg-gradient-to-r from-transparent via-white/30 to-transparent'></div>
-
           <div className='flex items-center justify-between'>
             {/* Logo */}
             <div className='flex items-center'>
@@ -154,9 +151,8 @@ const TopBar = () => {
 
                       {activeDropdown === item.name && (
                         <div
-                          className={`absolute top-full mt-2 left-0 min-w-48 backdrop-blur-xl border ${borderColor} rounded-2xl shadow-2xl overflow-hidden ${dropdownBg}`}
+                          className={`absolute top-full mt-2 left-0 min-w-48 border ${borderColor} rounded-2xl shadow-lg overflow-hidden ${dropdownBg}`}
                         >
-                          <div className='absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent'></div>
                           <div className='py-2'>
                             {item.dropdownItems.map((dropdownItem, i) => (
                               <a
@@ -202,11 +198,11 @@ const TopBar = () => {
                     <div className='w-6 h-6 bg-gradient-to-br from-violet-400 to-purple-500 rounded-full flex items-center justify-center'>
                       <User className='w-3 h-3 text-white' />
                     </div>
-                    <span className='text-sm text-white truncate max-w-[120px]'>
+                    <span className='text-sm text-gray-800 truncate max-w-[120px]'>
                       {currentUser.name || 'User'}
                     </span>
                     <ChevronDown
-                      className={`w-4 h-4 text-gray-300 transition-transform duration-200 ${
+                      className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
                         activeDropdown === 'user' ? 'rotate-180' : ''
                       }`}
                     />
@@ -214,15 +210,14 @@ const TopBar = () => {
 
                   {activeDropdown === 'user' && (
                     <div
-                      className={`absolute top-full mt-2 right-0 min-w-48 backdrop-blur-xl border ${borderColor} rounded-2xl shadow-2xl overflow-hidden ${dropdownBg}`}
+                      className={`absolute top-full mt-2 right-0 min-w-48 border ${borderColor} rounded-2xl shadow-lg overflow-hidden ${dropdownBg}`}
                     >
-                      <div className='absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent'></div>
                       <div className='py-2'>
-                        <div className='px-4 py-2 border-b border-white/10'>
-                          <p className='text-sm font-medium text-white'>
+                        <div className='px-4 py-2 border-b border-gray-200'>
+                          <p className='text-sm font-medium text-gray-900'>
                             {currentUser.name}
                           </p>
-                          <p className='text-xs text-gray-300'>
+                          <p className='text-xs text-gray-600'>
                             {currentUser.email}
                           </p>
                           {currentUser.role === 'admin' && (
@@ -245,11 +240,11 @@ const TopBar = () => {
                           <Settings className='w-4 h-4' />
                           <span>Settings</span>
                         </a>
-                        <hr className='my-1 border-white/10' />
+                        <hr className='my-1 border-gray-200' />
                         <button
                           onClick={handleLogout}
                           disabled={logoutMutation.isPending}
-                          className='w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 disabled:opacity-50'
+                          className='w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 disabled:opacity-50'
                         >
                           {logoutMutation.isPending ? (
                             <>
@@ -277,18 +272,18 @@ const TopBar = () => {
                   </button>
                   <button
                     onClick={() => handleAuthRedirect('signup')}
-                    className='px-4 py-2 text-white text-sm font-semibold rounded-full hover:scale-105 transition-all duration-200 shadow-lg'
+                    className='px-4 py-2 text-white text-sm font-semibold rounded-full hover:scale-105 transition-all duration-200 shadow-md'
                     style={{
                       background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
-                      boxShadow: `0 8px 20px ${brandColor}25`,
+                      boxShadow: `0 4px 15px ${brandColor}40`,
                     }}
                     onMouseEnter={(e) => {
                       e.target.style.background = `linear-gradient(to right, ${brandColorLight}, ${brandColor})`
-                      e.target.style.boxShadow = `0 12px 30px ${brandColor}30`
+                      e.target.style.boxShadow = `0 6px 20px ${brandColor}50`
                     }}
                     onMouseLeave={(e) => {
                       e.target.style.background = `linear-gradient(to right, ${brandColor}, ${brandColorLight})`
-                      e.target.style.boxShadow = `0 8px 20px ${brandColor}25`
+                      e.target.style.boxShadow = `0 4px 15px ${brandColor}40`
                     }}
                   >
                     Sign Up
@@ -298,7 +293,7 @@ const TopBar = () => {
 
               <button
                 onClick={toggleMenu}
-                className={`lg:hidden p-2 text-white hover:text-white transition-colors duration-200`}
+                className={`lg:hidden p-2 text-gray-800 hover:text-gray-900 transition-colors duration-200`}
               >
                 {isMenuOpen ? (
                   <X className='w-5 h-5' />
@@ -312,9 +307,8 @@ const TopBar = () => {
           {/* Mobile Menu */}
           {isMenuOpen && (
             <div
-              className={`lg:hidden absolute top-full left-0 right-0 mt-2 backdrop-blur-xl border ${borderColor} rounded-2xl shadow-2xl overflow-hidden ${dropdownBg}`}
+              className={`lg:hidden absolute top-full left-0 right-0 mt-2 border ${borderColor} rounded-2xl shadow-lg overflow-hidden ${dropdownBg}`}
             >
-              <div className='absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/30 to-transparent'></div>
               <div className='py-4 px-6 space-y-1'>
                 {navItems.map((item, index) => (
                   <div key={index}>
@@ -359,12 +353,12 @@ const TopBar = () => {
                 ))}
 
                 {currentUser ? (
-                  <div className='pt-4 border-t border-white/10'>
+                  <div className='pt-4 border-t border-gray-200'>
                     <div className='px-3 py-2 mb-2'>
-                      <p className='text-sm font-medium text-white'>
+                      <p className='text-sm font-medium text-gray-900'>
                         {currentUser.name}
                       </p>
-                      <p className='text-xs text-gray-300'>
+                      <p className='text-xs text-gray-600'>
                         {currentUser.email}
                       </p>
                     </div>
@@ -385,7 +379,7 @@ const TopBar = () => {
                     <button
                       onClick={handleLogout}
                       disabled={logoutMutation.isPending}
-                      className='w-full flex items-center space-x-2 px-3 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 rounded-lg disabled:opacity-50'
+                      className='w-full flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 rounded-lg disabled:opacity-50'
                     >
                       {logoutMutation.isPending ? (
                         <>
@@ -401,7 +395,7 @@ const TopBar = () => {
                     </button>
                   </div>
                 ) : (
-                  <div className='pt-4 border-t border-white/10 space-y-2'>
+                  <div className='pt-4 border-t border-gray-200 space-y-2'>
                     <button
                       onClick={() => handleAuthRedirect('login')}
                       className={`w-full px-4 py-3 text-sm font-medium rounded-full transition-all duration-200 border ${borderColor} ${textColor} ${hoverTextColor} ${hoverBg}`}
@@ -422,9 +416,6 @@ const TopBar = () => {
               </div>
             </div>
           )}
-
-          {/* Backdrop glow — subtle white glow */}
-          <div className='absolute inset-0 -z-10 rounded-full blur-3xl opacity-30 bg-white/10'></div>
         </nav>
       </div>
     </div>

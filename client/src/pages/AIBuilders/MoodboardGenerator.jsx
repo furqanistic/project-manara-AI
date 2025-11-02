@@ -797,17 +797,27 @@ const StepSpace = ({ selectedSpace, setSelectedSpace }) => {
 }
 
 const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
-  const styleCategories = {
-    Modern: ['Modern Minimalist', 'Contemporary', 'Scandinavian', 'Industrial'],
-    Classic: ['Traditional', 'Transitional', 'Mid-Century Modern'],
-    Eclectic: ['Bohemian', 'Art Deco', 'Industrial Chic'],
-    Natural: ['Rustic', 'Coastal', 'Mediterranean', 'Japanese'],
-    Luxury: ['Luxury'],
+  const styleIcons = {
+    'Modern Minimalist': '⬜',
+    Contemporary: '✨',
+    Scandinavian: '🧊',
+    Industrial: '⚙️',
+    Traditional: '👑',
+    Transitional: '⚖️',
+    'Mid-Century Modern': '🛋️',
+    Bohemian: '🌸',
+    'Art Deco': '💎',
+    'Industrial Chic': '🏭',
+    Rustic: '🌾',
+    Coastal: '🌊',
+    Mediterranean: '☀️',
+    Japanese: '🌸',
+    Luxury: '✨',
   }
 
   return (
     <div>
-      <div className='text-center mb-10'>
+      <div className='text-center mb-12'>
         <h2 className='text-4xl font-bold text-gray-900 mb-3'>
           What's your design style?
         </h2>
@@ -816,84 +826,126 @@ const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
         </p>
       </div>
 
-      <div className='space-y-8'>
-        {Object.entries(styleCategories).map(([category, styles]) => (
-          <div key={category}>
-            <h3 className='text-lg font-bold text-gray-700 mb-4 flex items-center gap-2'>
-              <div
-                className='w-1 h-6 rounded-full'
-                style={{ backgroundColor: BRAND_COLOR }}
-              />
-              {category}
-            </h3>
-            <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-              {DESIGN_STYLES.filter((style) =>
-                styles.includes(style.label)
-              ).map((style) => (
-                <motion.button
-                  key={style.value}
-                  onClick={() => setSelectedStyle(style.label)}
-                  whileHover={{ scale: 1.05, y: -3 }}
-                  whileTap={{ scale: 0.95 }}
-                  className={`relative p-5 rounded-xl border-2 transition-all text-center group overflow-hidden`}
-                  style={{
-                    borderColor:
-                      selectedStyle === style.label ? BRAND_COLOR : '#e5e7eb',
-                    backgroundColor:
-                      selectedStyle === style.label
-                        ? `${BRAND_COLOR}10`
-                        : 'white',
-                  }}
-                >
-                  {selectedStyle === style.label && (
-                    <motion.div
-                      layoutId='selected-style'
-                      className='absolute inset-0 rounded-xl'
-                      style={{
-                        background: `linear-gradient(135deg, ${BRAND_COLOR}20, ${BRAND_COLOR_LIGHT}20)`,
-                      }}
-                      transition={{
-                        type: 'spring',
-                        bounce: 0.2,
-                        duration: 0.6,
-                      }}
-                    />
-                  )}
+      <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4'>
+        {DESIGN_STYLES.map((style) => (
+          <motion.button
+            key={style.value}
+            onClick={() => setSelectedStyle(style.label)}
+            whileHover={{ scale: 1.08, y: -8 }}
+            whileTap={{ scale: 0.92 }}
+            className={`relative group p-6 rounded-2xl transition-all duration-300 overflow-hidden`}
+            style={{
+              background:
+                selectedStyle === style.label
+                  ? `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR_LIGHT})`
+                  : 'white',
+              boxShadow:
+                selectedStyle === style.label
+                  ? `0 20px 40px ${BRAND_COLOR}30`
+                  : '0 2px 8px rgba(0,0,0,0.08)',
+              border:
+                selectedStyle === style.label ? 'none' : '1px solid #e5e7eb',
+            }}
+          >
+            {/* Background gradient animation on hover */}
+            <motion.div
+              className='absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300'
+              style={{
+                background:
+                  selectedStyle !== style.label
+                    ? `linear-gradient(135deg, ${BRAND_COLOR}08, ${BRAND_COLOR_LIGHT}08)`
+                    : 'transparent',
+              }}
+            />
 
-                  <div className='relative z-10'>
-                    <h3 className='font-bold text-gray-900 text-base mb-2'>
-                      {style.label}
-                    </h3>
-                    <p className='text-xs text-gray-600'>{style.description}</p>
-                  </div>
-
-                  {selectedStyle === style.label && (
-                    <motion.div
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      className='absolute top-2 right-2 z-20'
-                    >
-                      <div
-                        className='w-6 h-6 rounded-full flex items-center justify-center shadow-lg'
-                        style={{ backgroundColor: BRAND_COLOR }}
-                      >
-                        <CheckCircle2 className='w-4 h-4 text-white' />
-                      </div>
-                    </motion.div>
-                  )}
-
-                  <div
-                    className='absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity'
-                    style={{
-                      background: `linear-gradient(135deg, transparent, ${BRAND_COLOR}05)`,
-                    }}
-                  />
-                </motion.button>
-              ))}
+            {/* Icon */}
+            <div className='relative z-10 mb-4 text-center'>
+              <motion.div
+                animate={
+                  selectedStyle === style.label ? { scale: [1, 1.2, 1] } : {}
+                }
+                transition={{ duration: 0.6, repeat: Infinity }}
+                className='text-4xl'
+              >
+                {styleIcons[style.label] || '🎨'}
+              </motion.div>
             </div>
-          </div>
+
+            {/* Content */}
+            <div className='relative z-10 text-center'>
+              <h3
+                className={`font-bold text-base mb-1 transition-colors ${
+                  selectedStyle === style.label ? 'text-white' : 'text-gray-900'
+                }`}
+              >
+                {style.label}
+              </h3>
+              <p
+                className={`text-xs transition-colors ${
+                  selectedStyle === style.label
+                    ? 'text-white/80'
+                    : 'text-gray-600'
+                }`}
+              >
+                {style.description}
+              </p>
+            </div>
+
+            {/* Selection checkmark */}
+            {selectedStyle === style.label && (
+              <motion.div
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ delay: 0.1, type: 'spring', bounce: 0.5 }}
+                className='absolute top-3 right-3 z-20'
+              >
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                  className='w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg'
+                >
+                  <CheckCircle2
+                    className='w-5 h-5'
+                    style={{ color: BRAND_COLOR }}
+                  />
+                </motion.div>
+              </motion.div>
+            )}
+
+            {/* Hover shine effect */}
+            <motion.div
+              className='absolute inset-0 opacity-0 group-hover:opacity-20'
+              style={{
+                background: `linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.8) 50%, transparent 70%)`,
+                transform: 'translateX(-100%)',
+              }}
+              whileHover={{
+                x: '100%',
+              }}
+              transition={{ duration: 0.6 }}
+            />
+          </motion.button>
         ))}
       </div>
+
+      {/* Style count indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        className='mt-8 text-center text-sm text-gray-500'
+      >
+        {selectedStyle ? (
+          <span>
+            Selected:{' '}
+            <span style={{ color: BRAND_COLOR }} className='font-semibold'>
+              {selectedStyle}
+            </span>
+          </span>
+        ) : (
+          <span>Select a style to continue →</span>
+        )}
+      </motion.div>
     </div>
   )
 }
