@@ -1,12 +1,12 @@
-// File: server/services/geminiService.js
+// File: server/services/geminiService.js (FIXED)
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import dotenv from 'dotenv'
 import sharp from 'sharp'
 dotenv.config({ quiet: true })
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image'
-const GEMINI_TEXT_MODEL = 'gemini-2.0-flash-exp'
+const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image' // Image generation model
+const GEMINI_TEXT_MODEL = 'gemini-2.5-flash' // Text generation model (higher quota)
 const USE_MOCK = process.env.USE_MOCK_GEMINI === 'true'
 
 let genAI = null
@@ -18,6 +18,106 @@ const initializeGemini = () => {
     genAI = new GoogleGenerativeAI(GEMINI_API_KEY)
     imageModel = genAI.getGenerativeModel({ model: GEMINI_IMAGE_MODEL })
     textModel = genAI.getGenerativeModel({ model: GEMINI_TEXT_MODEL })
+  }
+}
+
+// Add delay utility for rate limiting
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+/**
+ * Safely parse JSON with fallback
+ */
+const safeJsonParse = (jsonString, fallback = null) => {
+  try {
+    // Try to extract JSON from the string if it's embedded in text
+    const jsonMatch = jsonString.match(/\{[\s\S]*\}|\[[\s\S]*\]/)
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0])
+    }
+    return JSON.parse(jsonString)
+  } catch (error) {
+    console.error(
+      'JSON parse error:',
+      error.message,
+      'Input:',
+      jsonString.substring(0, 200)
+    )
+    return fallback
+  }
+}
+
+/**
+ * Normalize lighting concept - extract numbers from strings
+ */
+const normalizeLightingConcept = (lighting) => {
+  if (!lighting) return lighting
+
+  const normalizeLight = (item) => {
+    if (!item) return item
+
+    // Extract kelvin: "2700K" -> 2700
+    if (item.kelvin) {
+      const kelvinStr = String(item.kelvin).replace(/[^0-9]/g, '')
+      item.kelvin = Number(kelvinStr) || 2700
+    }
+
+    // Extract lumens: "600-800" or "Dimmable, 600-800 lumens" -> 700 (average)
+    if (item.lumens) {
+      const lumsStr = String(item.lumens)
+      const numbers = lumsStr.match(/\d+/g)
+      if (numbers && numbers.length > 0) {
+        if (numbers.length > 1) {
+          // Average of range: 600-800 -> 700
+          item.lumens = Math.round(
+            (Number(numbers[0]) + Number(numbers[1])) / 2
+          )
+        } else {
+          // Single number
+          item.lumens = Number(numbers[0])
+        }
+      } else {
+        item.lumens = 500 // default
+      }
+    }
+
+    return item
+  }
+
+  return {
+    ambient: lighting.ambient?.map(normalizeLight) || [],
+    task: lighting.task?.map(normalizeLight) || [],
+    accent: lighting.accent?.map(normalizeLight) || [],
+    dayMood: lighting.dayMood || {},
+    nightMood: lighting.nightMood || {},
+  }
+}
+
+/**
+ * Normalize furniture dimensions to extract single numbers
+ */
+const normalizeFurnitureDimensions = (furniture) => {
+  if (!furniture) return furniture
+
+  const normalizeDimensions = (item) => {
+    if (item && item.dimensions) {
+      const dims = item.dimensions
+      // Extract first number from arrays if dimensions are arrays
+      dims.length = Array.isArray(dims.length) ? dims.length[0] : dims.length
+      dims.width = Array.isArray(dims.width) ? dims.width[0] : dims.width
+      dims.height = Array.isArray(dims.height) ? dims.height[0] : dims.height
+
+      // Ensure they're numbers
+      dims.length = Number(dims.length) || 100
+      dims.width = Number(dims.width) || 80
+      dims.height = Number(dims.height) || 90
+      dims.unit = dims.unit || 'cm'
+    }
+    return item
+  }
+
+  return {
+    heroPieces: furniture.heroPieces?.map(normalizeDimensions) || [],
+    alternates: furniture.alternates?.map(normalizeDimensions) || [],
   }
 }
 
@@ -41,7 +141,6 @@ const calculateDimensions = (aspectRatio, baseWidth = 1024) => {
 
 /**
  * Resize image to target aspect ratio without cropping
- * Uses 'contain' to fit image within dimensions, preserving all content
  */
 const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
   try {
@@ -57,8 +156,6 @@ const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
       `Resizing: ${imgWidth}x${imgHeight} → ${targetWidth}x${targetHeight} (${aspectRatio})`
     )
 
-    // Use 'contain' to preserve all image content without cropping
-    // This ensures the entire generated image is visible
     const result = await sharp(imageBuffer)
       .resize(targetWidth, targetHeight, {
         fit: 'contain',
@@ -79,7 +176,7 @@ const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
 }
 
 /**
- * Generate images using Gemini 2.5 Flash Image with exact aspect ratio enforcement
+ * Generate images using Gemini 2.5 Flash with exact aspect ratio enforcement
  */
 export const generateImage = async (
   prompt,
@@ -128,7 +225,7 @@ export const generateImage = async (
     }
 
     console.log(
-      `Generating with Gemini 2.5 Flash Image (target: ${aspectRatio} - ${targetWidth}x${targetHeight})...`
+      `Generating with Gemini 2.5 Flash (target: ${aspectRatio} - ${targetWidth}x${targetHeight})...`
     )
 
     const generationConfig = {
@@ -191,7 +288,7 @@ export const generateImage = async (
   } catch (error) {
     console.error('Gemini API Error:', error)
 
-    if (error.message?.includes('quota')) {
+    if (error.message?.includes('quota') || error.status === 429) {
       throw new Error(
         'Gemini API quota exceeded. Please enable billing at https://aistudio.google.com/ or set USE_MOCK_GEMINI=true in .env for testing.'
       )
@@ -249,10 +346,9 @@ Format: { "mood": "...", "feeling": "...", "description": "...", "keywords": [".
     const response = result.response
     const text = response.text()
 
-    // Extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      const moodData = JSON.parse(jsonMatch[0])
+    const moodData = safeJsonParse(text, null)
+
+    if (moodData) {
       return {
         mood: moodData.mood || 'Harmonious',
         feeling: moodData.feeling || 'Comfortable and Inviting',
@@ -407,6 +503,9 @@ export const generateDesignNarrative = async ({
 
     initializeGemini()
 
+    // Add delay to avoid rate limiting
+    await delay(1000)
+
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 
     const narrativePrompt = `As an interior design expert, create a comprehensive design narrative for:
@@ -428,9 +527,9 @@ Format: { "narrative": "...", "vibe": "...", "lifestyle": "..." }`
     const response = result.response
     const text = response.text()
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      const narrativeData = JSON.parse(jsonMatch[0])
+    const narrativeData = safeJsonParse(text, null)
+
+    if (narrativeData) {
       return {
         narrative: narrativeData.narrative || '',
         vibe: narrativeData.vibe || '',
@@ -465,6 +564,9 @@ export const generateMaterials = async ({
 
     initializeGemini()
 
+    // Add delay to avoid rate limiting
+    await delay(1000)
+
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 
     const materialsPrompt = `As an interior design expert, specify materials for:
@@ -491,9 +593,9 @@ Format: { "floors": [...], "walls": [...], "tiles": [...], "fabrics": [...], "me
     const response = result.response
     const text = response.text()
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      const materialsData = JSON.parse(jsonMatch[0])
+    const materialsData = safeJsonParse(text, null)
+
+    if (materialsData) {
       return normalizeMaterialsData(materialsData)
     }
 
@@ -515,14 +617,17 @@ export const generateFurniture = async ({
 }) => {
   try {
     if (USE_MOCK) {
-      return getMockFurniture(style, roomType)
+      return normalizeFurnitureDimensions(getMockFurniture(style, roomType))
     }
 
     if (!GEMINI_API_KEY) {
-      return getMockFurniture(style, roomType)
+      return normalizeFurnitureDimensions(getMockFurniture(style, roomType))
     }
 
     initializeGemini()
+
+    // Add delay to avoid rate limiting
+    await delay(1000)
 
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 
@@ -538,7 +643,7 @@ Provide a JSON response with:
 1. "heroPieces" - 3-5 must-have furniture pieces with:
    - name (required)
    - category (seating/tables/storage/beds/lighting/decor/other)
-   - dimensions (length, width, height in cm)
+   - dimensions (length, width, height in cm - SINGLE NUMBERS, NOT ARRAYS)
    - scaleNotes (how it fits the space)
    - source (where to buy/brand)
    - brand
@@ -547,21 +652,24 @@ Provide a JSON response with:
 
 2. "alternates" - 1-2 alternative options per category with same structure, isHero: false
 
+IMPORTANT: Dimensions must be single numbers (e.g., "length": 120) NOT arrays (e.g., "length": [120, 130])
+
 Format: { "heroPieces": [...], "alternates": [...] }`
 
     const result = await textModel.generateContent(furniturePrompt)
     const response = result.response
     const text = response.text()
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
+    const furnitureData = safeJsonParse(text, null)
+
+    if (furnitureData) {
+      return normalizeFurnitureDimensions(furnitureData)
     }
 
-    return getMockFurniture(style, roomType)
+    return normalizeFurnitureDimensions(getMockFurniture(style, roomType))
   } catch (error) {
     console.error('Error generating furniture:', error)
-    return getMockFurniture(style, roomType)
+    return normalizeFurnitureDimensions(getMockFurniture(style, roomType))
   }
 }
 
@@ -584,6 +692,9 @@ export const generateLightingConcept = async ({
     }
 
     initializeGemini()
+
+    // Add delay to avoid rate limiting
+    await delay(1000)
 
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 
@@ -611,9 +722,10 @@ Format: { "ambient": [...], "task": [...], "accent": [...], "dayMood": {...}, "n
     const response = result.response
     const text = response.text()
 
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
+    const lightingData = safeJsonParse(text, null)
+
+    if (lightingData) {
+      return normalizeLightingConcept(lightingData)
     }
 
     return getMockLighting(style, roomType)
@@ -638,6 +750,9 @@ export const generateZones = async ({ style, roomType, prompt }) => {
 
     initializeGemini()
 
+    // Add delay to avoid rate limiting
+    await delay(1000)
+
     const zonesPrompt = `As an interior design expert, define functional zones for:
 
 Design Details:
@@ -657,9 +772,10 @@ Format: [{ "name": "...", "purpose": "...", "focalPoint": "...", "flowDirection"
     const response = result.response
     const text = response.text()
 
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
+    const zonesData = safeJsonParse(text, null)
+
+    if (Array.isArray(zonesData)) {
+      return zonesData
     }
 
     return getMockZones(roomType)
@@ -689,6 +805,9 @@ export const generateVariants = async ({
 
     initializeGemini()
 
+    // Add delay to avoid rate limiting
+    await delay(1000)
+
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 
     const variantsPrompt = `As an interior design expert, create 2 design variants for:
@@ -711,9 +830,10 @@ Format: [{ "name": "...", "description": "...", "differences": ["...", "..."] },
     const response = result.response
     const text = response.text()
 
-    const jsonMatch = text.match(/\[[\s\S]*\]/)
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
+    const variantsData = safeJsonParse(text, null)
+
+    if (Array.isArray(variantsData)) {
+      return variantsData
     }
 
     return getMockVariants(style)
@@ -810,7 +930,6 @@ const normalizeMaterialsData = (materials) => {
 
   const normalizeMaintenance = (item) => {
     if (item && item.maintenance) {
-      // Extract just low/medium/high from strings like "High (washable)"
       const maintenanceValue = item.maintenance.toLowerCase().trim()
       if (maintenanceValue.includes('low')) {
         item.maintenance = 'low'
@@ -819,7 +938,7 @@ const normalizeMaterialsData = (materials) => {
       } else if (maintenanceValue.includes('high')) {
         item.maintenance = 'high'
       } else {
-        item.maintenance = 'medium' // default fallback
+        item.maintenance = 'medium'
       }
     }
     return item
@@ -988,9 +1107,7 @@ const getMockZones = (roomType) => {
 
 const getMockVariants = (style) => [
   {
-    name: `Option A: Warm ${
-      style.charAt(0).toUpperCase() + style.slice(1)
-    }`,
+    name: `Option A: Warm ${style.charAt(0).toUpperCase() + style.slice(1)}`,
     description: 'Emphasizes warmth through wood tones and soft textures',
     differences: [
       'Warmer color temperature (3000K lighting)',
@@ -1000,9 +1117,7 @@ const getMockVariants = (style) => [
     ],
   },
   {
-    name: `Option B: Cool ${
-      style.charAt(0).toUpperCase() + style.slice(1)
-    }`,
+    name: `Option B: Cool ${style.charAt(0).toUpperCase() + style.slice(1)}`,
     description: 'Focuses on clean lines and cooler tones',
     differences: [
       'Cooler color temperature (4000K lighting)',
@@ -1038,7 +1153,6 @@ export const buildMoodboardPrompt = ({
   }
 
   if (colorPalette && colorPalette.length > 0) {
-    // Handle both string arrays and color object arrays
     const colors =
       Array.isArray(colorPalette) &&
       typeof colorPalette[0] === 'object' &&
@@ -1070,7 +1184,22 @@ export const buildMoodboardPrompt = ({
     prompt += `. ${customPrompt}`
   }
 
-  prompt += `. Professional interior design photography with high-quality materials, realistic textures, proper lighting, and attention to architectural details. Photorealistic rendering with depth and atmosphere.`
+  prompt += `. Professional interior design moodboard with high-quality materials, realistic textures, proper lighting, and attention to architectural details. Photorealistic rendering with depth and atmosphere.`
+
+  // Add text overlay instructions
+  const roomTypeText = roomType ? roomType.replace(/_/g, ' ') : 'Room'
+  const styleText = style && style !== 'custom' ? style : 'Modern'
+
+  prompt += ` IMPORTANT: Include text overlays on the image with:
+1. A title section with "MOOD BOARD" or main heading
+2. Design style name: "${styleText}"
+3. Room type: "${roomTypeText}"
+4. Color palette labels on or near color swatches (include color names)
+5. A brief design philosophy text (2-3 lines describing the aesthetic)
+6. Some handwritten-style text elements for visual interest
+7. Labels for key design elements (materials, furniture types, etc)
+
+Make the text professional, stylish, and integrated into the moodboard design. Use elegant typography and placement.`
 
   return prompt.trim()
 }

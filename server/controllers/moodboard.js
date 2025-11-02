@@ -20,28 +20,117 @@ import {
   getImageRegions,
 } from '../services/imageCompositor.js'
 
-/**
- * Helper to parse aspect ratio
- */
+// ============================================================================
+// PROGRESS TRACKING - SSE Management
+// ============================================================================
+
+const activeProgressStreams = new Map()
+
+const broadcastProgress = (moodboardId, currentSteps) => {
+  if (!activeProgressStreams.has(moodboardId)) return
+
+  const clients = activeProgressStreams.get(moodboardId)
+  const data = JSON.stringify({
+    currentSteps,
+    timestamp: new Date().toISOString(),
+  })
+
+  clients.forEach((client) => {
+    try {
+      client.write(`event: progress\n`)
+      client.write(`data: ${data}\n\n`)
+    } catch (error) {
+      console.error('Error sending progress update:', error)
+    }
+  })
+}
+
+const broadcastComplete = (moodboardId) => {
+  if (!activeProgressStreams.has(moodboardId)) return
+
+  const clients = activeProgressStreams.get(moodboardId)
+  clients.forEach((client) => {
+    try {
+      client.write(`event: complete\n`)
+      client.write(`data: {}\n\n`)
+    } catch (error) {
+      console.error('Error sending completion event:', error)
+    }
+  })
+
+  activeProgressStreams.delete(moodboardId)
+}
+
+// ============================================================================
+// PROGRESS STREAM ENDPOINT
+// ============================================================================
+
+export const getMoodboardProgressStream = async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    const moodboard = await Moodboard.findById(id)
+    if (!moodboard) {
+      return next(createError(404, 'Moodboard not found'))
+    }
+
+    if (moodboard.userId.toString() !== req.user._id.toString()) {
+      return next(
+        createError(403, 'You can only access your own moodboard progress')
+      )
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+    res.setHeader('Access-Control-Allow-Origin', '*')
+
+    if (!activeProgressStreams.has(id)) {
+      activeProgressStreams.set(id, [])
+    }
+
+    activeProgressStreams.get(id).push(res)
+    res.write(`:connected\n\n`)
+
+    req.on('close', () => {
+      const clients = activeProgressStreams.get(id)
+      if (clients) {
+        const index = clients.indexOf(res)
+        if (index > -1) {
+          clients.splice(index, 1)
+        }
+        if (clients.length === 0) {
+          activeProgressStreams.delete(id)
+        }
+      }
+      res.end()
+    })
+  } catch (error) {
+    console.error('Error setting up progress stream:', error)
+    next(error)
+  }
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
 const parseAspectRatio = (aspectRatio) => {
   const [width, height] = aspectRatio.split(':').map(Number)
   return { width, height }
 }
 
-/**
- * Build color palette instruction for prompt
- */
 const buildColorPalettePrompt = (colors) => {
   if (!colors || colors.length === 0) return ''
-
   return `Color palette (must use these exact colors): ${colors.join(
     ', '
   )}. Incorporate these colors prominently in the design.`
 }
 
-/**
- * Create a new moodboard
- */
+// ============================================================================
+// CREATE MOODBOARD
+// ============================================================================
+
 export const createMoodboard = async (req, res, next) => {
   let session = null
 
@@ -75,7 +164,6 @@ export const createMoodboard = async (req, res, next) => {
       return next(createError(401, 'User not authenticated'))
     }
 
-    // Always use collage layout with single composite image
     const moodboardData = {
       userId: req.user._id,
       title: title.trim(),
@@ -83,13 +171,13 @@ export const createMoodboard = async (req, res, next) => {
       style: style || 'modern',
       roomType,
       colorPreferences: colorPreferences || colorPalette || [],
-      paletteColors: paletteColors || [], // Store actual hex colors
-      colorPalette: [], // Will be filled after generation
+      paletteColors: paletteColors || [],
+      colorPalette: [],
       notes,
       projectId,
       status: 'draft',
-      layout: 'collage', // Always collage style
-      imageCount: 1, // Always single composite moodboard
+      layout: 'collage',
+      imageCount: 1,
       aspectRatio: aspectRatio || '16:9',
     }
 
@@ -116,9 +204,10 @@ export const createMoodboard = async (req, res, next) => {
   }
 }
 
-/**
- * Generate moodboard images using Gemini 2.5 Flash Image
- */
+// ============================================================================
+// GENERATE MOODBOARD IMAGES
+// ============================================================================
+
 export const generateMoodboardImages = async (req, res, next) => {
   try {
     const { id } = req.params
@@ -145,10 +234,9 @@ export const generateMoodboardImages = async (req, res, next) => {
     moodboard.status = 'generating'
     await moodboard.save({ validateBeforeSave: false })
 
-    const numImages = 1 // Always generate single composite moodboard
+    const numImages = 1
     const targetAspectRatio = aspectRatio || moodboard.aspectRatio || '16:9'
 
-    // Build enhanced prompt with color palette
     let basePrompt = buildMoodboardPrompt({
       style: moodboard.style,
       roomType: moodboard.roomType,
@@ -158,7 +246,6 @@ export const generateMoodboardImages = async (req, res, next) => {
       aspectRatio: targetAspectRatio,
     })
 
-    // Add color palette instruction if colors are provided
     const colorsToUse = paletteColors || moodboard.paletteColors
     if (colorsToUse && colorsToUse.length > 0) {
       const colorPaletteInstruction = buildColorPalettePrompt(colorsToUse)
@@ -169,7 +256,6 @@ export const generateMoodboardImages = async (req, res, next) => {
       ? `${basePrompt}. User requirements: ${customPrompt}`
       : basePrompt
 
-    // Process reference images if provided
     let processedImages = []
     if (referenceImages && Array.isArray(referenceImages)) {
       processedImages = referenceImages.map((img) => ({
@@ -181,7 +267,7 @@ export const generateMoodboardImages = async (req, res, next) => {
     console.log('Generating single composite moodboard...')
     console.log('Enhanced prompt:', enhancedPrompt)
 
-    // Generate single composite moodboard image
+    // Generate image
     const result = await generateImage(
       enhancedPrompt,
       processedImages,
@@ -191,7 +277,10 @@ export const generateMoodboardImages = async (req, res, next) => {
     const imageData = result.images[0].data
     const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
 
-    // Extract color palette from the generated moodboard
+    // PROGRESS: Color extraction
+    broadcastProgress(id, ['Extracting color palette'])
+    console.log('Extracted 5 colors from image')
+
     const palette = await extractColorPalette(imageData)
 
     const generatedImageEntry = {
@@ -208,10 +297,15 @@ export const generateMoodboardImages = async (req, res, next) => {
       },
     }
 
-    // For single moodboard, the composite IS the generated image
     const compositeColorPalette = palette
 
-    // Generate mood description using Gemini
+    // PROGRESS: Mood description
+    broadcastProgress(id, [
+      'Extracting color palette',
+      'Generating mood description',
+    ])
+    console.log('Generating mood description...')
+
     const moodDescription = await generateMoodDescription({
       style: moodboard.style,
       roomType: moodboard.roomType,
@@ -219,32 +313,104 @@ export const generateMoodboardImages = async (req, res, next) => {
       prompt: enhancedPrompt,
     })
 
-    console.log('Generating comprehensive moodboard data...')
-
-    // Generate all comprehensive moodboard data
-    const aiParams = {
+    // PROGRESS: Design narrative
+    broadcastProgress(id, [
+      'Extracting color palette',
+      'Generating mood description',
+      'Generating design narrative',
+    ])
+    console.log('Generating design narrative...')
+    const designNarrative = await generateDesignNarrative({
       style: moodboard.style,
       roomType: moodboard.roomType,
       colorPalette: compositeColorPalette,
       prompt: enhancedPrompt,
-    }
+    })
 
-    // Generate all data in parallel for efficiency
-    const [
-      designNarrative,
-      materials,
-      furniture,
-      lightingConcept,
-      zones,
-      variants,
-    ] = await Promise.all([
-      generateDesignNarrative(aiParams),
-      generateMaterials(aiParams),
-      generateFurniture(aiParams),
-      generateLightingConcept(aiParams),
-      generateZones(aiParams),
-      generateVariants(aiParams),
+    // PROGRESS: Materials
+    broadcastProgress(id, [
+      'Extracting color palette',
+      'Generating mood description',
+      'Generating design narrative',
+      'Generating materials',
     ])
+    console.log('Generating materials...')
+    const materials = await generateMaterials({
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: compositeColorPalette,
+      prompt: enhancedPrompt,
+    })
+
+    // PROGRESS: Furniture
+    broadcastProgress(id, [
+      'Extracting color palette',
+      'Generating mood description',
+      'Generating design narrative',
+      'Generating materials',
+      'Generating furniture',
+    ])
+    console.log('Generating furniture...')
+    const furniture = await generateFurniture({
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: compositeColorPalette,
+      prompt: enhancedPrompt,
+    })
+
+    // PROGRESS: Lighting
+    broadcastProgress(id, [
+      'Extracting color palette',
+      'Generating mood description',
+      'Generating design narrative',
+      'Generating materials',
+      'Generating furniture',
+      'Generating lighting concept',
+    ])
+    console.log('Generating lighting concept...')
+    const lightingConcept = await generateLightingConcept({
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: compositeColorPalette,
+      prompt: enhancedPrompt,
+    })
+
+    // PROGRESS: Zones
+    broadcastProgress(id, [
+      'Extracting color palette',
+      'Generating mood description',
+      'Generating design narrative',
+      'Generating materials',
+      'Generating furniture',
+      'Generating lighting concept',
+      'Generating zones',
+    ])
+    console.log('Generating zones...')
+    const zones = await generateZones({
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: compositeColorPalette,
+      prompt: enhancedPrompt,
+    })
+
+    // PROGRESS: Variants
+    broadcastProgress(id, [
+      'Extracting color palette',
+      'Generating mood description',
+      'Generating design narrative',
+      'Generating materials',
+      'Generating furniture',
+      'Generating lighting concept',
+      'Generating zones',
+      'Generating variants',
+    ])
+    console.log('Generating variants...')
+    const variants = await generateVariants({
+      style: moodboard.style,
+      roomType: moodboard.roomType,
+      colorPalette: compositeColorPalette,
+      prompt: enhancedPrompt,
+    })
 
     console.log('All comprehensive moodboard data generated successfully')
 
@@ -282,6 +448,9 @@ export const generateMoodboardImages = async (req, res, next) => {
     moodboard.status = 'completed'
     await moodboard.save()
 
+    // PROGRESS: Complete
+    broadcastComplete(id)
+
     console.log(
       'Composite moodboard generated successfully with color palette and mood'
     )
@@ -294,6 +463,7 @@ export const generateMoodboardImages = async (req, res, next) => {
     })
   } catch (error) {
     console.error('Error generating moodboard images:', error)
+    broadcastComplete(req.params.id)
 
     try {
       const moodboard = await Moodboard.findById(req.params.id)
@@ -309,9 +479,10 @@ export const generateMoodboardImages = async (req, res, next) => {
   }
 }
 
-/**
- * Regenerate the moodboard (creates a new variation)
- */
+// ============================================================================
+// REGENERATE MOODBOARD IMAGES
+// ============================================================================
+
 export const regenerateMoodboardImages = async (req, res, next) => {
   try {
     const { id } = req.params
@@ -332,7 +503,6 @@ export const regenerateMoodboardImages = async (req, res, next) => {
       )
     }
 
-    // Build base prompt
     let basePrompt = buildMoodboardPrompt({
       style: moodboard.style,
       roomType: moodboard.roomType,
@@ -342,7 +512,6 @@ export const regenerateMoodboardImages = async (req, res, next) => {
       aspectRatio: aspectRatio || moodboard.aspectRatio,
     })
 
-    // Add color palette instruction
     const colorsToUse = paletteColors || moodboard.paletteColors
     if (colorsToUse && colorsToUse.length > 0) {
       const colorPaletteInstruction = buildColorPalettePrompt(colorsToUse)
@@ -355,7 +524,6 @@ export const regenerateMoodboardImages = async (req, res, next) => {
 
     console.log('Regenerating moodboard with new variation...')
 
-    // Regenerate the single composite moodboard
     const result = await generateImage(
       regenerationPrompt,
       [],
@@ -365,10 +533,8 @@ export const regenerateMoodboardImages = async (req, res, next) => {
     const imageData = result.images[0].data
     const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
 
-    // Extract color palette
     const palette = await extractColorPalette(imageData)
 
-    // Generate new mood description
     const moodDescription = await generateMoodDescription({
       style: moodboard.style,
       roomType: moodboard.roomType,
@@ -393,7 +559,6 @@ export const regenerateMoodboardImages = async (req, res, next) => {
 
     moodboard.generatedImages[0] = regeneratedImageEntry
 
-    // Update composite (same as the generated image)
     const targetAspectRatio = aspectRatio || moodboard.aspectRatio
     moodboard.compositeMoodboard = {
       url: imageUrl,
@@ -433,9 +598,10 @@ export const regenerateMoodboardImages = async (req, res, next) => {
   }
 }
 
-/**
- * Edit the moodboard (apply modifications)
- */
+// ============================================================================
+// EDIT MOODBOARD IMAGE
+// ============================================================================
+
 export const editMoodboardImage = async (req, res, next) => {
   try {
     const { id } = req.params
@@ -464,7 +630,6 @@ export const editMoodboardImage = async (req, res, next) => {
     const existingImage = moodboard.generatedImages[0]
     const baseImageData = existingImage.url.split(',')[1]
 
-    // Build edit prompt with color constraints
     let fullEditPrompt = editPrompt
     const colorsToUse = paletteColors || moodboard.paletteColors
     if (colorsToUse && colorsToUse.length > 0) {
@@ -474,7 +639,6 @@ export const editMoodboardImage = async (req, res, next) => {
 
     console.log('Editing moodboard with modifications...')
 
-    // Edit the image with exact aspect ratio
     const result = await editImage(
       fullEditPrompt,
       baseImageData,
@@ -485,10 +649,8 @@ export const editMoodboardImage = async (req, res, next) => {
     const imageData = result.images[0].data
     const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
 
-    // Extract color palette
     const palette = await extractColorPalette(imageData)
 
-    // Generate new mood description
     const moodDescription = await generateMoodDescription({
       style: moodboard.style,
       roomType: moodboard.roomType,
@@ -514,7 +676,6 @@ export const editMoodboardImage = async (req, res, next) => {
 
     moodboard.generatedImages[0] = editedImageEntry
 
-    // Update composite (same as edited image for single moodboard)
     const targetAspectRatio = aspectRatio || moodboard.aspectRatio
     moodboard.compositeMoodboard = {
       url: imageUrl,
@@ -554,7 +715,10 @@ export const editMoodboardImage = async (req, res, next) => {
   }
 }
 
-// ... rest of the controller methods
+// ============================================================================
+// GET USER MOODBOARDS
+// ============================================================================
+
 export const getUserMoodboards = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1
@@ -587,6 +751,10 @@ export const getUserMoodboards = async (req, res, next) => {
   }
 }
 
+// ============================================================================
+// GET MOODBOARD BY ID
+// ============================================================================
+
 export const getMoodboardById = async (req, res, next) => {
   try {
     const moodboard = await Moodboard.findById(req.params.id).populate(
@@ -617,6 +785,10 @@ export const getMoodboardById = async (req, res, next) => {
   }
 }
 
+// ============================================================================
+// UPDATE MOODBOARD
+// ============================================================================
+
 export const updateMoodboard = async (req, res, next) => {
   try {
     const {
@@ -642,7 +814,6 @@ export const updateMoodboard = async (req, res, next) => {
       return next(createError(403, 'You can only update your own moodboards'))
     }
 
-    // Update fields
     if (title) moodboard.title = title.trim()
     if (style) moodboard.style = style
     if (roomType) moodboard.roomType = roomType
@@ -667,6 +838,10 @@ export const updateMoodboard = async (req, res, next) => {
     next(error)
   }
 }
+
+// ============================================================================
+// DELETE MOODBOARD
+// ============================================================================
 
 export const deleteMoodboard = async (req, res, next) => {
   try {
