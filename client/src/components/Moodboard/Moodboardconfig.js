@@ -1,5 +1,6 @@
-// File: client/src/components/Moodboard/Moodboardconfig.js (UPDATED)
-// Add color palette mapping for AI generation
+// File: client/src/components/Moodboard/Moodboardconfig.js (FIXED - Enum Aligned)
+// IMPORTANT: Every value here MUST match the backend model enums
+
 export const getColorDescriptionForPalette = (paletteName) => {
   const colorDescriptions = {
     'Executive Navy':
@@ -226,134 +227,197 @@ export const COLOR_PALETTES = [
   },
 ]
 
-// Room types for decoration
+// ============================================================================
+// ROOM TYPES - MUST MATCH Moodboard.roomType enum
+// ============================================================================
 export const SPACE_TYPES = [
   {
     name: 'Living Room',
     icon: 'Sofa',
-    value: 'living_room',
+    value: 'living_room', // ✅ Matches model
     description: 'Social gathering space',
   },
   {
     name: 'Bedroom',
     icon: 'Home',
-    value: 'bedroom',
+    value: 'bedroom', // ✅ Matches model
     description: 'Rest & relaxation',
   },
   {
     name: 'Kitchen',
     icon: 'ChefHat',
-    value: 'kitchen',
+    value: 'kitchen', // ✅ Matches model
     description: 'Culinary hub',
   },
   {
     name: 'Dining Room',
     icon: 'Utensils',
-    value: 'dining_room',
+    value: 'dining_room', // ✅ Matches model
     description: 'Dining & entertaining',
   },
   {
     name: 'Office',
     icon: 'Layers',
-    value: 'office',
+    value: 'office', // ✅ Matches model
     description: 'Productivity zone',
   },
   {
     name: 'Bathroom',
     icon: 'Lightbulb',
-    value: 'bathroom',
+    value: 'bathroom', // ✅ Matches model
     description: 'Personal spa',
   },
   {
     name: 'Home Office',
     icon: 'Heart',
-    value: 'home_office',
+    value: 'home_office', // ✅ Matches model
     description: 'Work from home',
   },
   {
     name: 'Balcony',
     icon: 'Globe',
-    value: 'outdoor',
+    value: 'outdoor', // ✅ Matches model
     description: 'Outdoor living',
   },
   {
     name: 'Hallway',
     icon: 'Heart',
-    value: 'hallway',
+    value: 'hallway', // ✅ Matches model
     description: 'Entry & corridors',
   },
   {
     name: 'Kids Room',
     icon: 'Heart',
-    value: 'kids_room',
+    value: 'kids_room', // ✅ Matches model
     description: 'Fun & playful',
   },
   {
     name: 'Commercial Space',
     icon: 'Layers',
-    value: 'commercial',
+    value: 'commercial', // ✅ Matches model
     description: 'Retail & business',
   },
   {
     name: 'Restaurant',
     icon: 'ChefHat',
-    value: 'restaurant',
+    value: 'restaurant', // ✅ Matches model
     description: 'Dining establishment',
+  },
+  {
+    name: 'Other',
+    icon: 'Layers',
+    value: 'other', // ✅ Matches model (fallback)
+    description: 'Custom space',
   },
 ]
 
-// Design styles
+// ============================================================================
+// DESIGN STYLES - MUST MATCH Moodboard.style enum EXACTLY
+// ============================================================================
+// ENUM in model: 'modern', 'contemporary', 'minimalist', 'scandinavian',
+// 'industrial', 'bohemian', 'traditional', 'rustic', 'coastal', 'eclectic',
+// 'mid-century', 'luxury', 'art-deco', 'mediterranean', 'japanese',
+// 'industrial-chic', 'transitional', 'custom'
 export const DESIGN_STYLES = [
+  // Core styles
   {
-    label: 'Modern Minimalist',
-    value: 'minimalist',
-    description: 'Clean & simple',
-  },
-  {
-    label: 'Scandinavian',
-    value: 'scandinavian',
-    description: 'Cozy & functional',
-  },
-  { label: 'Industrial', value: 'industrial', description: 'Raw & edgy' },
-  { label: 'Bohemian', value: 'bohemian', description: 'Eclectic & artistic' },
-  {
-    label: 'Mid-Century Modern',
-    value: 'mid-century',
-    description: 'Retro elegance',
-  },
-  {
-    label: 'Traditional',
-    value: 'traditional',
-    description: 'Classic & timeless',
+    label: 'Modern',
+    value: 'modern', // ✅ Matches model - previously missing!
+    description: 'Clean & contemporary',
   },
   {
     label: 'Contemporary',
-    value: 'contemporary',
+    value: 'contemporary', // ✅ Matches model
     description: 'Trendy & refined',
   },
-  { label: 'Rustic', value: 'rustic', description: 'Warm & natural' },
-  { label: 'Luxury', value: 'luxury', description: 'Opulent & bold' },
   {
-    label: 'Art Deco',
-    value: 'art-deco',
-    description: 'Geometric & glamorous',
+    label: 'Modern Minimalist',
+    value: 'minimalist', // ✅ Matches model
+    description: 'Clean & simple',
   },
-  { label: 'Coastal', value: 'coastal', description: 'Relaxed & beachy' },
+
+  // Natural & Organic
   {
-    label: 'Mediterranean',
-    value: 'mediterranean',
-    description: 'Warm & textured',
+    label: 'Scandinavian',
+    value: 'scandinavian', // ✅ Matches model
+    description: 'Cozy & functional',
   },
-  { label: 'Japanese', value: 'japanese', description: 'Zen & minimalist' },
+  {
+    label: 'Rustic',
+    value: 'rustic', // ✅ Matches model
+    description: 'Warm & natural',
+  },
+  {
+    label: 'Coastal',
+    value: 'coastal', // ✅ Matches model
+    description: 'Relaxed & beachy',
+  },
+
+  // Artistic & Expressive
+  {
+    label: 'Bohemian',
+    value: 'bohemian', // ✅ Matches model
+    description: 'Eclectic & artistic',
+  },
+  {
+    label: 'Eclectic',
+    value: 'eclectic', // ✅ Matches model - previously missing!
+    description: 'Mixed & vibrant',
+  },
+
+  // Industrial & Urban
+  {
+    label: 'Industrial',
+    value: 'industrial', // ✅ Matches model
+    description: 'Raw & edgy',
+  },
   {
     label: 'Industrial Chic',
-    value: 'industrial-chic',
+    value: 'industrial-chic', // ✅ Matches model
     description: 'Urban & trendy',
+  },
+
+  // Classical & Elegant
+  {
+    label: 'Traditional',
+    value: 'traditional', // ✅ Matches model
+    description: 'Classic & timeless',
   },
   {
     label: 'Transitional',
-    value: 'transitional',
+    value: 'transitional', // ✅ Matches model
     description: 'Balanced & versatile',
+  },
+
+  // Global Influences
+  {
+    label: 'Mediterranean',
+    value: 'mediterranean', // ✅ Matches model
+    description: 'Warm & textured',
+  },
+  {
+    label: 'Japanese',
+    value: 'japanese', // ✅ Matches model
+    description: 'Zen & minimalist',
+  },
+
+  // Luxury & Glamorous
+  {
+    label: 'Luxury',
+    value: 'luxury', // ✅ Matches model
+    description: 'Opulent & bold',
+  },
+  {
+    label: 'Art Deco',
+    value: 'art-deco', // ✅ Matches model
+    description: 'Geometric & glamorous',
+  },
+
+  // Fallback
+  {
+    label: 'Custom',
+    value: 'custom', // ✅ Matches model - previously missing!
+    description: 'Your unique vision',
   },
 ]
 
