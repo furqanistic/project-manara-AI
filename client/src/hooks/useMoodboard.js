@@ -5,6 +5,7 @@ import {
   deleteMoodboard,
   editMoodboardImage,
   generateMoodboardImages,
+  generateMoodboardDescriptions,
   getMoodboardById,
   getUserMoodboards,
   regenerateMoodboardImages,
@@ -62,27 +63,27 @@ export const useCreateMoodboard = () => {
 }
 
 /**
- * Generate moodboard images
- * ✅ Optimized for long-running requests
+ * Generate moodboard image (Phase 1 - fast)
+ * ✅ Optimized for quick image generation
  */
 export const useGenerateMoodboard = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (variables) => {
-      console.log('🎨 useGenerateMoodboard called with:', variables)
+      console.log('🎨 useGenerateMoodboard (Phase 1) called with:', variables)
 
       try {
         const result = await generateMoodboardImages(variables)
-        console.log('✅ Generation successful:', result)
+        console.log('✅ Image generation successful:', result)
         return result
       } catch (error) {
-        console.error('❌ Generation failed:', error)
+        console.error('❌ Image generation failed:', error)
 
         // Provide user-friendly error messages
         if (error.code === 'TIMEOUT') {
           throw new Error(
-            'Generation took too long (>10 minutes). Please try again or use a simpler prompt.'
+            'Image generation took too long. Please try again or use a simpler prompt.'
           )
         }
 
@@ -116,6 +117,53 @@ export const useGenerateMoodboard = () => {
     },
     retry: 1, // Retry once on failure
     retryDelay: 2000, // Wait 2 seconds before retry
+  })
+}
+
+/**
+ * Generate moodboard descriptions (Phase 2 - deferred)
+ * ✅ Runs in background after image is shown
+ */
+export const useGenerateMoodboardDescriptions = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (moodboardId) => {
+      console.log('📝 useGenerateMoodboardDescriptions (Phase 2) called for:', moodboardId)
+
+      try {
+        const result = await generateMoodboardDescriptions(moodboardId)
+        console.log('✅ Description generation successful:', result)
+        return result
+      } catch (error) {
+        console.error('❌ Description generation failed:', error)
+
+        if (error.code === 'TIMEOUT') {
+          throw new Error(
+            'Description generation took too long. Some details may be missing.'
+          )
+        }
+
+        if (error.message?.includes('quota')) {
+          throw new Error(
+            'API quota exceeded. Descriptions may be incomplete.'
+          )
+        }
+
+        throw error
+      }
+    },
+    onSuccess: (data, moodboardId) => {
+      console.log('🔄 Invalidating queries after description generation:', moodboardId)
+      queryClient.invalidateQueries({
+        queryKey: moodboardKeys.detail(moodboardId),
+      })
+    },
+    onError: (error) => {
+      console.error('❌ Description generation error:', error.message)
+    },
+    retry: 2, // Retry twice for descriptions
+    retryDelay: 3000, // Wait 3 seconds before retry
   })
 }
 

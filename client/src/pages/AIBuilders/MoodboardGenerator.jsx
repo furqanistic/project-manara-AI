@@ -1,6 +1,6 @@
 // File: client/src/pages/AIBuilders/MoodboardGenerator.jsx
 import TopBar from '@/components/Layout/Topbar'
-import { useCreateMoodboard, useGenerateMoodboard } from '@/hooks/useMoodboard'
+import { useCreateMoodboard, useGenerateMoodboard, useGenerateMoodboardDescriptions } from '@/hooks/useMoodboard'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -44,8 +44,10 @@ const MoodboardGenerator = () => {
   const [showEditModal, setShowEditModal] = useState(false)
   const [loadingState, setLoadingState] = useState(null)
   const [progressSteps, setProgressSteps] = useState([])
+  const [generationPhase, setGenerationPhase] = useState(null) // 'image' or 'descriptions'
   const createMutation = useCreateMoodboard()
   const generateMutation = useGenerateMoodboard()
+  const generateDescriptionsMutation = useGenerateMoodboardDescriptions()
 
   const handleGenerate = async () => {
     if (!changes.trim()) {
@@ -54,7 +56,10 @@ const MoodboardGenerator = () => {
     }
 
     try {
+      // ========== PHASE 1: Generate Image (Fast) ==========
       setLoadingState('generating')
+      setGenerationPhase('image')
+      setProgressSteps(['Creating moodboard draft'])
 
       const spaceValue =
         SPACE_TYPES.find((s) => s.name === selectedSpace)?.value ||
@@ -78,25 +83,7 @@ const MoodboardGenerator = () => {
       const createResult = await createMutation.mutateAsync(createPayload)
       const moodboardId = createResult.data.moodboard._id
 
-      // Start tracking progress
-      const progressTracker = setInterval(() => {
-        // Simulated progress - in real implementation, use SSE
-        setProgressSteps((prev) => {
-          const steps = [
-            'Extracting color palette',
-            'Generating mood description',
-            'Generating design narrative',
-            'Generating materials',
-            'Generating furniture',
-            'Generating lighting concept',
-            'Generating zones',
-            'Generating variants',
-          ]
-          return prev.length < steps.length
-            ? [...prev, steps[prev.length]]
-            : prev
-        })
-      }, 2000)
+      setProgressSteps(['Moodboard created', 'Generating image...'])
 
       const enhancedCustomPrompt = `${changes.trim()}. Color scheme: ${colorDescription}`
 
@@ -106,21 +93,45 @@ const MoodboardGenerator = () => {
         aspectRatio: '16:9',
       }
 
+      // Generate image (Phase 1)
       const generateResult = await generateMutation.mutateAsync({
         moodboardId,
         data: generatePayload,
       })
 
-      clearInterval(progressTracker)
-      setProgressSteps([])
+      // Image is ready! Show it to the user
       setCurrentMoodboard(generateResult.data.moodboard)
+      setProgressSteps(['Image generated', 'Colors extracted', 'Image ready!'])
       setLoadingState(null)
-      toast.success('Moodboard generated successfully!')
+      setGenerationPhase(null)
+      toast.success('Moodboard image ready! Generating details...')
       setCurrentStep(3)
+
+      // ========== PHASE 2: Generate Descriptions (Background) ==========
+      // Start Phase 2 immediately but don't block the UI
+      setGenerationPhase('descriptions')
+
+      try {
+        const descriptionsResult = await generateDescriptionsMutation.mutateAsync(moodboardId)
+
+        // Update moodboard with all descriptions
+        setCurrentMoodboard(descriptionsResult.data.moodboard)
+        setGenerationPhase(null)
+        toast.success('All details generated successfully!')
+      } catch (descError) {
+        console.error('Description generation error:', descError)
+        setGenerationPhase(null)
+        // Don't show error toast - image is already shown
+        toast('Some details couldn\'t be generated, but your image is ready!', {
+          icon: '⚠️',
+        })
+      }
+
     } catch (error) {
       console.error('Generation error:', error)
       setProgressSteps([])
       setLoadingState(null)
+      setGenerationPhase(null)
       toast.error(
         error.response?.data?.message ||
           error.message ||
@@ -404,7 +415,7 @@ const MoodboardGenerator = () => {
     <>
       <TopBar />
       {loadingState === 'generating' && (
-        <BeautifulLoader progressSteps={progressSteps} />
+        <BeautifulLoader progressSteps={progressSteps} phase={generationPhase} />
       )}
       <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'>
         {currentStep < 3 ? (
@@ -431,6 +442,7 @@ const MoodboardGenerator = () => {
             onDownloadPDF={downloadMoodboardPDF}
             onBackToCreate={() => setCurrentStep(0)}
             loadingState={loadingState}
+            generationPhase={generationPhase}
             showImageModal={showImageModal}
             setShowImageModal={setShowImageModal}
             showEditModal={showEditModal}
@@ -443,19 +455,28 @@ const MoodboardGenerator = () => {
   )
 }
 
-const BeautifulLoader = ({ progressSteps = [] }) => {
-  const backendSteps = [
+const BeautifulLoader = ({ progressSteps = [], phase = 'image' }) => {
+  const imagePhaseSteps = [
+    'Creating moodboard draft',
+    'Generating image with AI',
     'Extracting color palette',
-    'Generating mood description',
-    'Generating design narrative',
-    'Generating materials',
-    'Generating furniture',
-    'Generating lighting concept',
-    'Generating zones',
-    'Generating variants',
+    'Analyzing design elements',
   ]
 
-  const displaySteps = progressSteps.length > 0 ? progressSteps : backendSteps
+  const descriptionPhaseSteps = [
+    'Generating design narrative',
+    'Selecting materials',
+    'Curating furniture pieces',
+    'Planning lighting concept',
+    'Defining functional zones',
+    'Creating design variants',
+  ]
+
+  const displaySteps = progressSteps.length > 0
+    ? progressSteps
+    : phase === 'image'
+      ? imagePhaseSteps
+      : descriptionPhaseSteps
 
   return (
     <motion.div
@@ -557,10 +578,14 @@ const BeautifulLoader = ({ progressSteps = [] }) => {
           transition={{ delay: 0.2 }}
         >
           <h2 className='text-3xl font-bold text-white mb-3'>
-            Creating Your Moodboard
+            {phase === 'image'
+              ? 'Generating Your Moodboard'
+              : 'Enriching Design Details'}
           </h2>
           <p className='text-gray-300 text-lg mb-8'>
-            Our AI is crafting your perfect design...
+            {phase === 'image'
+              ? 'Creating your perfect design image...'
+              : 'Adding materials, furniture, lighting details...'}
           </p>
 
           {/* Backend progress steps - vertical list with status */}
@@ -1181,6 +1206,7 @@ const ResultView = ({
   onDownloadPDF,
   onBackToCreate,
   loadingState,
+  generationPhase,
   showImageModal,
   setShowImageModal,
   showEditModal,
@@ -1223,6 +1249,30 @@ const ResultView = ({
 
   return (
     <div className='min-h-screen pt-32 pb-12'>
+      {/* Phase 2 Loading Banner */}
+      {generationPhase === 'descriptions' && (
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          className='fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 shadow-lg'
+        >
+          <div className='max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-3'>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+            >
+              <Sparkles className='w-5 h-5 text-white' />
+            </motion.div>
+            <span className='text-white font-medium'>
+              Generating detailed descriptions in background...
+            </span>
+            <span className='text-white/80 text-sm'>
+              (Materials, Furniture, Lighting, Zones)
+            </span>
+          </div>
+        </motion.div>
+      )}
       <div className='max-w-7xl mx-auto px-4'>
         <motion.div
           initial={{ opacity: 0, y: -20 }}

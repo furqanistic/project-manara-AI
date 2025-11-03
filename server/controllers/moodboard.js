@@ -304,7 +304,7 @@ export const generateMoodboardImages = async (req, res, next) => {
     console.log('✅ Image generated successfully')
 
     // PROGRESS: Color extraction
-    broadcastProgress(id, ['Extracting color palette'])
+    broadcastProgress(id, ['Image generated'])
     console.log('🎨 Extracting color palette...')
 
     const palette = await extractColorPalette(imageData)
@@ -325,11 +325,8 @@ export const generateMoodboardImages = async (req, res, next) => {
 
     const compositeColorPalette = palette
 
-    // PROGRESS: Mood description
-    broadcastProgress(id, [
-      'Extracting color palette',
-      'Generating mood description',
-    ])
+    // PROGRESS: Mood description (quick generation for preview)
+    broadcastProgress(id, ['Image generated', 'Extracting colors'])
     console.log('💭 Generating mood description...')
 
     const moodDescription = await withTimeout(
@@ -343,130 +340,7 @@ export const generateMoodboardImages = async (req, res, next) => {
       'Mood description'
     )
 
-    // PROGRESS: Design narrative
-    broadcastProgress(id, [
-      'Extracting color palette',
-      'Generating mood description',
-      'Generating design narrative',
-    ])
-    console.log('📖 Generating design narrative...')
-    const designNarrative = await withTimeout(
-      generateDesignNarrative({
-        style: moodboard.style,
-        roomType: moodboard.roomType,
-        colorPalette: compositeColorPalette,
-        prompt: enhancedPrompt,
-      }),
-      60000,
-      'Design narrative'
-    )
-
-    // PROGRESS: Materials
-    broadcastProgress(id, [
-      'Extracting color palette',
-      'Generating mood description',
-      'Generating design narrative',
-      'Generating materials',
-    ])
-    console.log('🏗️  Generating materials...')
-    const materials = await withTimeout(
-      generateMaterials({
-        style: moodboard.style,
-        roomType: moodboard.roomType,
-        colorPalette: compositeColorPalette,
-        prompt: enhancedPrompt,
-      }),
-      60000,
-      'Materials generation'
-    )
-
-    // PROGRESS: Furniture
-    broadcastProgress(id, [
-      'Extracting color palette',
-      'Generating mood description',
-      'Generating design narrative',
-      'Generating materials',
-      'Generating furniture',
-    ])
-    console.log('🛋️  Generating furniture...')
-    const furniture = await withTimeout(
-      generateFurniture({
-        style: moodboard.style,
-        roomType: moodboard.roomType,
-        colorPalette: compositeColorPalette,
-        prompt: enhancedPrompt,
-      }),
-      60000,
-      'Furniture generation'
-    )
-
-    // PROGRESS: Lighting
-    broadcastProgress(id, [
-      'Extracting color palette',
-      'Generating mood description',
-      'Generating design narrative',
-      'Generating materials',
-      'Generating furniture',
-      'Generating lighting concept',
-    ])
-    console.log('💡 Generating lighting concept...')
-    const lightingConcept = await withTimeout(
-      generateLightingConcept({
-        style: moodboard.style,
-        roomType: moodboard.roomType,
-        colorPalette: compositeColorPalette,
-        prompt: enhancedPrompt,
-      }),
-      60000,
-      'Lighting generation'
-    )
-
-    // PROGRESS: Zones
-    broadcastProgress(id, [
-      'Extracting color palette',
-      'Generating mood description',
-      'Generating design narrative',
-      'Generating materials',
-      'Generating furniture',
-      'Generating lighting concept',
-      'Generating zones',
-    ])
-    console.log('🗺️  Generating zones...')
-    const zones = await withTimeout(
-      generateZones({
-        style: moodboard.style,
-        roomType: moodboard.roomType,
-        colorPalette: compositeColorPalette,
-        prompt: enhancedPrompt,
-      }),
-      60000,
-      'Zones generation'
-    )
-
-    // PROGRESS: Variants
-    broadcastProgress(id, [
-      'Extracting color palette',
-      'Generating mood description',
-      'Generating design narrative',
-      'Generating materials',
-      'Generating furniture',
-      'Generating lighting concept',
-      'Generating zones',
-      'Generating variants',
-    ])
-    console.log('🔄 Generating variants...')
-    const variants = await withTimeout(
-      generateVariants({
-        style: moodboard.style,
-        roomType: moodboard.roomType,
-        colorPalette: compositeColorPalette,
-        prompt: enhancedPrompt,
-      }),
-      60000,
-      'Variants generation'
-    )
-
-    console.log('✅ All moodboard data generated successfully')
+    console.log('✅ Quick generation complete (image + mood)')
 
     const compositeMoodboardEntry = {
       url: imageUrl,
@@ -493,22 +367,18 @@ export const generateMoodboardImages = async (req, res, next) => {
     moodboard.compositeMoodboard = compositeMoodboardEntry
     moodboard.generatedImages = [generatedImageEntry]
     moodboard.colorPalette = compositeColorPalette
-    moodboard.designNarrative = designNarrative
-    moodboard.materials = materials
-    moodboard.furniture = furniture
-    moodboard.lightingConcept = lightingConcept
-    moodboard.zones = zones
-    moodboard.variants = variants
-    moodboard.status = 'completed'
+    moodboard.status = 'image_generated' // Partial completion
     await moodboard.save()
 
-    // PROGRESS: Complete
-    broadcastComplete(id)
+    // PROGRESS: Image complete
+    broadcastProgress(id, ['Image generated', 'Colors extracted', 'Ready'])
 
-    console.log('🎉 Moodboard generation complete!')
+    console.log('🎉 Phase 1 complete! Image ready for viewing.')
 
     res.status(200).json({
       status: 'success',
+      phase: 'image_generated',
+      message: 'Image generated successfully. Descriptions will be generated next.',
       data: {
         moodboard,
       },
@@ -547,6 +417,214 @@ export const generateMoodboardImages = async (req, res, next) => {
     }
 
     next(createError(500, error.message || 'Failed to generate moodboard'))
+  }
+}
+
+// ============================================================================
+// GENERATE MOODBOARD DESCRIPTIONS (Phase 2 - Deferred)
+// ============================================================================
+
+export const generateMoodboardDescriptions = async (req, res, next) => {
+  try {
+    const { id } = req.params
+
+    console.log('📝 Starting description generation (Phase 2)...')
+
+    const moodboard = await Moodboard.findById(id)
+
+    if (!moodboard) {
+      return next(createError(404, 'Moodboard not found'))
+    }
+
+    if (moodboard.userId.toString() !== req.user._id.toString()) {
+      return next(
+        createError(403, 'You can only generate descriptions for your own moodboards')
+      )
+    }
+
+    if (!moodboard.compositeMoodboard?.url) {
+      return next(createError(400, 'Please generate the moodboard image first'))
+    }
+
+    // Update status to show descriptions are being generated
+    moodboard.status = 'generating_descriptions'
+    await moodboard.save({ validateBeforeSave: false })
+
+    const compositeColorPalette = moodboard.colorPalette || []
+    const enhancedPrompt = moodboard.compositeMoodboard.prompt || moodboard.prompt
+
+    // PROGRESS: Design narrative
+    broadcastProgress(id, ['Generating design narrative'])
+    console.log('📖 Generating design narrative...')
+    const designNarrative = await withTimeout(
+      generateDesignNarrative({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Design narrative'
+    )
+
+    moodboard.designNarrative = designNarrative
+    await moodboard.save({ validateBeforeSave: false })
+
+    // PROGRESS: Materials
+    broadcastProgress(id, ['Generating design narrative', 'Generating materials'])
+    console.log('🏗️  Generating materials...')
+    const materials = await withTimeout(
+      generateMaterials({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Materials generation'
+    )
+
+    moodboard.materials = materials
+    await moodboard.save({ validateBeforeSave: false })
+
+    // PROGRESS: Furniture
+    broadcastProgress(id, [
+      'Generating design narrative',
+      'Generating materials',
+      'Generating furniture',
+    ])
+    console.log('🛋️  Generating furniture...')
+    const furniture = await withTimeout(
+      generateFurniture({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Furniture generation'
+    )
+
+    moodboard.furniture = furniture
+    await moodboard.save({ validateBeforeSave: false })
+
+    // PROGRESS: Lighting
+    broadcastProgress(id, [
+      'Generating design narrative',
+      'Generating materials',
+      'Generating furniture',
+      'Generating lighting',
+    ])
+    console.log('💡 Generating lighting concept...')
+    const lightingConcept = await withTimeout(
+      generateLightingConcept({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Lighting generation'
+    )
+
+    moodboard.lightingConcept = lightingConcept
+    await moodboard.save({ validateBeforeSave: false })
+
+    // PROGRESS: Zones
+    broadcastProgress(id, [
+      'Generating design narrative',
+      'Generating materials',
+      'Generating furniture',
+      'Generating lighting',
+      'Generating zones',
+    ])
+    console.log('🗺️  Generating zones...')
+    const zones = await withTimeout(
+      generateZones({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Zones generation'
+    )
+
+    moodboard.zones = zones
+    await moodboard.save({ validateBeforeSave: false })
+
+    // PROGRESS: Variants
+    broadcastProgress(id, [
+      'Generating design narrative',
+      'Generating materials',
+      'Generating furniture',
+      'Generating lighting',
+      'Generating zones',
+      'Generating variants',
+    ])
+    console.log('🔄 Generating variants...')
+    const variants = await withTimeout(
+      generateVariants({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Variants generation'
+    )
+
+    moodboard.variants = variants
+    moodboard.status = 'completed'
+    await moodboard.save()
+
+    // PROGRESS: Complete
+    broadcastComplete(id)
+
+    console.log('🎉 All descriptions generated successfully!')
+
+    res.status(200).json({
+      status: 'success',
+      phase: 'descriptions_complete',
+      message: 'All descriptions generated successfully',
+      data: {
+        moodboard,
+      },
+    })
+  } catch (error) {
+    console.error('❌ Error generating descriptions:', error.message)
+    broadcastComplete(req.params.id)
+
+    try {
+      const moodboard = await Moodboard.findById(req.params.id)
+      if (moodboard) {
+        moodboard.status = 'descriptions_failed'
+        await moodboard.save({ validateBeforeSave: false })
+      }
+    } catch (updateError) {
+      console.error('Error updating moodboard status:', updateError)
+    }
+
+    // Check if it's a timeout or quota error
+    if (error.statusCode === 504 || error.message.includes('timeout')) {
+      return next(
+        createError(
+          504,
+          'Request timed out. Gemini API may be busy. Please try again or check your API quota at https://console.cloud.google.com'
+        )
+      )
+    }
+
+    if (error.message?.includes('quota')) {
+      return next(
+        createError(
+          429,
+          'Gemini API quota exceeded. Please enable billing at https://aistudio.google.com/'
+        )
+      )
+    }
+
+    next(createError(500, error.message || 'Failed to generate descriptions'))
   }
 }
 

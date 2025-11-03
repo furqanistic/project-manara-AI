@@ -6,6 +6,7 @@ import {
   deleteMoodboard,
   editMoodboardImage,
   generateMoodboardImages,
+  generateMoodboardDescriptions,
   getMoodboardById,
   getMoodboardProgressStream,
   getUserMoodboards,
@@ -53,9 +54,15 @@ router.get('/:id', getMoodboardById)
 
 /**
  * POST /api/moodboards/:id/generate
- * Generate images for a moodboard using Gemini 2.5 Flash Image
+ * Generate moodboard image (Phase 1 - fast, returns image immediately)
  */
 router.post('/:id/generate', generateMoodboardImages)
+
+/**
+ * POST /api/moodboards/:id/generate-descriptions
+ * Generate all descriptions (Phase 2 - deferred, called after image generation)
+ */
+router.post('/:id/generate-descriptions', generateMoodboardDescriptions)
 
 /**
  * POST /api/moodboards/:id/regenerate

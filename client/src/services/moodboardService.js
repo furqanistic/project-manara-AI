@@ -12,28 +12,53 @@ export const createMoodboard = async (data) => {
 }
 
 /**
- * Generate images for a moodboard
+ * Generate moodboard image (Phase 1 - fast)
  * @param {String} moodboardId - ID of the moodboard
  * @param {Object} data - Generation options
  * @returns {Promise}
  */
 export const generateMoodboardImages = async ({ moodboardId, data }) => {
   try {
-    console.log('🎨 Starting moodboard generation for ID:', moodboardId)
+    console.log('🎨 Starting moodboard image generation (Phase 1) for ID:', moodboardId)
 
-    // ✅ Set specific long timeout for this request
+    // Reduced timeout since we're only generating image now
     const response = await axiosInstance.post(
       `/moodboards/${moodboardId}/generate`,
       data,
       {
-        timeout: 600000, // 10 minutes for image generation
+        timeout: 180000, // 3 minutes for image generation
       }
     )
 
-    console.log('✅ Generation complete:', response.data)
+    console.log('✅ Image generation complete (Phase 1):', response.data)
     return response.data
   } catch (error) {
-    console.error('❌ Generation error:', error)
+    console.error('❌ Image generation error:', error)
+    throw error
+  }
+}
+
+/**
+ * Generate moodboard descriptions (Phase 2 - deferred)
+ * @param {String} moodboardId - ID of the moodboard
+ * @returns {Promise}
+ */
+export const generateMoodboardDescriptions = async (moodboardId) => {
+  try {
+    console.log('📝 Starting description generation (Phase 2) for ID:', moodboardId)
+
+    const response = await axiosInstance.post(
+      `/moodboards/${moodboardId}/generate-descriptions`,
+      {},
+      {
+        timeout: 600000, // 10 minutes for all descriptions
+      }
+    )
+
+    console.log('✅ Description generation complete (Phase 2):', response.data)
+    return response.data
+  } catch (error) {
+    console.error('❌ Description generation error:', error)
     throw error
   }
 }
