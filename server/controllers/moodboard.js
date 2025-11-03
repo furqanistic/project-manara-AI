@@ -259,7 +259,8 @@ export const generateMoodboardImages = async (req, res, next) => {
     await moodboard.save({ validateBeforeSave: false })
 
     const numImages = 1
-    const targetAspectRatio = aspectRatio || moodboard.aspectRatio || '16:9'
+    // Let AI choose aspect ratio naturally if not specified
+    const targetAspectRatio = aspectRatio || moodboard.aspectRatio || null
 
     let basePrompt = buildMoodboardPrompt({
       style: moodboard.style,

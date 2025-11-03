@@ -77,7 +77,7 @@ const MoodboardGenerator = () => {
         customPrompt: changes.trim(),
         layout: 'collage',
         imageCount: 1,
-        aspectRatio: '16:9',
+        // Let AI choose aspect ratio naturally
       }
 
       const createResult = await createMutation.mutateAsync(createPayload)
@@ -90,7 +90,7 @@ const MoodboardGenerator = () => {
       const generatePayload = {
         customPrompt: enhancedCustomPrompt,
         imageCount: 1,
-        aspectRatio: '16:9',
+        // Let AI choose aspect ratio naturally
       }
 
       // Generate image (Phase 1)

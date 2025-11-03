@@ -209,12 +209,12 @@ const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
 export const generateImage = async (
   prompt,
   referenceImages = [],
-  aspectRatio = '1:1'
+  aspectRatio = null
 ) => {
   try {
     if (USE_MOCK) {
       console.log('Using mock Gemini response')
-      const mockImageBase64 = generateMockImage(prompt, aspectRatio)
+      const mockImageBase64 = generateMockImage(prompt, aspectRatio || '1:1')
       return {
         images: [
           {
@@ -232,12 +232,19 @@ export const generateImage = async (
 
     initializeGemini()
 
-    const { width: targetWidth, height: targetHeight } = calculateDimensions(
-      aspectRatio,
-      1024
-    )
+    // Build prompt based on whether aspect ratio is specified
+    let enhancedPrompt
+    let targetWidth, targetHeight
 
-    const enhancedPrompt = `Generate an interior design moodboard image with ${aspectRatio} aspect ratio (${targetWidth}x${targetHeight} pixels). ${prompt}. Ensure the composition fills the entire frame and is optimized for this specific aspect ratio.`
+    if (aspectRatio) {
+      const dimensions = calculateDimensions(aspectRatio, 1024)
+      targetWidth = dimensions.width
+      targetHeight = dimensions.height
+      enhancedPrompt = `Generate an interior design moodboard image with ${aspectRatio} aspect ratio (${targetWidth}x${targetHeight} pixels). ${prompt}. Ensure the composition fills the entire frame and is optimized for this specific aspect ratio.`
+    } else {
+      // Let AI choose natural aspect ratio
+      enhancedPrompt = `Generate an interior design moodboard image. ${prompt}. Create a composition that naturally suits the content with optimal visual balance.`
+    }
 
     const parts = [{ text: enhancedPrompt }]
 
@@ -252,9 +259,13 @@ export const generateImage = async (
       })
     }
 
-    console.log(
-      `Generating with Gemini 2.5 Flash (target: ${aspectRatio} - ${targetWidth}x${targetHeight})...`
-    )
+    if (aspectRatio) {
+      console.log(
+        `Generating with Gemini 2.5 Flash (target: ${aspectRatio} - ${targetWidth}x${targetHeight})...`
+      )
+    } else {
+      console.log('Generating with Gemini 2.5 Flash (AI-chosen aspect ratio)...')
+    }
 
     const generationConfig = {
       temperature: 1,
@@ -264,7 +275,9 @@ export const generateImage = async (
       responseModalities: ['IMAGE'],
     }
 
-    const systemInstruction = `Generate high-quality interior design images. Maintain the ${aspectRatio} aspect ratio strictly. The output should be photorealistic with professional composition.`
+    const systemInstruction = aspectRatio
+      ? `Generate high-quality interior design images. Maintain the ${aspectRatio} aspect ratio strictly. The output should be photorealistic with professional composition.`
+      : `Generate high-quality interior design images with natural composition. The output should be photorealistic with professional composition. Choose the aspect ratio that best suits the content.`
 
     const result = await imageModel.generateContent({
       contents: [
@@ -294,11 +307,19 @@ export const generateImage = async (
         text = part.text
       } else if (part.inlineData) {
         const imageBuffer = Buffer.from(part.inlineData.data, 'base64')
-        const croppedBuffer = await enforceAspectRatio(imageBuffer, aspectRatio)
-        const croppedBase64 = croppedBuffer.toString('base64')
+
+        // Only enforce aspect ratio if specified
+        let finalBuffer
+        if (aspectRatio) {
+          finalBuffer = await enforceAspectRatio(imageBuffer, aspectRatio)
+        } else {
+          finalBuffer = imageBuffer
+        }
+
+        const finalBase64 = finalBuffer.toString('base64')
 
         images.push({
-          data: croppedBase64,
+          data: finalBase64,
           mimeType: 'image/png',
         })
       }

@@ -370,8 +370,9 @@ const MoodboardSchema = new mongoose.Schema(
         '21:9',
         '5:4',
         '3:2',
+        null, // Allow null for AI-chosen aspect ratio
       ],
-      default: '16:9',
+      default: null, // Let AI choose naturally
     },
     referenceImages: [
       {
@@ -409,7 +410,7 @@ const MoodboardSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'generating', 'completed', 'failed'],
+      enum: ['draft', 'generating', 'image_generated', 'generating_descriptions', 'completed', 'failed', 'descriptions_failed'],
       default: 'draft',
       index: true,
     },
