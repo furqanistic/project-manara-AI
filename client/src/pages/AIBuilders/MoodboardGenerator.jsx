@@ -1263,7 +1263,7 @@ const ResultView = ({
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className='fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-brown-500 via-brown-500 to-brown-600 shadow-lg'
+          className='fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-amber-900 via-amber-900 to-brown-950 shadow-lg'
         >
           <div className='max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-3'>
             <motion.div
