@@ -9,53 +9,75 @@ import path from 'path'
 import authRoute from './routes/auth.js'
 import floorPlanRoutes from './routes/floorPlan.js'
 import moodboardRoute from './routes/moodboard.js'
+
 const app = express()
 dotenv.config({ quiet: true })
 
-// ✅ CRITICAL: Apply CORS middleware FIRST (before any other middleware)
+// ============================================================================
+// ✅ CRITICAL: CORS MIDDLEWARE MUST BE FIRST
+// ============================================================================
+
 const corsOptions = {
   origin: (origin, callback) => {
     const allowedOrigins =
       process.env.NODE_ENV === 'production'
         ? [
-            'https://manaradesign.ai',
-            'https://www.manaradesign.ai',
+            // Frontend domains
+            'https://manaradesign.ai', // ✅ Your main frontend
+            'https://www.manaradesign.ai', // www variant
+            'https://app.manaradesign.ai', // app subdomain
+            'https://design.manaradesign.ai', // design subdomain
+            // Backend domain (for self-referencing requests)
             'https://api.manaradesign.ai',
           ]
         : [
+            // Development domains
             'http://localhost:5173',
             'http://localhost:5174',
             'http://127.0.0.1:5173',
+            'http://127.0.0.1:5174',
+            'http://localhost:3000',
           ]
 
-    console.log(
-      'CORS Check - Origin:',
-      origin,
-      'NODE_ENV:',
-      process.env.NODE_ENV
-    )
+    console.log('========================================')
+    console.log('🔍 CORS REQUEST RECEIVED')
+    console.log('   Origin:', origin || 'NO ORIGIN (preflight or same-origin)')
+    console.log('   NODE_ENV:', process.env.NODE_ENV)
+    console.log('   Allowed origins:', allowedOrigins)
 
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin) {
+      // Preflight or same-origin request
+      console.log('   ✅ CORS ALLOWED (no origin header)')
+      callback(null, true)
+    } else if (allowedOrigins.includes(origin)) {
+      console.log('   ✅ CORS ALLOWED (origin matched)')
       callback(null, true)
     } else {
-      console.warn('CORS rejected origin:', origin)
+      console.log('   ❌ CORS BLOCKED (origin not in list)')
       callback(new Error('Not allowed by CORS'))
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Length', 'X-JSON-Response-Length'],
   maxAge: 86400, // 24 hours
 }
 
 app.use(cors(corsOptions))
 
-// Then apply other middleware
+// ============================================================================
+// ✅ THEN apply other middleware
+// ============================================================================
+
 app.use(cookieParser())
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
+// ============================================================================
 // Routes
+// ============================================================================
+
 app.use('/api/auth/', authRoute)
 app.use('/api/moodboards/', moodboardRoute)
 app.use('/api/floorplans', floorPlanRoutes)
@@ -77,9 +99,12 @@ app.get('/api/health', (req, res) => {
   })
 })
 
-// ✅ IMPROVED Error handling middleware (now includes CORS headers via middleware)
+// ============================================================================
+// ✅ ERROR HANDLING MIDDLEWARE - INCLUDES CORS HEADERS
+// ============================================================================
+
 app.use((err, req, res, next) => {
-  // Ensure status code is a number
+  // Determine status code
   let statusCode = 500
   if (typeof err.status === 'number') {
     statusCode = err.status
@@ -88,13 +113,17 @@ app.use((err, req, res, next) => {
   }
 
   const message = err.message || 'Something went wrong'
-  console.error('Error:', {
-    statusCode,
-    message,
-    stack: err.stack,
-  })
+
+  console.error('========================================')
+  console.error('❌ ERROR CAUGHT')
+  console.error('   Status:', statusCode)
+  console.error('   Message:', message)
+  console.error('   Path:', req.path)
+  console.error('   Stack:', err.stack)
+  console.error('========================================')
 
   // ✅ CRITICAL: Send CORS headers with error responses
+  // This ensures the browser doesn't block the error response
   res.header('Access-Control-Allow-Origin', req.headers.origin || '*')
   res.header('Access-Control-Allow-Credentials', 'true')
   res.header(
@@ -102,6 +131,10 @@ app.use((err, req, res, next) => {
     'GET,HEAD,OPTIONS,POST,PUT,DELETE,PATCH'
   )
   res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+  res.header(
+    'Access-Control-Expose-Headers',
+    'Content-Length,X-JSON-Response-Length'
+  )
 
   return res.status(statusCode).json({
     status: 'error',
@@ -111,7 +144,10 @@ app.use((err, req, res, next) => {
   })
 })
 
+// ============================================================================
 // Database connection
+// ============================================================================
+
 const connect = () => {
   mongoose
     .connect(process.env.MONGO)
@@ -128,6 +164,9 @@ const PORT = process.env.PORT || 8800
 app.listen(PORT, () => {
   connect()
   console.log(`🚀 Server running on port ${PORT}`)
+  console.log(`📍 API: https://api.manaradesign.ai`)
+  console.log(`🎨 Frontend: https://manaradesign.ai`)
+  console.log(`📌 NODE_ENV: ${process.env.NODE_ENV || 'development'}`)
   console.log(`🎨 Moodboard generation with Gemini 2.5 Flash Image enabled`)
-  console.log(`📍 NODE_ENV: ${process.env.NODE_ENV || 'development'}`)
+  console.log('========================================')
 })

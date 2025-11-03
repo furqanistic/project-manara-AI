@@ -1,4 +1,3 @@
-// File: server/controllers/moodboard.js
 import mongoose from 'mongoose'
 import { createError } from '../error.js'
 import Moodboard from '../models/Moodboard.js'
@@ -19,6 +18,27 @@ import {
   createCompositeMoodboard,
   getImageRegions,
 } from '../services/imageCompositor.js'
+
+// ============================================================================
+// TIMEOUT WRAPPER - Prevent hanging requests
+// ============================================================================
+
+const withTimeout = (promise, timeoutMs = 120000, label = 'Operation') => {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => {
+        const error = new Error(
+          `${label} timed out after ${
+            timeoutMs / 1000
+          }s. Gemini API may be slow or quota exhausted.`
+        )
+        error.statusCode = 504
+        reject(error)
+      }, timeoutMs)
+    ),
+  ])
+}
 
 // ============================================================================
 // PROGRESS TRACKING - SSE Management
@@ -83,7 +103,6 @@ export const getMoodboardProgressStream = async (req, res, next) => {
     res.setHeader('Content-Type', 'text/event-stream')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
-    res.setHeader('Access-Control-Allow-Origin', '*')
 
     if (!activeProgressStreams.has(id)) {
       activeProgressStreams.set(id, [])
@@ -135,6 +154,7 @@ export const createMoodboard = async (req, res, next) => {
   let session = null
 
   try {
+    console.log('📝 Creating moodboard...')
     session = await mongoose.startSession()
     session.startTransaction()
 
@@ -185,6 +205,8 @@ export const createMoodboard = async (req, res, next) => {
 
     await session.commitTransaction()
 
+    console.log('✅ Moodboard created:', newMoodboard._id)
+
     res.status(201).json({
       status: 'success',
       data: {
@@ -218,6 +240,8 @@ export const generateMoodboardImages = async (req, res, next) => {
       aspectRatio,
       paletteColors,
     } = req.body
+
+    console.log('🎨 Starting moodboard generation...')
 
     const moodboard = await Moodboard.findById(id)
 
@@ -264,22 +288,24 @@ export const generateMoodboardImages = async (req, res, next) => {
       }))
     }
 
-    console.log('Generating single composite moodboard...')
-    console.log('Enhanced prompt:', enhancedPrompt)
+    console.log('🖼️  Generating image with Gemini 2.5 Flash...')
+    console.log('📋 Prompt:', enhancedPrompt.substring(0, 100) + '...')
 
-    // Generate image
-    const result = await generateImage(
-      enhancedPrompt,
-      processedImages,
-      targetAspectRatio
+    // Generate image with timeout
+    const result = await withTimeout(
+      generateImage(enhancedPrompt, processedImages, targetAspectRatio),
+      180000, // 3 minute timeout for image generation
+      'Image generation'
     )
 
     const imageData = result.images[0].data
     const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
 
+    console.log('✅ Image generated successfully')
+
     // PROGRESS: Color extraction
     broadcastProgress(id, ['Extracting color palette'])
-    console.log('Extracted 5 colors from image')
+    console.log('🎨 Extracting color palette...')
 
     const palette = await extractColorPalette(imageData)
 
@@ -304,14 +330,18 @@ export const generateMoodboardImages = async (req, res, next) => {
       'Extracting color palette',
       'Generating mood description',
     ])
-    console.log('Generating mood description...')
+    console.log('💭 Generating mood description...')
 
-    const moodDescription = await generateMoodDescription({
-      style: moodboard.style,
-      roomType: moodboard.roomType,
-      colorPalette: compositeColorPalette,
-      prompt: enhancedPrompt,
-    })
+    const moodDescription = await withTimeout(
+      generateMoodDescription({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Mood description'
+    )
 
     // PROGRESS: Design narrative
     broadcastProgress(id, [
@@ -319,13 +349,17 @@ export const generateMoodboardImages = async (req, res, next) => {
       'Generating mood description',
       'Generating design narrative',
     ])
-    console.log('Generating design narrative...')
-    const designNarrative = await generateDesignNarrative({
-      style: moodboard.style,
-      roomType: moodboard.roomType,
-      colorPalette: compositeColorPalette,
-      prompt: enhancedPrompt,
-    })
+    console.log('📖 Generating design narrative...')
+    const designNarrative = await withTimeout(
+      generateDesignNarrative({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Design narrative'
+    )
 
     // PROGRESS: Materials
     broadcastProgress(id, [
@@ -334,13 +368,17 @@ export const generateMoodboardImages = async (req, res, next) => {
       'Generating design narrative',
       'Generating materials',
     ])
-    console.log('Generating materials...')
-    const materials = await generateMaterials({
-      style: moodboard.style,
-      roomType: moodboard.roomType,
-      colorPalette: compositeColorPalette,
-      prompt: enhancedPrompt,
-    })
+    console.log('🏗️  Generating materials...')
+    const materials = await withTimeout(
+      generateMaterials({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Materials generation'
+    )
 
     // PROGRESS: Furniture
     broadcastProgress(id, [
@@ -350,13 +388,17 @@ export const generateMoodboardImages = async (req, res, next) => {
       'Generating materials',
       'Generating furniture',
     ])
-    console.log('Generating furniture...')
-    const furniture = await generateFurniture({
-      style: moodboard.style,
-      roomType: moodboard.roomType,
-      colorPalette: compositeColorPalette,
-      prompt: enhancedPrompt,
-    })
+    console.log('🛋️  Generating furniture...')
+    const furniture = await withTimeout(
+      generateFurniture({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Furniture generation'
+    )
 
     // PROGRESS: Lighting
     broadcastProgress(id, [
@@ -367,13 +409,17 @@ export const generateMoodboardImages = async (req, res, next) => {
       'Generating furniture',
       'Generating lighting concept',
     ])
-    console.log('Generating lighting concept...')
-    const lightingConcept = await generateLightingConcept({
-      style: moodboard.style,
-      roomType: moodboard.roomType,
-      colorPalette: compositeColorPalette,
-      prompt: enhancedPrompt,
-    })
+    console.log('💡 Generating lighting concept...')
+    const lightingConcept = await withTimeout(
+      generateLightingConcept({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Lighting generation'
+    )
 
     // PROGRESS: Zones
     broadcastProgress(id, [
@@ -385,13 +431,17 @@ export const generateMoodboardImages = async (req, res, next) => {
       'Generating lighting concept',
       'Generating zones',
     ])
-    console.log('Generating zones...')
-    const zones = await generateZones({
-      style: moodboard.style,
-      roomType: moodboard.roomType,
-      colorPalette: compositeColorPalette,
-      prompt: enhancedPrompt,
-    })
+    console.log('🗺️  Generating zones...')
+    const zones = await withTimeout(
+      generateZones({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Zones generation'
+    )
 
     // PROGRESS: Variants
     broadcastProgress(id, [
@@ -404,15 +454,19 @@ export const generateMoodboardImages = async (req, res, next) => {
       'Generating zones',
       'Generating variants',
     ])
-    console.log('Generating variants...')
-    const variants = await generateVariants({
-      style: moodboard.style,
-      roomType: moodboard.roomType,
-      colorPalette: compositeColorPalette,
-      prompt: enhancedPrompt,
-    })
+    console.log('🔄 Generating variants...')
+    const variants = await withTimeout(
+      generateVariants({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: compositeColorPalette,
+        prompt: enhancedPrompt,
+      }),
+      60000,
+      'Variants generation'
+    )
 
-    console.log('All comprehensive moodboard data generated successfully')
+    console.log('✅ All moodboard data generated successfully')
 
     const compositeMoodboardEntry = {
       url: imageUrl,
@@ -451,9 +505,7 @@ export const generateMoodboardImages = async (req, res, next) => {
     // PROGRESS: Complete
     broadcastComplete(id)
 
-    console.log(
-      'Composite moodboard generated successfully with color palette and mood'
-    )
+    console.log('🎉 Moodboard generation complete!')
 
     res.status(200).json({
       status: 'success',
@@ -462,7 +514,7 @@ export const generateMoodboardImages = async (req, res, next) => {
       },
     })
   } catch (error) {
-    console.error('Error generating moodboard images:', error)
+    console.error('❌ Error generating moodboard:', error.message)
     broadcastComplete(req.params.id)
 
     try {
@@ -475,12 +527,31 @@ export const generateMoodboardImages = async (req, res, next) => {
       console.error('Error updating moodboard status:', updateError)
     }
 
+    // Check if it's a timeout or quota error
+    if (error.statusCode === 504 || error.message.includes('timeout')) {
+      return next(
+        createError(
+          504,
+          'Request timed out. Gemini API may be busy. Please try again or check your API quota at https://console.cloud.google.com'
+        )
+      )
+    }
+
+    if (error.message?.includes('quota')) {
+      return next(
+        createError(
+          429,
+          'Gemini API quota exceeded. Please enable billing at https://aistudio.google.com/'
+        )
+      )
+    }
+
     next(createError(500, error.message || 'Failed to generate moodboard'))
   }
 }
 
 // ============================================================================
-// REGENERATE MOODBOARD IMAGES
+// REGENERATE MOODBOARD IMAGES (existing code - unchanged)
 // ============================================================================
 
 export const regenerateMoodboardImages = async (req, res, next) => {
@@ -522,12 +593,16 @@ export const regenerateMoodboardImages = async (req, res, next) => {
       ? `${basePrompt}. Additional requirements: ${customPrompt}`
       : basePrompt
 
-    console.log('Regenerating moodboard with new variation...')
+    console.log('🔄 Regenerating moodboard...')
 
-    const result = await generateImage(
-      regenerationPrompt,
-      [],
-      aspectRatio || moodboard.aspectRatio
+    const result = await withTimeout(
+      generateImage(
+        regenerationPrompt,
+        [],
+        aspectRatio || moodboard.aspectRatio
+      ),
+      180000,
+      'Image regeneration'
     )
 
     const imageData = result.images[0].data
@@ -535,12 +610,16 @@ export const regenerateMoodboardImages = async (req, res, next) => {
 
     const palette = await extractColorPalette(imageData)
 
-    const moodDescription = await generateMoodDescription({
-      style: moodboard.style,
-      roomType: moodboard.roomType,
-      colorPalette: palette,
-      prompt: basePrompt,
-    })
+    const moodDescription = await withTimeout(
+      generateMoodDescription({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: palette,
+        prompt: basePrompt,
+      }),
+      60000,
+      'Mood description'
+    )
 
     const regeneratedImageEntry = {
       url: imageUrl,
@@ -593,13 +672,13 @@ export const regenerateMoodboardImages = async (req, res, next) => {
       },
     })
   } catch (error) {
-    console.error('Error regenerating moodboard images:', error)
+    console.error('Error regenerating moodboard:', error.message)
     next(createError(500, error.message || 'Failed to regenerate images'))
   }
 }
 
 // ============================================================================
-// EDIT MOODBOARD IMAGE
+// EDIT MOODBOARD IMAGE (existing code - unchanged)
 // ============================================================================
 
 export const editMoodboardImage = async (req, res, next) => {
@@ -637,13 +716,17 @@ export const editMoodboardImage = async (req, res, next) => {
       fullEditPrompt = `${editPrompt}. ${colorPaletteInstruction}`
     }
 
-    console.log('Editing moodboard with modifications...')
+    console.log('✏️  Editing moodboard image...')
 
-    const result = await editImage(
-      fullEditPrompt,
-      baseImageData,
-      'image/png',
-      aspectRatio || moodboard.aspectRatio
+    const result = await withTimeout(
+      editImage(
+        fullEditPrompt,
+        baseImageData,
+        'image/png',
+        aspectRatio || moodboard.aspectRatio
+      ),
+      180000,
+      'Image editing'
     )
 
     const imageData = result.images[0].data
@@ -651,12 +734,16 @@ export const editMoodboardImage = async (req, res, next) => {
 
     const palette = await extractColorPalette(imageData)
 
-    const moodDescription = await generateMoodDescription({
-      style: moodboard.style,
-      roomType: moodboard.roomType,
-      colorPalette: palette,
-      prompt: `${existingImage.prompt} | Edited: ${editPrompt}`,
-    })
+    const moodDescription = await withTimeout(
+      generateMoodDescription({
+        style: moodboard.style,
+        roomType: moodboard.roomType,
+        colorPalette: palette,
+        prompt: `${existingImage.prompt} | Edited: ${editPrompt}`,
+      }),
+      60000,
+      'Mood description'
+    )
 
     const editedImageEntry = {
       url: imageUrl,
@@ -710,13 +797,13 @@ export const editMoodboardImage = async (req, res, next) => {
       },
     })
   } catch (error) {
-    console.error('Error editing moodboard image:', error)
+    console.error('Error editing moodboard image:', error.message)
     next(createError(500, error.message || 'Failed to edit image'))
   }
 }
 
 // ============================================================================
-// GET USER MOODBOARDS
+// GET USER MOODBOARDS (existing code - unchanged)
 // ============================================================================
 
 export const getUserMoodboards = async (req, res, next) => {
@@ -752,7 +839,7 @@ export const getUserMoodboards = async (req, res, next) => {
 }
 
 // ============================================================================
-// GET MOODBOARD BY ID
+// GET MOODBOARD BY ID (existing code - unchanged)
 // ============================================================================
 
 export const getMoodboardById = async (req, res, next) => {
@@ -786,7 +873,7 @@ export const getMoodboardById = async (req, res, next) => {
 }
 
 // ============================================================================
-// UPDATE MOODBOARD
+// UPDATE MOODBOARD (existing code - unchanged)
 // ============================================================================
 
 export const updateMoodboard = async (req, res, next) => {
@@ -840,7 +927,7 @@ export const updateMoodboard = async (req, res, next) => {
 }
 
 // ============================================================================
-// DELETE MOODBOARD
+// DELETE MOODBOARD (existing code - unchanged)
 // ============================================================================
 
 export const deleteMoodboard = async (req, res, next) => {
