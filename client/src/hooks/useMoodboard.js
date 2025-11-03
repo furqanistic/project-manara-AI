@@ -20,16 +20,22 @@ export const moodboardKeys = {
   detail: (id) => [...moodboardKeys.details(), id],
 }
 
-// Get all user moodboards
+/**
+ * Get all user moodboards
+ */
 export const useUserMoodboards = (page = 1, limit = 10) => {
   return useQuery({
     queryKey: moodboardKeys.list({ page, limit }),
     queryFn: () => getUserMoodboards({ page, limit }),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 2,
+    retryDelay: 1000,
   })
 }
 
-// Get single moodboard
+/**
+ * Get single moodboard
+ */
 export const useMoodboard = (id) => {
   return useQuery({
     queryKey: moodboardKeys.detail(id),
@@ -39,62 +45,147 @@ export const useMoodboard = (id) => {
   })
 }
 
-// Create moodboard
+/**
+ * Create moodboard
+ */
 export const useCreateMoodboard = () => {
   const queryClient = useQueryClient()
-
   return useMutation({
     mutationFn: createMoodboard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: moodboardKeys.lists() })
     },
+    onError: (error) => {
+      console.error('❌ Create moodboard error:', error)
+    },
   })
 }
 
-// Generate moodboard images
+/**
+ * Generate moodboard images
+ * ✅ Optimized for long-running requests
+ */
 export const useGenerateMoodboard = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: generateMoodboardImages,
+    mutationFn: async (variables) => {
+      console.log('🎨 useGenerateMoodboard called with:', variables)
+
+      try {
+        const result = await generateMoodboardImages(variables)
+        console.log('✅ Generation successful:', result)
+        return result
+      } catch (error) {
+        console.error('❌ Generation failed:', error)
+
+        // Provide user-friendly error messages
+        if (error.code === 'TIMEOUT') {
+          throw new Error(
+            'Generation took too long (>10 minutes). Please try again or use a simpler prompt.'
+          )
+        }
+
+        if (error.code === 'NETWORK_ERROR') {
+          throw new Error(
+            'Network connection lost. Check your internet and try again.'
+          )
+        }
+
+        if (error.message?.includes('quota')) {
+          throw new Error(
+            'API quota exceeded. Please wait a moment and try again.'
+          )
+        }
+
+        throw error
+      }
+    },
     onSuccess: (data, variables) => {
+      console.log(
+        '🔄 Invalidating queries for moodboard:',
+        variables.moodboardId
+      )
       queryClient.invalidateQueries({
         queryKey: moodboardKeys.detail(variables.moodboardId),
       })
       queryClient.invalidateQueries({ queryKey: moodboardKeys.lists() })
     },
+    onError: (error) => {
+      console.error('❌ Mutation error:', error.message)
+    },
+    retry: 1, // Retry once on failure
+    retryDelay: 2000, // Wait 2 seconds before retry
   })
 }
 
-// Regenerate specific images
+/**
+ * Regenerate specific images
+ */
 export const useRegenerateImage = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: regenerateMoodboardImages,
+    mutationFn: async (variables) => {
+      console.log('🔄 useRegenerateImage called')
+
+      try {
+        return await regenerateMoodboardImages(variables)
+      } catch (error) {
+        if (error.code === 'TIMEOUT') {
+          throw new Error('Regeneration took too long. Please try again.')
+        }
+        throw error
+      }
+    },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({
         queryKey: moodboardKeys.detail(variables.moodboardId),
       })
     },
+    onError: (error) => {
+      console.error('❌ Regenerate error:', error.message)
+    },
+    retry: 1,
+    retryDelay: 2000,
   })
 }
 
-// Edit moodboard image
+/**
+ * Edit moodboard image
+ */
 export const useEditMoodboardImage = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: editMoodboardImage,
+    mutationFn: async (variables) => {
+      console.log('✏️  useEditMoodboardImage called')
+
+      try {
+        return await editMoodboardImage(variables)
+      } catch (error) {
+        if (error.code === 'TIMEOUT') {
+          throw new Error('Edit took too long. Please try again.')
+        }
+        throw error
+      }
+    },
     onSuccess: (data, variables) => {
       queryClient.invalidateQueries({
         queryKey: moodboardKeys.detail(variables.moodboardId),
       })
     },
+    onError: (error) => {
+      console.error('❌ Edit error:', error.message)
+    },
+    retry: 1,
+    retryDelay: 2000,
   })
 }
 
-// Update moodboard
+/**
+ * Update moodboard
+ */
 export const useUpdateMoodboard = () => {
   const queryClient = useQueryClient()
 
@@ -106,10 +197,15 @@ export const useUpdateMoodboard = () => {
       })
       queryClient.invalidateQueries({ queryKey: moodboardKeys.lists() })
     },
+    onError: (error) => {
+      console.error('❌ Update error:', error)
+    },
   })
 }
 
-// Delete moodboard
+/**
+ * Delete moodboard
+ */
 export const useDeleteMoodboard = () => {
   const queryClient = useQueryClient()
 
@@ -117,6 +213,9 @@ export const useDeleteMoodboard = () => {
     mutationFn: deleteMoodboard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: moodboardKeys.lists() })
+    },
+    onError: (error) => {
+      console.error('❌ Delete error:', error)
     },
   })
 }
