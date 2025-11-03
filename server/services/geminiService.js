@@ -48,6 +48,7 @@ const safeJsonParse = (jsonString, fallback = null) => {
 
 /**
  * Normalize lighting concept - extract numbers from strings
+ * FIXED: Properly handle ranges like "2700-3000" instead of concatenating
  */
 const normalizeLightingConcept = (lighting) => {
   if (!lighting) return lighting
@@ -55,28 +56,55 @@ const normalizeLightingConcept = (lighting) => {
   const normalizeLight = (item) => {
     if (!item) return item
 
-    // Extract kelvin: "2700K" -> 2700
-    if (item.kelvin) {
-      const kelvinStr = String(item.kelvin).replace(/[^0-9]/g, '')
-      item.kelvin = Number(kelvinStr) || 2700
+    // Extract kelvin: "2700K", "2700-3000K", "2700" -> properly bounded
+    if (item.kelvin !== undefined && item.kelvin !== null) {
+      const kelvinStr = String(item.kelvin)
+      const numbers = kelvinStr.match(/\d+/g)
+
+      if (numbers && numbers.length > 0) {
+        let kelvinValue
+
+        if (numbers.length >= 2) {
+          // Range: average the values
+          // "2700-3000" becomes 2850 (not 27003000!)
+          kelvinValue = Math.round(
+            (Number(numbers[0]) + Number(numbers[1])) / 2
+          )
+        } else {
+          // Single value
+          kelvinValue = Number(numbers[0])
+        }
+
+        // ✅ CRITICAL: Validate against schema (1000-10000)
+        if (kelvinValue > 10000) {
+          console.warn(`⚠️ Kelvin ${kelvinValue} exceeds max 10000, clamping`)
+          item.kelvin = 10000
+        } else if (kelvinValue < 1000) {
+          console.warn(`⚠️ Kelvin ${kelvinValue} below min 1000, clamping`)
+          item.kelvin = 1000
+        } else {
+          item.kelvin = kelvinValue
+        }
+      } else {
+        item.kelvin = 2700 // default warm white
+      }
     }
 
-    // Extract lumens: "600-800" or "Dimmable, 600-800 lumens" -> 700 (average)
-    if (item.lumens) {
+    // Extract lumens: "600-800" -> 700 (average)
+    if (item.lumens !== undefined && item.lumens !== null) {
       const lumsStr = String(item.lumens)
       const numbers = lumsStr.match(/\d+/g)
+
       if (numbers && numbers.length > 0) {
         if (numbers.length > 1) {
-          // Average of range: 600-800 -> 700
           item.lumens = Math.round(
             (Number(numbers[0]) + Number(numbers[1])) / 2
           )
         } else {
-          // Single number
           item.lumens = Number(numbers[0])
         }
       } else {
-        item.lumens = 500 // default
+        item.lumens = 500
       }
     }
 
