@@ -1,6 +1,10 @@
 // File: client/src/pages/AIBuilders/MoodboardGenerator.jsx
 import TopBar from '@/components/Layout/Topbar'
-import { useCreateMoodboard, useGenerateMoodboard, useGenerateMoodboardDescriptions } from '@/hooks/useMoodboard'
+import {
+  useCreateMoodboard,
+  useGenerateMoodboard,
+  useGenerateMoodboardDescriptions,
+} from '@/hooks/useMoodboard'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
@@ -112,7 +116,8 @@ const MoodboardGenerator = () => {
       setGenerationPhase('descriptions')
 
       try {
-        const descriptionsResult = await generateDescriptionsMutation.mutateAsync(moodboardId)
+        const descriptionsResult =
+          await generateDescriptionsMutation.mutateAsync(moodboardId)
 
         // Update moodboard with all descriptions
         setCurrentMoodboard(descriptionsResult.data.moodboard)
@@ -122,11 +127,10 @@ const MoodboardGenerator = () => {
         console.error('Description generation error:', descError)
         setGenerationPhase(null)
         // Don't show error toast - image is already shown
-        toast('Some details couldn\'t be generated, but your image is ready!', {
+        toast("Some details couldn't be generated, but your image is ready!", {
           icon: '⚠️',
         })
       }
-
     } catch (error) {
       console.error('Generation error:', error)
       setProgressSteps([])
@@ -415,7 +419,10 @@ const MoodboardGenerator = () => {
     <>
       <TopBar />
       {loadingState === 'generating' && (
-        <BeautifulLoader progressSteps={progressSteps} phase={generationPhase} />
+        <BeautifulLoader
+          progressSteps={progressSteps}
+          phase={generationPhase}
+        />
       )}
       <div className='min-h-screen bg-gradient-to-br from-gray-50 to-gray-100'>
         {currentStep < 3 ? (
@@ -472,9 +479,10 @@ const BeautifulLoader = ({ progressSteps = [], phase = 'image' }) => {
     'Creating design variants',
   ]
 
-  const displaySteps = progressSteps.length > 0
-    ? progressSteps
-    : phase === 'image'
+  const displaySteps =
+    progressSteps.length > 0
+      ? progressSteps
+      : phase === 'image'
       ? imagePhaseSteps
       : descriptionPhaseSteps
 
@@ -1255,7 +1263,7 @@ const ResultView = ({
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className='fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 shadow-lg'
+          className='fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-brown-500 via-brown-500 to-brown-600 shadow-lg'
         >
           <div className='max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-3'>
             <motion.div
