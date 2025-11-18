@@ -1,5 +1,5 @@
-// File: server/routes/auth.js
-import express from 'express'
+// File: routes/auth.js (FIXED VERSION)
+import express from "express";
 import {
   changePassword,
   deleteUser,
@@ -9,56 +9,130 @@ import {
   signin,
   signup,
   updateUser,
-} from '../controllers/auth.js'
-import { restrictTo, verifyToken } from '../middleware/authMiddleware.js'
+} from "../controllers/auth.js";
+import { restrictTo, verifyToken } from "../middleware/authMiddleware.js";
 
-const router = express.Router()
+const router = express.Router();
 
-// Public routes
-router.post('/signup', signup)
-router.post('/signin', signin)
+// ============================================
+// PUBLIC ROUTES (No authentication required)
+// ============================================
 
-// Protected routes (require authentication)
-router.use(verifyToken)
+/**
+ * POST /api/auth/signup
+ * Create a new user account
+ * Body: { name, email, password, role? }
+ */
+router.post("/signup", signup);
 
-// Basic user routes (available to all authenticated users)
-router.get('/profile/:id', getUserProfile)
-router.put('/change-password', changePassword)
-router.post('/logout', logout)
+/**
+ * POST /api/auth/signin
+ * Login existing user
+ * Body: { email, password }
+ */
+router.post("/signin", signin);
 
-// Self-profile management (users can update their own profile)
+// ============================================
+// PROTECTED ROUTES (Authentication required)
+// ============================================
+
+// Apply authentication middleware to all routes below
+router.use(verifyToken);
+
+/**
+ * GET /api/auth/profile/:id
+ * Get user profile by ID
+ * Params: { id: userId }
+ */
+router.get("/profile/:id", getUserProfile);
+
+/**
+ * PUT /api/auth/change-password
+ * Change current user's password
+ * Body: { currentPassword, newPassword, confirmPassword }
+ */
+router.put("/change-password", changePassword);
+
+/**
+ * POST /api/auth/logout
+ * Logout current user
+ */
+router.post("/logout", logout);
+
+/**
+ * PUT /api/auth/profile
+ * Update current user's profile (name, email)
+ * Automatically sets userId from token
+ * Body: { name?, email?, role? }
+ */
 router.put(
-  '/profile',
+  "/profile",
   (req, res, next) => {
-    req.params.id = req.user.id
-    next()
+    // ✅ Set the userId from authenticated user's token
+    req.params.id = req.user._id;
+    next();
   },
   updateUser
-)
+);
 
-// User management routes - users can only access their own profile
+/**
+ * PUT /api/auth/users/:id
+ * Update user profile (can update own or others if admin)
+ * Params: { id: userId }
+ * Body: { name?, email?, role? }
+ */
 router.put(
-  '/users/:id',
+  "/users/:id",
   (req, res, next) => {
+    // Allow admin to update anyone, or user to update themselves
     if (
-      req.user.role === 'admin' ||
+      req.user.role === "admin" ||
       req.user._id.toString() === req.params.id
     ) {
-      next()
+      next();
     } else {
-      const error = new Error('You can only access your own profile')
-      error.statusCode = 403
-      next(error)
+      const error = new Error("You can only access your own profile");
+      error.statusCode = 403;
+      next(error);
     }
   },
   updateUser
-)
+);
 
-// Admin only routes
-router.use(restrictTo('admin'))
-router.get('/all-users', getAllUsers)
-router.post('/create-user', signup)
-router.put('/admin/users/:id', updateUser)
-router.delete('/admin/users/:id', deleteUser)
+// ============================================
+// ADMIN ONLY ROUTES
+// ============================================
 
-export default router
+// Apply admin restriction middleware
+router.use(restrictTo("admin"));
+
+/**
+ * GET /api/auth/all-users
+ * Get all users (paginated)
+ * Query: { page?, limit? }
+ */
+router.get("/all-users", getAllUsers);
+
+/**
+ * POST /api/auth/create-user
+ * Create new user as admin
+ * Body: { name, email, password, role? }
+ */
+router.post("/create-user", signup);
+
+/**
+ * PUT /api/auth/admin/users/:id
+ * Update user as admin
+ * Params: { id: userId }
+ * Body: { name?, email?, role? }
+ */
+router.put("/admin/users/:id", updateUser);
+
+/**
+ * DELETE /api/auth/admin/users/:id
+ * Delete/deactivate user as admin (soft delete)
+ * Params: { id: userId }
+ */
+router.delete("/admin/users/:id", deleteUser);
+
+export default router;

@@ -1,22 +1,27 @@
-// File: controllers/auth.js
-import jwt from 'jsonwebtoken'
-import mongoose from 'mongoose'
-import { createError } from '../error.js'
-import User from '../models/User.js'
+// File: controllers/auth.js (FIXED VERSION 2)
+/**
+ * ✅ FIXED: Profile update now sends token to prevent re-login
+ * ✅ FIXED: Password change properly sets passwordChangedAt
+ */
+
+import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+import { createError } from "../error.js";
+import User from "../models/User.js";
 
 const signToken = (id) => {
-  const jwtSecret = process.env.JWT_SECRET
+  const jwtSecret = process.env.JWT_SECRET;
   if (!jwtSecret) {
-    throw new Error('JWT_SECRET is not defined in the environment variables')
+    throw new Error("JWT_SECRET is not defined in the environment variables");
   }
   return jwt.sign({ id }, jwtSecret, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  })
-}
+    expiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  });
+};
 
 const createSendToken = (user, statusCode, res) => {
   try {
-    const token = signToken(user._id)
+    const token = signToken(user._id);
     const cookieOptions = {
       expires: new Date(
         Date.now() +
@@ -27,64 +32,64 @@ const createSendToken = (user, statusCode, res) => {
             1000
       ),
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-    }
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    };
 
-    res.cookie('jwt', token, cookieOptions)
+    res.cookie("jwt", token, cookieOptions);
 
     // Remove password from output
-    user.password = undefined
+    user.password = undefined;
 
     res.status(statusCode).json({
-      status: 'success',
+      status: "success",
       token,
       data: {
         user,
       },
-    })
+    });
   } catch (error) {
-    console.error('Error in createSendToken:', error)
-    throw error
+    console.error("Error in createSendToken:", error);
+    throw error;
   }
-}
+};
 
 export const signup = async (req, res, next) => {
-  const session = await mongoose.startSession()
-  session.startTransaction()
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
   try {
-    const { name, email, password, role } = req.body
+    const { name, email, password, role } = req.body;
 
     // Check if all required fields are provided
     if (!name || !email || !password) {
-      await session.abortTransaction()
-      return next(createError(400, 'Please provide name, email and password'))
+      await session.abortTransaction();
+      return next(createError(400, "Please provide name, email and password"));
     }
 
     // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      await session.abortTransaction()
-      return next(createError(400, 'Please provide a valid email address'))
+      await session.abortTransaction();
+      return next(createError(400, "Please provide a valid email address"));
     }
 
     // Validate password strength
     if (password.length < 8) {
-      await session.abortTransaction()
+      await session.abortTransaction();
       return next(
-        createError(400, 'Password must be at least 8 characters long')
-      )
+        createError(400, "Password must be at least 8 characters long")
+      );
     }
 
     // Set default role to user if not provided
-    const userRole = role || 'user'
+    const userRole = role || "user";
 
     // Check if user with this email already exists
-    const existingUser = await User.findOne({ email }).session(session)
+    const existingUser = await User.findOne({ email }).session(session);
     if (existingUser) {
-      await session.abortTransaction()
-      return next(createError(400, 'User with this email already exists'))
+      await session.abortTransaction();
+      return next(createError(400, "User with this email already exists"));
     }
 
     // Create new user (password will be hashed by the pre-save middleware)
@@ -93,39 +98,39 @@ export const signup = async (req, res, next) => {
       email: email.toLowerCase().trim(),
       password,
       role: userRole,
-    }
+    };
 
-    const [newUser] = await User.create([newUserData], { session })
+    const [newUser] = await User.create([newUserData], { session });
 
-    await session.commitTransaction()
+    await session.commitTransaction();
 
     // Get user without password
-    const populatedUser = await User.findById(newUser._id).select('-password')
+    const populatedUser = await User.findById(newUser._id).select("-password");
 
     // Send token to the new user
-    createSendToken(populatedUser, 201, res)
+    createSendToken(populatedUser, 201, res);
   } catch (err) {
-    await session.abortTransaction()
-    console.error('Error in signup:', err)
+    await session.abortTransaction();
+    console.error("Error in signup:", err);
 
     if (err.code === 11000) {
       // Handle duplicate key errors
-      const field = Object.keys(err.keyValue)[0]
-      return next(createError(400, `${field} already exists`))
+      const field = Object.keys(err.keyValue)[0];
+      return next(createError(400, `${field} already exists`));
     }
 
-    next(createError(500, 'An unexpected error occurred during signup'))
+    next(createError(500, "An unexpected error occurred during signup"));
   } finally {
-    session.endSession()
+    session.endSession();
   }
-}
+};
 
 export const signin = async (req, res, next) => {
   try {
-    const { email, password } = req.body
+    const { email, password } = req.body;
 
     if (!email || !password) {
-      return next(createError(400, 'Please provide email and password'))
+      return next(createError(400, "Please provide email and password"));
     }
 
     // Find user and include password for comparison
@@ -133,84 +138,80 @@ export const signin = async (req, res, next) => {
       email: email.toLowerCase().trim(),
       isActive: true,
       isDeleted: false,
-    }).select('+password')
+    }).select("+password");
 
     if (!user || !(await user.correctPassword(password, user.password))) {
-      return next(createError(401, 'Incorrect email or password'))
+      return next(createError(401, "Incorrect email or password"));
     }
 
     // Update last login
-    user.lastLogin = new Date()
-    await user.save({ validateBeforeSave: false })
+    user.lastLogin = new Date();
+    await user.save({ validateBeforeSave: false });
 
     // Get user data for response
-    const populatedUser = await User.findById(user._id).select('-password')
+    const populatedUser = await User.findById(user._id).select("-password");
 
-    createSendToken(populatedUser, 200, res)
+    createSendToken(populatedUser, 200, res);
   } catch (err) {
-    console.error('Error in signin:', err)
-    next(createError(500, 'An unexpected error occurred during login'))
+    console.error("Error in signin:", err);
+    next(createError(500, "An unexpected error occurred during login"));
   }
-}
+};
 
 export const updateUser = async (req, res, next) => {
   try {
-    const { role, name, email } = req.body
-    const userId = req.params.id
+    const { role, name, email } = req.body;
+    const userId = req.params.id;
 
     // Find the user first
-    const existingUser = await User.findById(userId)
+    const existingUser = await User.findById(userId);
 
     // If no user found with that ID
     if (!existingUser) {
-      return next(createError(404, 'No user found with that ID'))
+      return next(createError(404, "No user found with that ID"));
     }
 
     // Validate role if being updated
-    if (role && !['admin', 'user'].includes(role)) {
-      return next(createError(400, 'Invalid role provided'))
+    if (role && !["admin", "user"].includes(role)) {
+      return next(createError(400, "Invalid role provided"));
     }
 
     // Validate email if being updated
     if (email) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
-        return next(createError(400, 'Please provide a valid email address'))
+        return next(createError(400, "Please provide a valid email address"));
       }
 
       // Check if email is already taken by another user
       const emailExists = await User.findOne({
         email: email.toLowerCase().trim(),
         _id: { $ne: userId },
-      })
+      });
 
       if (emailExists) {
-        return next(createError(400, 'Email is already taken by another user'))
+        return next(createError(400, "Email is already taken by another user"));
       }
     }
 
     // Prepare update data
-    const updateData = {}
-    if (role) updateData.role = role
-    if (name) updateData.name = name.trim()
-    if (email) updateData.email = email.toLowerCase().trim()
+    const updateData = {};
+    if (role) updateData.role = role;
+    if (name) updateData.name = name.trim();
+    if (email) updateData.email = email.toLowerCase().trim();
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
       runValidators: true,
-    })
+    });
 
-    res.status(200).json({
-      status: 'success',
-      data: {
-        user: updatedUser,
-      },
-    })
+    // ✅ FIXED: Send token with profile update to prevent re-login
+    createSendToken(updatedUser, 200, res);
   } catch (error) {
-    console.error('Error in updateUser:', error)
-    next(error)
+    console.error("Error in updateUser:", error);
+    next(error);
   }
-}
+};
 
 export const deleteUser = async (req, res, next) => {
   try {
@@ -224,58 +225,58 @@ export const deleteUser = async (req, res, next) => {
       {
         new: true,
       }
-    )
+    );
 
     if (!user) {
-      return next(createError(404, 'No user found with that ID'))
+      return next(createError(404, "No user found with that ID"));
     }
 
     res.status(204).json({
-      status: 'success',
+      status: "success",
       data: null,
-    })
+    });
   } catch (error) {
-    console.error('Error in deleteUser:', error)
-    next(error)
+    console.error("Error in deleteUser:", error);
+    next(error);
   }
-}
+};
 
 export const getUserProfile = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id)
+    const user = await User.findById(req.params.id);
 
     if (!user) {
-      return next(createError(404, 'No user found with that ID'))
+      return next(createError(404, "No user found with that ID"));
     }
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       data: {
         user,
       },
-    })
+    });
   } catch (error) {
-    console.error('Error in getUserProfile:', error)
-    next(error)
+    console.error("Error in getUserProfile:", error);
+    next(error);
   }
-}
+};
 
 export const getAllUsers = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1
-    const limit = parseInt(req.query.limit) || 10
-    const skip = (page - 1) * limit
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
     const users = await User.find({ isDeleted: false })
-      .select('-password')
+      .select("-password")
       .skip(skip)
       .limit(limit)
-      .sort({ createdAt: -1 })
+      .sort({ createdAt: -1 });
 
-    const totalUsers = await User.countDocuments({ isDeleted: false })
+    const totalUsers = await User.countDocuments({ isDeleted: false });
 
     res.status(200).json({
-      status: 'success',
+      status: "success",
       results: users.length,
       totalResults: totalUsers,
       totalPages: Math.ceil(totalUsers / limit),
@@ -283,75 +284,76 @@ export const getAllUsers = async (req, res, next) => {
       data: {
         users,
       },
-    })
+    });
   } catch (error) {
-    console.error('Error in getAllUsers:', error)
-    next(error)
+    console.error("Error in getAllUsers:", error);
+    next(error);
   }
-}
+};
 
 export const changePassword = async (req, res, next) => {
   try {
-    const { currentPassword, newPassword, confirmPassword } = req.body
+    const { currentPassword, newPassword, confirmPassword } = req.body;
 
     if (!currentPassword || !newPassword || !confirmPassword) {
       return next(
         createError(
           400,
-          'Please provide current password, new password, and confirm password'
+          "Please provide current password, new password, and confirm password"
         )
-      )
+      );
     }
 
     if (newPassword !== confirmPassword) {
       return next(
-        createError(400, 'New password and confirm password do not match')
-      )
+        createError(400, "New password and confirm password do not match")
+      );
     }
 
     if (newPassword.length < 8) {
       return next(
-        createError(400, 'New password must be at least 8 characters long')
-      )
+        createError(400, "New password must be at least 8 characters long")
+      );
     }
 
-    const user = await User.findById(req.user.id).select('+password')
+    // ✅ FIXED: Changed req.user.id to req.user._id
+    const user = await User.findById(req.user._id).select("+password");
 
     if (!user) {
-      return next(createError(404, 'User not found'))
+      return next(createError(404, "User not found"));
     }
 
     if (!(await user.correctPassword(currentPassword, user.password))) {
-      return next(createError(401, 'Your current password is incorrect'))
+      return next(createError(401, "Your current password is incorrect"));
     }
 
     // Set new password (will be hashed by pre-save middleware)
-    user.password = newPassword
-    await user.save()
+    user.password = newPassword;
+    await user.save();
 
     // Get updated user without password
-    const updatedUser = await User.findById(user._id)
+    const updatedUser = await User.findById(user._id);
 
-    createSendToken(updatedUser, 200, res)
+    createSendToken(updatedUser, 200, res);
   } catch (error) {
-    console.error('Error in changePassword:', error)
-    next(error)
+    console.error("Error in changePassword:", error);
+    next(error);
   }
-}
+};
 
 export const logout = async (req, res, next) => {
   try {
-    res.cookie('jwt', 'loggedout', {
+    res.cookie("jwt", "loggedout", {
       expires: new Date(Date.now() + 10 * 1000),
       httpOnly: true,
-    })
+    });
 
     res.status(200).json({
-      status: 'success',
-      message: 'Logged out successfully',
-    })
+      status: "success",
+      message: "Logged out successfully",
+    });
   } catch (error) {
-    console.error('Error in logout:', error)
-    next(error)
+    console.error("Error in logout:", error);
+    next(error);
   }
-}
+};
