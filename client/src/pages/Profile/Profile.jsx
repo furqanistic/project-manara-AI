@@ -1,13 +1,4 @@
 // File: client/src/pages/Profile/Profile.jsx
-/**
- * Enhanced User Profile Page - Professional Version
- * ✅ Multiple tabs (Profile, Security, Activity, Preferences)
- * ✅ More detailed information display
- * ✅ Modern UI with better design
- * ✅ Profile picture/Avatar section
- * ✅ Status indicators and badges
- * ✅ Better responsive design
- */
 
 import TopBar from "@/components/Layout/Topbar";
 import React, { useState, useEffect } from "react";
