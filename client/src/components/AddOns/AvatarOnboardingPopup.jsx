@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/components/AddOns/AvatarOnboardingPopup.jsx
 import {
   Briefcase,
   ChevronLeft,

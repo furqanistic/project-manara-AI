@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/components/Home/ImageCollageSection.jsx
 import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion'
 import { ArrowUpRight, Eye, Sparkles } from 'lucide-react'
 import React, { useEffect, useState } from 'react'

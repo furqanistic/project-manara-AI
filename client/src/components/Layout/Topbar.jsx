@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
 import { useLogout } from '../../hooks/useAuth'
 
 const TopBar = () => {
@@ -226,13 +226,13 @@ const TopBar = () => {
                             </span>
                           )}
                         </div>
-                        <a
-                          href='#'
-                          className={`flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${textColor} ${hoverTextColor} ${hoverBg}`}
+                        <NavLink
+                          to='/profile'
+                          className={` flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${textColor} ${hoverTextColor} ${hoverBg}`}
                         >
                           <User className='w-4 h-4' />
                           <span>Profile</span>
-                        </a>
+                        </NavLink>
                         <a
                           href='#'
                           className={`flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${textColor} ${hoverTextColor} ${hoverBg}`}
@@ -364,10 +364,10 @@ const TopBar = () => {
                     </div>
                     <a
                       href='#'
-                      className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
+                      className={` flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
                     >
                       <User className='w-4 h-4' />
-                      <span>Profile</span>
+                      <span className=''>Profile</span>
                     </a>
                     <a
                       href='#'

@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/components/Home/ModernBeforeAfterSection.jsx
 import {
   AnimatePresence,
   motion,

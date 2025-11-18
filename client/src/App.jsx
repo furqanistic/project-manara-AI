@@ -1,4 +1,3 @@
-// File: client/src/App.jsx
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import { Toaster } from 'react-hot-toast'
@@ -18,6 +17,7 @@ import AuthPage from './pages/Auth/AuthPage'
 import HomePage from './pages/Home/HomePage'
 import PricingPage from './pages/Pricing/PricingPage'
 import { persistor, store } from './redux/store'
+import Profile from './pages/Profile/Profile'
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -74,6 +74,12 @@ const AppRoutes = () => {
               <FloorPlanGenerator />
             </RequireAuth>
           }
+        />
+        <Route path='/profile' element={
+          <RequireAuth>
+            <Profile />
+          </RequireAuth>
+        }
         />
 
         {/* Example admin-only route */}

@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/components/ui/progress.jsx
 "use client"
 
 import * as React from "react"

@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/components/Home/MissionSection.jsx
 import React, { useEffect, useState } from 'react'
 
 const MissionSection = () => {
