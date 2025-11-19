@@ -1,4 +1,5 @@
 // File: client/src/pages/Profile/Profile.jsx
+// ✨ FIXED VERSION - Password change success/error messages now work properly
 
 import TopBar from "@/components/Layout/Topbar";
 import React, { useState, useEffect } from "react";
@@ -12,6 +13,31 @@ import {
   BRAND_COLOR_LIGHT,
   BRAND_COLOR_DARK,
 } from "@/components/Moodboard/Moodboardconfig";
+
+// Lucide Icons
+import {
+  User,
+  Mail,
+  CheckCircle2,
+  Lock,
+  Fingerprint,
+  Crown,
+  Calendar,
+  RefreshCw,
+  Key,
+  Clock,
+  TrendingUp,
+  Shield,
+  Activity,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  MapPin,
+  Edit2,
+  Save,
+  X,
+  LogIn,
+} from "lucide-react";
 
 function Profile() {
   // ============ Hooks & State ============
@@ -73,16 +99,26 @@ function Profile() {
     }
   }, [currentUser]);
 
+  // ✅ FIXED: Better success message handling with longer timeout
   useEffect(() => {
     if (successMessage) {
-      const timer = setTimeout(() => setSuccessMessage(""), 3000);
+      console.log("Success message set:", successMessage);
+      const timer = setTimeout(() => {
+        console.log("Clearing success message");
+        setSuccessMessage("");
+      }, 4000); // Increased from 3000 to 4000ms
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
 
+  // ✅ FIXED: Better error message handling
   useEffect(() => {
     if (errorMessage) {
-      const timer = setTimeout(() => setErrorMessage(""), 5000);
+      console.log("Error message set:", errorMessage);
+      const timer = setTimeout(() => {
+        console.log("Clearing error message");
+        setErrorMessage("");
+      }, 6000); // Increased from 5000 to 6000ms
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
@@ -273,12 +309,16 @@ function Profile() {
     }
   };
 
+  // ✅ FIXED: Completely rewritten password submit handler
   const handlePasswordSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+
+    // Clear previous messages first
     setSuccessMessage("");
     setErrorMessage("");
+    setLoading(true);
 
+    // Mark all fields as touched for validation
     setFieldTouched({
       currentPassword: true,
       newPassword: true,
@@ -286,59 +326,91 @@ function Profile() {
     });
 
     try {
+      // ✅ VALIDATION CHECKS
       if (!passwordForm.currentPassword) {
-        setErrorMessage("Current password is required");
+        const msg = "Current password is required";
+        setErrorMessage(msg);
+        console.error(msg);
         setLoading(false);
         return;
       }
 
       if (!passwordForm.newPassword) {
-        setErrorMessage("New password is required");
+        const msg = "New password is required";
+        setErrorMessage(msg);
+        console.error(msg);
         setLoading(false);
         return;
       }
 
       const strengthErrors = validatePasswordStrength(passwordForm.newPassword);
       if (strengthErrors.length > 0) {
-        setErrorMessage(`Password: ${strengthErrors[0]}`);
+        const msg = `Password: ${strengthErrors[0]}`;
+        setErrorMessage(msg);
+        console.error(msg);
         setLoading(false);
         return;
       }
 
       if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-        setErrorMessage("Passwords do not match");
+        const msg = "Passwords do not match";
+        setErrorMessage(msg);
+        console.error(msg);
         setLoading(false);
         return;
       }
 
       if (Object.keys(validationErrors).length > 0) {
-        setErrorMessage("Please fix the errors before submitting");
+        const msg = "Please fix the errors before submitting";
+        setErrorMessage(msg);
+        console.error(msg);
         setLoading(false);
         return;
       }
 
-      await changePasswordMutation.mutateAsync({
+      // ✅ API CALL - Wait for response
+      console.log("Submitting password change...");
+      const response = await changePasswordMutation.mutateAsync({
         currentPassword: passwordForm.currentPassword,
         newPassword: passwordForm.newPassword,
         confirmPassword: passwordForm.confirmPassword,
       });
 
+      console.log("Password change response:", response);
+
+      // ✅ SUCCESS - Reset form and show message
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
       setFieldTouched({});
-      setSuccessMessage("Password changed successfully!");
+      setValidationErrors({});
+
+      const successMsg = "Password changed successfully!";
+      console.log("Setting success message:", successMsg);
+      setSuccessMessage(successMsg);
     } catch (error) {
-      const errorMsg =
-        error?.message ||
-        error?.response?.data?.message ||
-        "Failed to change password";
-      setErrorMessage(errorMsg);
+      // ✅ ERROR HANDLING
       console.error("Password change error:", error);
+
+      let errorMsg = "Failed to change password";
+
+      if (error?.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error?.response?.data?.error) {
+        errorMsg = error.response.data.error;
+      } else if (error?.message) {
+        errorMsg = error.message;
+      }
+
+      console.log("Final error message:", errorMsg);
+      setErrorMessage(errorMsg);
+
+      // Don't reset form on error - user might want to retry
     } finally {
       setLoading(false);
+      console.log("Loading state set to false");
     }
   };
 
@@ -377,12 +449,12 @@ function Profile() {
     });
   };
 
-  // ============ Styles ============
+  // ============ Enhanced Styles ============
   const pageContainerStyle = {
     display: "flex",
     flexDirection: "column",
     minHeight: "100vh",
-    backgroundColor: "#f0f2f5",
+    background: `linear-gradient(135deg, #faf8f5 0%, #f5f1ed 100%)`,
   };
 
   const topbarWrapperStyle = {
@@ -391,7 +463,8 @@ function Profile() {
     zIndex: 1000,
     width: "100%",
     backgroundColor: "white",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+    boxShadow: "0 2px 12px rgba(147, 124, 96, 0.08)",
+    backdropFilter: "blur(10px)",
   };
 
   const mainContentStyle = {
@@ -401,32 +474,38 @@ function Profile() {
   };
 
   const contentWrapperStyle = {
-    maxWidth: "1100px",
+    maxWidth: "1200px",
     margin: "0 auto",
-    padding: isMobile ? "16px 12px" : isTablet ? "30px 24px" : "40px 32px",
+    padding: isMobile ? "20px 16px" : isTablet ? "32px 28px" : "48px 40px",
     width: "100%",
     boxSizing: "border-box",
   };
 
   const headerStyle = {
-    marginBottom: isMobile ? "30px" : "40px",
+    marginBottom: isMobile ? "36px" : "48px",
     display: "flex",
     alignItems: "flex-end",
-    gap: "24px",
+    gap: isMobile ? "16px" : "28px",
+    padding: isMobile ? "24px 16px" : isTablet ? "32px 24px" : "40px 32px",
+    backgroundColor: "white",
+    borderRadius: "16px",
+    boxShadow: "0 4px 24px rgba(147, 124, 96, 0.12)",
+    border: `1px solid rgba(147, 124, 96, 0.08)`,
   };
 
   const avatarStyle = {
     width: isMobile ? "80px" : isTablet ? "100px" : "120px",
     height: isMobile ? "80px" : isTablet ? "100px" : "120px",
     borderRadius: "50%",
-    backgroundColor: BRAND_COLOR,
+    background: `linear-gradient(135deg, ${BRAND_COLOR} 0%, ${BRAND_COLOR_DARK} 100%)`,
     color: "white",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: isMobile ? "32px" : "48px",
-    fontWeight: "bold",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+    fontSize: isMobile ? "40px" : "52px",
+    fontWeight: "700",
+    boxShadow: `0 8px 28px rgba(147, 124, 96, 0.2)`,
+    flexShrink: 0,
   };
 
   const headerTextStyle = {
@@ -434,84 +513,98 @@ function Profile() {
   };
 
   const titleStyle = {
-    fontSize: isMobile ? "24px" : isTablet ? "28px" : "32px",
+    fontSize: isMobile ? "26px" : isTablet ? "30px" : "36px",
     fontWeight: "700",
     color: "#1a1a1a",
     margin: "0 0 8px 0",
+    letterSpacing: "-0.5px",
   };
 
   const subtitleStyle = {
     fontSize: isMobile ? "13px" : "14px",
     color: "#666",
-    margin: "0 0 12px 0",
+    margin: "0 0 14px 0",
+    fontWeight: "500",
   };
 
   const statusBadgeStyle = {
-    display: "inline-block",
-    padding: "6px 12px",
-    backgroundColor: "#e8f4f8",
-    color: "#0066cc",
-    borderRadius: "20px",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: "8px 14px",
+    backgroundColor: `${BRAND_COLOR}15`,
+    color: BRAND_COLOR,
+    borderRadius: "8px",
     fontSize: "12px",
     fontWeight: "600",
+    border: `1px solid ${BRAND_COLOR}30`,
   };
 
+  // ✅ IMPROVED: Better alert styling
   const alertStyle = (type) => ({
-    padding: isMobile ? "12px 14px" : "14px 16px",
-    marginBottom: "20px",
-    backgroundColor: type === "success" ? "#d4edda" : "#f8d7da",
-    color: type === "success" ? "#155724" : "#721c24",
-    borderRadius: "8px",
-    border: `1px solid ${type === "success" ? "#c3e6cb" : "#f5c6cb"}`,
+    padding: isMobile ? "14px 16px" : "16px 20px",
+    marginBottom: "24px",
+    backgroundColor: type === "success" ? "#f0fdf4" : "#fef2f2",
+    color: type === "success" ? "#166534" : "#b91c1c",
+    borderRadius: "10px",
+    border: `2px solid ${type === "success" ? "#86efac" : "#fecaca"}`,
     fontSize: isMobile ? "13px" : "14px",
     display: "flex",
     alignItems: "flex-start",
-    gap: "10px",
+    gap: "12px",
     boxSizing: "border-box",
+    animation: "slideIn 0.3s ease-out",
+    boxShadow:
+      type === "success"
+        ? "0 4px 12px rgba(22, 163, 74, 0.15)"
+        : "0 4px 12px rgba(185, 28, 28, 0.15)",
   });
 
   const tabContainerStyle = {
     display: "flex",
-    gap: isMobile ? "0" : "4px",
-    marginBottom: "25px",
-    borderBottom: "2px solid #e0e0e0",
+    gap: isMobile ? "0" : "8px",
+    marginBottom: "28px",
+    borderBottom: `2px solid ${BRAND_COLOR}20`,
     overflowX: "auto",
     scrollBehavior: "smooth",
   };
 
   const tabButtonStyle = (isActive) => ({
-    padding: isMobile ? "12px 12px" : isTablet ? "14px 18px" : "14px 20px",
+    padding: isMobile ? "14px 14px" : isTablet ? "16px 20px" : "16px 24px",
     border: "none",
     background: "none",
     cursor: "pointer",
-    fontSize: isMobile ? "12px" : "13px",
+    fontSize: isMobile ? "13px" : "14px",
     fontWeight: isActive ? "600" : "500",
-    color: isActive ? BRAND_COLOR : "#666",
+    color: isActive ? BRAND_COLOR : "#6b7280",
     borderBottom: isActive ? `3px solid ${BRAND_COLOR}` : "none",
-    transition: "all 0.3s ease",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     whiteSpace: "nowrap",
     marginBottom: "-2px",
     position: "relative",
+    opacity: isActive ? 1 : 0.7,
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   });
 
   const cardStyle = {
     backgroundColor: "white",
-    padding: isMobile ? "20px 16px" : isTablet ? "28px 24px" : "32px 28px",
-    borderRadius: "12px",
-    boxShadow: "0 2px 12px rgba(0,0,0,0.08)",
-    border: "1px solid #f0f0f0",
+    padding: isMobile ? "24px 18px" : isTablet ? "32px 28px" : "40px 36px",
+    borderRadius: "16px",
+    boxShadow: "0 4px 24px rgba(147, 124, 96, 0.1)",
+    border: `1px solid rgba(147, 124, 96, 0.06)`,
   };
 
-  // ✅ IMPROVED: Better info section styles
   const infoSectionStyle = {
-    marginBottom: isMobile ? "32px" : "40px",
-    paddingBottom: isMobile ? "24px" : "32px",
-    borderBottom: "2px solid #e8eef7",
+    marginBottom: isMobile ? "36px" : "48px",
+    paddingBottom: isMobile ? "28px" : "36px",
+    borderBottom: `1px solid ${BRAND_COLOR}12`,
   };
 
   const infoSectionLastStyle = {
-    marginBottom: isMobile ? "0" : "0",
-    paddingBottom: isMobile ? "0" : "0",
+    marginBottom: "0",
+    paddingBottom: "0",
     borderBottom: "none",
   };
 
@@ -519,24 +612,25 @@ function Profile() {
     display: "flex",
     alignItems: "center",
     gap: "12px",
-    marginBottom: isMobile ? "20px" : "24px",
-    paddingBottom: isMobile ? "12px" : "14px",
-    borderBottom: "2px solid #f0f4f9",
+    marginBottom: isMobile ? "24px" : "32px",
+    paddingBottom: isMobile ? "16px" : "20px",
+    borderBottom: `2px solid ${BRAND_COLOR}15`,
   };
 
   const sectionIconStyle = {
-    fontSize: isMobile ? "20px" : "24px",
+    fontSize: isMobile ? "22px" : "28px",
     display: "flex",
     alignItems: "center",
+    color: BRAND_COLOR,
   };
 
   const infoSectionTitleStyle = {
-    fontSize: isMobile ? "14px" : "15px",
+    fontSize: isMobile ? "15px" : "16px",
     fontWeight: "700",
     color: "#1a1a1a",
     textTransform: "uppercase",
     margin: "0",
-    letterSpacing: "0.6px",
+    letterSpacing: "1px",
   };
 
   const infoGridStyle = {
@@ -546,27 +640,27 @@ function Profile() {
       : isTablet
       ? "repeat(2, 1fr)"
       : "repeat(3, 1fr)",
-    gap: isMobile ? "18px" : isTablet ? "20px" : "24px",
+    gap: isMobile ? "16px" : isTablet ? "20px" : "24px",
   };
 
   const infoItemStyle = {
     display: "flex",
     flexDirection: "column",
-    padding: isMobile ? "16px 14px" : "18px 16px",
-    backgroundColor: "#f8fafc",
-    borderRadius: "10px",
-    border: "1px solid #e8eef7",
+    padding: isMobile ? "16px 14px" : "20px 18px",
+    backgroundColor: "#faf8f5",
+    borderRadius: "12px",
+    border: `1px solid ${BRAND_COLOR}15`,
     transition: "all 0.3s ease",
-    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+    cursor: "default",
   };
 
   const infoLabelStyle = {
     fontSize: isMobile ? "11px" : "12px",
-    color: "#666",
+    color: "#6b7280",
     textTransform: "uppercase",
-    marginBottom: isMobile ? "8px" : "10px",
+    marginBottom: isMobile ? "10px" : "12px",
     fontWeight: "700",
-    letterSpacing: "0.6px",
+    letterSpacing: "0.8px",
     display: "flex",
     alignItems: "center",
     gap: "6px",
@@ -583,109 +677,129 @@ function Profile() {
   const roleStatusBadgeStyle = {
     fontSize: isMobile ? "12px" : "13px",
     color: "white",
-    display: "inline-block",
-    padding: isMobile ? "5px 10px" : "6px 12px",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "6px",
+    padding: isMobile ? "6px 12px" : "8px 14px",
     backgroundColor: BRAND_COLOR,
-    borderRadius: "6px",
+    borderRadius: "8px",
     textTransform: "capitalize",
     fontWeight: "600",
     width: "fit-content",
   };
 
   const activityItemStyle = {
-    padding: isMobile ? "12px" : "14px",
-    borderLeft: `3px solid ${BRAND_COLOR}`,
-    backgroundColor: "#f8f9fb",
-    borderRadius: "4px",
-    marginBottom: "12px",
+    padding: isMobile ? "14px" : "18px",
+    borderLeft: `4px solid ${BRAND_COLOR}`,
+    backgroundColor: "#faf8f5",
+    borderRadius: "8px",
+    marginBottom: "14px",
+    transition: "all 0.3s ease",
   };
 
   const activityTitleStyle = {
     fontSize: "14px",
     fontWeight: "600",
-    color: "#333",
-    margin: "0 0 4px 0",
+    color: "#1a1a1a",
+    margin: "0 0 6px 0",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
   };
 
   const activityTimeStyle = {
     fontSize: "12px",
-    color: "#888",
+    color: "#6b7280",
     margin: "0",
   };
 
   const buttonGroupStyle = {
     display: "flex",
-    gap: isMobile ? "10px" : "12px",
-    marginTop: isMobile ? "24px" : "28px",
+    gap: isMobile ? "12px" : "16px",
+    marginTop: isMobile ? "28px" : "36px",
     flexWrap: "wrap",
   };
 
   const editButtonStyle = {
-    padding: isMobile ? "10px 18px" : "11px 22px",
+    padding: isMobile ? "11px 20px" : "12px 28px",
     backgroundColor: BRAND_COLOR,
     color: "white",
     border: "none",
-    borderRadius: "7px",
+    borderRadius: "8px",
     fontSize: isMobile ? "13px" : "14px",
     fontWeight: "600",
     cursor: "pointer",
-    transition: "all 0.3s ease",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    boxShadow: `0 4px 12px rgba(147, 124, 96, 0.15)`,
     flex: isMobile ? "1 1 auto" : "0 0 auto",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    justifyContent: "center",
   };
 
   const cancelButtonStyle = {
-    padding: isMobile ? "10px 18px" : "11px 22px",
-    backgroundColor: "#f0f0f0",
-    color: "#333",
-    border: "1px solid #ddd",
-    borderRadius: "7px",
+    padding: isMobile ? "11px 20px" : "12px 28px",
+    backgroundColor: "#f3f4f6",
+    color: "#374151",
+    border: `1px solid ${BRAND_COLOR}30`,
+    borderRadius: "8px",
     fontSize: isMobile ? "13px" : "14px",
     fontWeight: "600",
     cursor: "pointer",
-    transition: "all 0.3s ease",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     flex: isMobile ? "1 1 auto" : "0 0 auto",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    justifyContent: "center",
   };
 
   const formGroupStyle = {
-    marginBottom: isMobile ? "18px" : "20px",
+    marginBottom: isMobile ? "20px" : "24px",
   };
 
   const formGroupLastStyle = {
-    marginBottom: isMobile ? "18px" : "24px",
+    marginBottom: isMobile ? "20px" : "24px",
   };
 
   const labelStyle = {
     display: "block",
     fontSize: isMobile ? "13px" : "14px",
     fontWeight: "600",
-    marginBottom: isMobile ? "7px" : "8px",
-    color: "#333",
+    marginBottom: isMobile ? "8px" : "10px",
+    color: "#1a1a1a",
   };
 
   const inputStyle = (hasError = false) => ({
     width: "100%",
-    padding: isMobile ? "10px 11px" : "11px 12px",
-    border: `2px solid ${hasError ? "#f5c6cb" : "#ddd"}`,
-    borderRadius: "7px",
+    padding: isMobile ? "11px 13px" : "12px 14px",
+    border: `2px solid ${hasError ? "#fecaca" : `${BRAND_COLOR}30`}`,
+    borderRadius: "8px",
     fontSize: isMobile ? "13px" : "14px",
     fontFamily: "inherit",
     boxSizing: "border-box",
     transition: "all 0.3s ease",
-    backgroundColor: hasError ? "#fff8f9" : "#fff",
+    backgroundColor: hasError ? "#fef2f2" : "#faf8f5",
+    color: "#1a1a1a",
+    outline: "none",
   });
 
   const errorTextStyle = {
-    fontSize: isMobile ? "11px" : "12px",
-    color: "#721c24",
-    marginTop: "5px",
+    fontSize: isMobile ? "12px" : "13px",
+    color: "#b91c1c",
+    marginTop: "6px",
     marginBottom: "8px",
     fontWeight: "500",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
   };
 
   const helperTextStyle = {
-    fontSize: isMobile ? "11px" : "12px",
-    color: "#666",
-    marginTop: "5px",
+    fontSize: isMobile ? "12px" : "13px",
+    color: "#6b7280",
+    marginTop: "6px",
     fontWeight: "500",
   };
 
@@ -697,18 +811,17 @@ function Profile() {
 
   const passwordInputStyle = (hasError = false) => ({
     ...inputStyle(hasError),
-    paddingRight: "40px",
+    paddingRight: "44px",
   });
 
   const toggleButtonStyle = {
     position: "absolute",
-    right: isMobile ? "10px" : "12px",
+    right: isMobile ? "12px" : "14px",
     background: "none",
     border: "none",
     cursor: "pointer",
-    fontSize: isMobile ? "16px" : "18px",
-    color: "#666",
-    padding: "4px",
+    color: "#6b7280",
+    padding: "6px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -716,23 +829,73 @@ function Profile() {
   };
 
   const submitButtonStyle = {
-    padding: isMobile ? "10px 18px" : "11px 26px",
+    padding: isMobile ? "11px 20px" : "12px 32px",
     backgroundColor: BRAND_COLOR,
     color: "white",
     border: "none",
-    borderRadius: "7px",
+    borderRadius: "8px",
     fontSize: isMobile ? "13px" : "14px",
     fontWeight: "600",
     cursor: loading ? "not-allowed" : "pointer",
-    transition: "all 0.3s ease",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     opacity: loading ? 0.6 : 1,
     width: isMobile ? "100%" : "auto",
+    boxShadow: `0 4px 12px rgba(147, 124, 96, 0.15)`,
     flex: isMobile ? "1 1 100%" : "0 0 auto",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    justifyContent: "center",
   };
 
   // ============ Render ============
   return (
     <div style={pageContainerStyle}>
+      <style>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        button:hover:not(:disabled) {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(147, 124, 96, 0.18);
+        }
+
+        button:active:not(:disabled) {
+          transform: translateY(0);
+        }
+
+        input:focus {
+          border-color: ${BRAND_COLOR} !important;
+          box-shadow: 0 0 0 3px ${BRAND_COLOR}20;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+          height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+          background: #f3f4f6;
+        }
+
+        ::-webkit-scrollbar-thumb {
+          background: ${BRAND_COLOR}40;
+          border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+          background: ${BRAND_COLOR}60;
+        }
+      `}</style>
+
       <div style={topbarWrapperStyle}>
         <TopBar />
       </div>
@@ -746,23 +909,36 @@ function Profile() {
               <h1 style={titleStyle}>{currentUser?.name || "User Profile"}</h1>
               <p style={subtitleStyle}>{currentUser?.email}</p>
               <div style={statusBadgeStyle}>
-                {getStatusBadge(currentUser?.role).text}
+                <CheckCircle2 size={14} />
+                <span>{getStatusBadge(currentUser?.role).text}</span>
               </div>
             </div>
           </div>
 
-          {/* Alerts */}
+          {/* ✅ ALERTS - Now display consistently */}
           {successMessage && (
             <div style={alertStyle("success")}>
-              <span style={{ fontSize: "18px", marginTop: "2px" }}>✓</span>
-              <span>{successMessage}</span>
+              <CheckCircle2
+                size={20}
+                style={{ marginTop: "0px", flexShrink: 0 }}
+              />
+              <div>
+                <p style={{ margin: "0", fontWeight: "600" }}>Success!</p>
+                <p style={{ margin: "4px 0 0 0" }}>{successMessage}</p>
+              </div>
             </div>
           )}
 
           {errorMessage && (
             <div style={alertStyle("error")}>
-              <span style={{ fontSize: "18px", marginTop: "2px" }}>✕</span>
-              <span>{errorMessage}</span>
+              <AlertCircle
+                size={20}
+                style={{ marginTop: "0px", flexShrink: 0 }}
+              />
+              <div>
+                <p style={{ margin: "0", fontWeight: "600" }}>Error!</p>
+                <p style={{ margin: "4px 0 0 0" }}>{errorMessage}</p>
+              </div>
             </div>
           )}
 
@@ -775,8 +951,10 @@ function Profile() {
                 setSuccessMessage("");
               }}
               style={tabButtonStyle(activeTab === "profile")}
+              title="View profile information"
             >
-              👤 Profile Info
+              <User size={16} />
+              Profile Info
             </button>
             <button
               onClick={() => {
@@ -785,8 +963,10 @@ function Profile() {
                 setSuccessMessage("");
               }}
               style={tabButtonStyle(activeTab === "security")}
+              title="Manage security settings"
             >
-              🔒 Security
+              <Lock size={16} />
+              Security
             </button>
             <button
               onClick={() => {
@@ -795,8 +975,10 @@ function Profile() {
                 setSuccessMessage("");
               }}
               style={tabButtonStyle(activeTab === "activity")}
+              title="View activity history"
             >
-              📊 Activity
+              <Activity size={16} />
+              Activity
             </button>
           </div>
 
@@ -808,13 +990,16 @@ function Profile() {
                   {/* Basic Information */}
                   <div style={infoSectionStyle}>
                     <div style={sectionHeaderStyle}>
-                      <span style={sectionIconStyle}>👤</span>
+                      <User
+                        size={isMobile ? 22 : 28}
+                        style={sectionIconStyle}
+                      />
                       <h3 style={infoSectionTitleStyle}>Basic Information</h3>
                     </div>
                     <div style={infoGridStyle}>
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>📝</span> Full Name
+                          <User size={14} /> Full Name
                         </p>
                         <p style={infoValueStyle}>
                           {currentUser?.name || "Not set"}
@@ -823,7 +1008,7 @@ function Profile() {
 
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>📧</span> Email Address
+                          <Mail size={14} /> Email Address
                         </p>
                         <p style={infoValueStyle}>
                           {currentUser?.email || "Not set"}
@@ -832,10 +1017,11 @@ function Profile() {
 
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>✓</span> Account Status
+                          <CheckCircle2 size={14} /> Account Status
                         </p>
                         <p style={roleStatusBadgeStyle}>
-                          {currentUser?.isActive ? "✓ Active" : "Inactive"}
+                          <CheckCircle2 size={14} />
+                          {currentUser?.isActive ? "Active" : "Inactive"}
                         </p>
                       </div>
                     </div>
@@ -844,13 +1030,16 @@ function Profile() {
                   {/* Account Details */}
                   <div style={infoSectionStyle}>
                     <div style={sectionHeaderStyle}>
-                      <span style={sectionIconStyle}>🔐</span>
+                      <Lock
+                        size={isMobile ? 22 : 28}
+                        style={sectionIconStyle}
+                      />
                       <h3 style={infoSectionTitleStyle}>Account Details</h3>
                     </div>
                     <div style={infoGridStyle}>
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>🆔</span> User ID
+                          <Fingerprint size={14} /> User ID
                         </p>
                         <p
                           style={{
@@ -865,9 +1054,10 @@ function Profile() {
 
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>👑</span> Role
+                          <Crown size={14} /> Role
                         </p>
                         <p style={roleStatusBadgeStyle}>
+                          <Crown size={14} />
                           {currentUser?.role === "admin"
                             ? "Administrator"
                             : "User"}
@@ -876,14 +1066,17 @@ function Profile() {
 
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>✔️</span> Email Verification
+                          <CheckCircle2 size={14} /> Email Verification
                         </p>
-                        <p style={roleStatusBadgeStyle}>✓ Verified</p>
+                        <p style={roleStatusBadgeStyle}>
+                          <CheckCircle2 size={14} />
+                          Verified
+                        </p>
                       </div>
 
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>📅</span> Member Since
+                          <Calendar size={14} /> Member Since
                         </p>
                         <p style={infoValueStyle}>
                           {currentUser?.createdAt
@@ -900,7 +1093,7 @@ function Profile() {
 
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>🔄</span> Last Updated
+                          <RefreshCw size={14} /> Last Updated
                         </p>
                         <p style={infoValueStyle}>
                           {currentUser?.updatedAt
@@ -917,7 +1110,7 @@ function Profile() {
 
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>🔑</span> 2FA Status
+                          <Key size={14} /> 2FA Status
                         </p>
                         <p style={roleStatusBadgeStyle}>Disabled</p>
                       </div>
@@ -927,13 +1120,16 @@ function Profile() {
                   {/* Last Login Information */}
                   <div style={{ ...infoSectionStyle, ...infoSectionLastStyle }}>
                     <div style={sectionHeaderStyle}>
-                      <span style={sectionIconStyle}>📍</span>
+                      <LogIn
+                        size={isMobile ? 22 : 28}
+                        style={sectionIconStyle}
+                      />
                       <h3 style={infoSectionTitleStyle}>Last Login</h3>
                     </div>
                     <div style={infoGridStyle}>
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>⏰</span> Last Access
+                          <Clock size={14} /> Last Access
                         </p>
                         <p style={infoValueStyle}>
                           {currentUser?.lastLogin
@@ -954,16 +1150,19 @@ function Profile() {
 
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>📈</span> Access Frequency
+                          <TrendingUp size={14} /> Access Frequency
                         </p>
                         <p style={infoValueStyle}>Regular</p>
                       </div>
 
                       <div style={infoItemStyle}>
                         <p style={infoLabelStyle}>
-                          <span>✅</span> Session Status
+                          <CheckCircle2 size={14} /> Session Status
                         </p>
-                        <p style={roleStatusBadgeStyle}>✓ Active</p>
+                        <p style={roleStatusBadgeStyle}>
+                          <CheckCircle2 size={14} />
+                          Active
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -980,7 +1179,8 @@ function Profile() {
                         (e.target.style.backgroundColor = BRAND_COLOR)
                       }
                     >
-                      ✏️ Edit Profile
+                      <Edit2 size={16} />
+                      Edit Profile
                     </button>
                   </div>
                 </>
@@ -1004,7 +1204,10 @@ function Profile() {
                       }
                     />
                     {fieldTouched.name && validationErrors.name && (
-                      <p style={errorTextStyle}>{validationErrors.name}</p>
+                      <p style={errorTextStyle}>
+                        <AlertCircle size={14} />
+                        {validationErrors.name}
+                      </p>
                     )}
                   </div>
 
@@ -1025,7 +1228,10 @@ function Profile() {
                       }
                     />
                     {fieldTouched.email && validationErrors.email && (
-                      <p style={errorTextStyle}>{validationErrors.email}</p>
+                      <p style={errorTextStyle}>
+                        <AlertCircle size={14} />
+                        {validationErrors.email}
+                      </p>
                     )}
                   </div>
 
@@ -1048,6 +1254,7 @@ function Profile() {
                         (e.target.style.backgroundColor = BRAND_COLOR)
                       }
                     >
+                      <Save size={16} />
                       {loading || updateProfileMutation.isPending
                         ? "Saving..."
                         : "Save Changes"}
@@ -1057,12 +1264,13 @@ function Profile() {
                       onClick={handleCancel}
                       style={cancelButtonStyle}
                       onMouseEnter={(e) =>
-                        (e.target.style.backgroundColor = "#e5e5e5")
+                        (e.target.style.backgroundColor = `${BRAND_COLOR}15`)
                       }
                       onMouseLeave={(e) =>
-                        (e.target.style.backgroundColor = "#f0f0f0")
+                        (e.target.style.backgroundColor = "#f3f4f6")
                       }
                     >
+                      <X size={16} />
                       Cancel
                     </button>
                   </div>
@@ -1076,7 +1284,7 @@ function Profile() {
             <div style={cardStyle}>
               <form onSubmit={handlePasswordSubmit}>
                 <div style={sectionHeaderStyle}>
-                  <span style={sectionIconStyle}>🔒</span>
+                  <Lock size={isMobile ? 22 : 28} style={sectionIconStyle} />
                   <h3 style={infoSectionTitleStyle}>Change Your Password</h3>
                 </div>
 
@@ -1104,12 +1312,17 @@ function Profile() {
                       style={toggleButtonStyle}
                       title="Toggle password visibility"
                     >
-                      {showPasswords.current ? "👁️" : "👁️‍🗨️"}
+                      {showPasswords.current ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
                     </button>
                   </div>
                   {fieldTouched.currentPassword &&
                     validationErrors.currentPassword && (
                       <p style={errorTextStyle}>
+                        <AlertCircle size={14} />
                         {validationErrors.currentPassword}
                       </p>
                     )}
@@ -1142,15 +1355,28 @@ function Profile() {
                       style={toggleButtonStyle}
                       title="Toggle password visibility"
                     >
-                      {showPasswords.new ? "👁️" : "👁️‍🗨️"}
+                      {showPasswords.new ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
                     </button>
                   </div>
                   {fieldTouched.newPassword && validationErrors.newPassword && (
-                    <p style={errorTextStyle}>{validationErrors.newPassword}</p>
+                    <p style={errorTextStyle}>
+                      <AlertCircle size={14} />
+                      {validationErrors.newPassword}
+                    </p>
                   )}
                   {passwordForm.newPassword &&
                     !validationErrors.newPassword && (
-                      <p style={helperTextStyle}>✓ Password strength OK</p>
+                      <p style={{ ...helperTextStyle, color: "#16a34a" }}>
+                        <CheckCircle2
+                          size={14}
+                          style={{ display: "inline", marginRight: "4px" }}
+                        />
+                        Password strength OK
+                      </p>
                     )}
                 </div>
 
@@ -1178,19 +1404,30 @@ function Profile() {
                       style={toggleButtonStyle}
                       title="Toggle password visibility"
                     >
-                      {showPasswords.confirm ? "👁️" : "👁️‍🗨️"}
+                      {showPasswords.confirm ? (
+                        <EyeOff size={18} />
+                      ) : (
+                        <Eye size={18} />
+                      )}
                     </button>
                   </div>
                   {fieldTouched.confirmPassword &&
                     validationErrors.confirmPassword && (
                       <p style={errorTextStyle}>
+                        <AlertCircle size={14} />
                         {validationErrors.confirmPassword}
                       </p>
                     )}
                   {passwordForm.confirmPassword &&
                     passwordForm.newPassword === passwordForm.confirmPassword &&
                     !validationErrors.confirmPassword && (
-                      <p style={helperTextStyle}>✓ Passwords match</p>
+                      <p style={{ ...helperTextStyle, color: "#16a34a" }}>
+                        <CheckCircle2
+                          size={14}
+                          style={{ display: "inline", marginRight: "4px" }}
+                        />
+                        Passwords match
+                      </p>
                     )}
                 </div>
 
@@ -1211,6 +1448,7 @@ function Profile() {
                       !loading && (e.target.style.backgroundColor = BRAND_COLOR)
                     }
                   >
+                    <Lock size={16} />
                     {loading || changePasswordMutation.isPending
                       ? "Changing..."
                       : "Change Password"}
@@ -1219,23 +1457,45 @@ function Profile() {
               </form>
 
               {/* Security Settings */}
-              <div style={{ ...infoSectionStyle, marginTop: "36px" }}>
+              <div style={{ ...infoSectionStyle, marginTop: "40px" }}>
                 <div style={sectionHeaderStyle}>
-                  <span style={sectionIconStyle}>🛡️</span>
+                  <Shield size={isMobile ? 22 : 28} style={sectionIconStyle} />
                   <h3 style={infoSectionTitleStyle}>Security Settings</h3>
                 </div>
                 <div style={infoGridStyle}>
                   <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>Two-Factor Auth</p>
-                    <p style={infoValueStyle}>Not Enabled</p>
+                    <p style={infoLabelStyle}>
+                      <Key size={14} /> Two-Factor Auth
+                    </p>
+                    <p
+                      style={{
+                        ...roleStatusBadgeStyle,
+                        backgroundColor: "#f3f4f6",
+                        color: "#6b7280",
+                      }}
+                    >
+                      Not Enabled
+                    </p>
                   </div>
                   <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>Active Sessions</p>
+                    <p style={infoLabelStyle}>
+                      <Lock size={14} /> Active Sessions
+                    </p>
                     <p style={infoValueStyle}>1 Session</p>
                   </div>
                   <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>Login Alerts</p>
-                    <p style={infoValueStyle}>Enabled</p>
+                    <p style={infoLabelStyle}>
+                      <CheckCircle2 size={14} /> Login Alerts
+                    </p>
+                    <p
+                      style={{
+                        ...roleStatusBadgeStyle,
+                        backgroundColor: "#16a34a",
+                      }}
+                    >
+                      <CheckCircle2 size={14} />
+                      Enabled
+                    </p>
                   </div>
                 </div>
               </div>
@@ -1246,27 +1506,33 @@ function Profile() {
           {activeTab === "activity" && (
             <div style={cardStyle}>
               <div style={sectionHeaderStyle}>
-                <span style={sectionIconStyle}>📊</span>
+                <Activity size={isMobile ? 22 : 28} style={sectionIconStyle} />
                 <h3 style={infoSectionTitleStyle}>Account Activity</h3>
               </div>
 
-              <div style={{ marginBottom: "24px" }}>
-                <h4 style={{ ...infoLabelStyle, marginBottom: "16px" }}>
+              <div style={{ marginBottom: "36px" }}>
+                <h4 style={{ ...infoLabelStyle, marginBottom: "20px" }}>
                   Recent Activity
                 </h4>
 
                 <div style={activityItemStyle}>
-                  <p style={activityTitleStyle}>Profile Updated</p>
+                  <p style={activityTitleStyle}>
+                    <CheckCircle2 size={16} /> Profile Updated
+                  </p>
                   <p style={activityTimeStyle}>Last updated today</p>
                 </div>
 
                 <div style={activityItemStyle}>
-                  <p style={activityTitleStyle}>Password Changed</p>
+                  <p style={activityTitleStyle}>
+                    <Lock size={16} /> Password Changed
+                  </p>
                   <p style={activityTimeStyle}>Last changed 2 months ago</p>
                 </div>
 
                 <div style={activityItemStyle}>
-                  <p style={activityTitleStyle}>Account Created</p>
+                  <p style={activityTitleStyle}>
+                    <CheckCircle2 size={16} /> Account Created
+                  </p>
                   <p style={activityTimeStyle}>
                     {formatDate(currentUser?.createdAt)}
                   </p>
@@ -1274,22 +1540,28 @@ function Profile() {
               </div>
 
               <div style={infoSectionStyle}>
-                <h4 style={{ ...infoLabelStyle, marginBottom: "16px" }}>
+                <h4 style={{ ...infoLabelStyle, marginBottom: "20px" }}>
                   Login History
                 </h4>
                 <div style={infoGridStyle}>
                   <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>Last Login</p>
+                    <p style={infoLabelStyle}>
+                      <Clock size={14} /> Last Login
+                    </p>
                     <p style={infoValueStyle}>
                       {formatDate(currentUser?.lastLogin)}
                     </p>
                   </div>
                   <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>Total Logins</p>
+                    <p style={infoLabelStyle}>
+                      <TrendingUp size={14} /> Total Logins
+                    </p>
                     <p style={infoValueStyle}>24</p>
                   </div>
                   <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>Failed Attempts</p>
+                    <p style={infoLabelStyle}>
+                      <AlertCircle size={14} /> Failed Attempts
+                    </p>
                     <p style={infoValueStyle}>0</p>
                   </div>
                 </div>
