@@ -362,13 +362,13 @@ const TopBar = () => {
                         {currentUser.email}
                       </p>
                     </div>
-                    <a
-                      href='#'
+                    <NavLink
+                      to={"/profile"}
                       className={` flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
                     >
                       <User className='w-4 h-4' />
                       <span className=''>Profile</span>
-                    </a>
+                    </NavLink>
                     <a
                       href='#'
                       className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
