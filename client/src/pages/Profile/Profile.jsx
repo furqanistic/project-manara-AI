@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/pages/Profile/Profile.jsx
 import TopBar from "@/components/Layout/Topbar";
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -444,7 +445,7 @@ function Profile() {
                 <form onSubmit={handleProfileSubmit(onProfileSubmit)}>
                   <div className="mb-4 md:mb-5">
                     <label className="block text-xs md:text-sm font-semibold mb-1.5 md:mb-2 text-[#1a1a1a]">
-                      Full Name *
+                      Full Name <span className="text-red-600">*</span>
                     </label>
                     <input
                       type="text"
@@ -466,7 +467,7 @@ function Profile() {
 
                   <div className="mb-4 md:mb-5">
                     <label className="block text-xs md:text-sm font-semibold mb-1.5 md:mb-2 text-[#1a1a1a]">
-                      Email Address *
+                      Email Address <span className="text-red-600">*</span>
                     </label>
                     <input
                       type="email"
@@ -530,7 +531,7 @@ function Profile() {
 
                 <div className="mb-4 md:mb-5">
                   <label className="block text-xs md:text-sm font-semibold mb-1.5 md:mb-2 text-[#1a1a1a]">
-                    Current Password *
+                    Current Password <span className="text-red-600">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <input
@@ -568,7 +569,7 @@ function Profile() {
 
                 <div className="mb-4 md:mb-5">
                   <label className="block text-xs md:text-sm font-semibold mb-1.5 md:mb-2 text-[#1a1a1a]">
-                    New Password *
+                    New Password <span className="text-red-600">*</span>
                   </label>
                   <p className="text-xs text-gray-600 mb-2 font-medium">
                     8+ chars, uppercase, lowercase, number
@@ -616,7 +617,7 @@ function Profile() {
 
                 <div className="mb-4 md:mb-5">
                   <label className="block text-xs md:text-sm font-semibold mb-1.5 md:mb-2 text-[#1a1a1a]">
-                    Confirm Password *
+                    Confirm Password <span className="text-red-600">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <input
