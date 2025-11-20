@@ -1,4 +1,3 @@
-// File: project-manara-AI/client/src/pages/Profile/Profile.jsx
 import TopBar from "@/components/Layout/Topbar";
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -132,11 +131,9 @@ function Profile() {
     },
     newPassword: {
       required: "New password required",
-      minLength: {
-        value: 8,
-        message: "Password must be at least 8 characters",
-      },
       validate: {
+        minLength: (value) =>
+          value.length >= 8 || "Password must be at least 8 characters",
         hasUppercase: (value) => /[A-Z]/.test(value) || "Need uppercase letter",
         hasLowercase: (value) => /[a-z]/.test(value) || "Need lowercase letter",
         hasNumber: (value) => /[0-9]/.test(value) || "Need a number",
