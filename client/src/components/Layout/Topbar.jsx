@@ -1,6 +1,7 @@
 // File: client/src/components/Layout/Topbar.jsx
 import {
   Banknote,
+  BanknoteIcon,
   ChevronDown,
   LogOut,
   Menu,
@@ -234,13 +235,13 @@ const TopBar = () => {
                           <User className="w-4 h-4" />
                           <span>Profile</span>
                         </NavLink>
-                        <a
-                          href="#"
-                          className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
+                        <NavLink
+                          to="/subscription"
+                          className={` flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${textColor} ${hoverTextColor} ${hoverBg}`}
                         >
-                          <Banknote className="w-4 h-4" />
+                          <BanknoteIcon className="w-4 h-4" />
                           <span>Subscription</span>
-                        </a>
+                        </NavLink>
                         <hr className="my-1 border-gray-200" />
                         <button
                           onClick={handleLogout}
@@ -370,13 +371,13 @@ const TopBar = () => {
                       <User className="w-4 h-4" />
                       <span className="">Profile</span>
                     </NavLink>
-                    <a
-                      href="#"
-                      className={`flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
+                    <NavLink
+                      to={"/subscription"}
+                      className={` flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
                     >
-                      <Banknote className="w-4 h-4" />
-                      <span>Subscription</span>
-                    </a>
+                      <BanknoteIcon className="w-4 h-4" />
+                      <span className="">Subscription</span>
+                    </NavLink>
                     <button
                       onClick={handleLogout}
                       disabled={logoutMutation.isPending}
