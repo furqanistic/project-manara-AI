@@ -197,7 +197,7 @@ const TopBar = () => {
                         : ""
                     }`}
                   >
-                    <div className="w-6 h-6 bg-gradient-to-br from-violet-400 to-purple-500 rounded-full flex items-center justify-center">
+                    <div className="w-6 h-6 bg-gradient-to-br from-[#937c60] to-[#937c60] rounded-full flex items-center justify-center">
                       <User className="w-3 h-3 text-white" />
                     </div>
                     <span className="text-sm text-gray-800 truncate max-w-[120px]">
