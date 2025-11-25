@@ -67,30 +67,6 @@ export const ResultView = ({
 
   return (
     <div className="min-h-screen pt-32 pb-12">
-      {/* Phase 2 Loading Banner */}
-      {generationPhase === "descriptions" && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-amber-900 via-amber-900 to-brown-950 shadow-lg"
-        >
-          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-3">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            >
-              <Sparkles className="w-5 h-5 text-white" />
-            </motion.div>
-            <span className="text-white font-medium">
-              Generating detailed descriptions in background...
-            </span>
-            <span className="text-white/80 text-sm">
-              (Materials, Furniture, Lighting, Zones)
-            </span>
-          </div>
-        </motion.div>
-      )}
       <div className="max-w-7xl mx-auto px-4">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -207,6 +183,7 @@ export const ResultView = ({
                     <TabContent
                       tabId={activeTab}
                       moodboard={currentMoodboard}
+                      generationPhase={generationPhase}
                     />
                   </motion.div>
                 </AnimatePresence>
@@ -461,16 +438,84 @@ const EditModal = ({ moodboard, onClose, onSave }) => {
     </motion.div>
   );
 };
+
+{
+  /* Cute Loading Indicator for Tabs */
+}
+const TabLoadingState = () => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex flex-col items-center justify-center py-20"
+    >
+      <motion.div
+        animate={{ scale: [1, 1.1, 1] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="mb-6"
+      >
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: `${BRAND_COLOR}20` }}
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          >
+            <Sparkles className="w-8 h-8" style={{ color: BRAND_COLOR }} />
+          </motion.div>
+        </div>
+      </motion.div>
+
+      <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">
+        Generating Details
+      </h3>
+      <p className="text-sm text-gray-600 text-center mb-6">
+        It usually takes 1–2 minutes to generate.
+      </p>
+
+      <div className="flex gap-2">
+        {[0, 0.2, 0.4].map((delay, i) => (
+          <motion.div
+            key={i}
+            animate={{ y: [0, -8, 0] }}
+            transition={{
+              duration: 1.2,
+              repeat: Infinity,
+              delay: delay,
+            }}
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: BRAND_COLOR }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
 {
   /* Tab Content Component */
 }
-const TabContent = ({ tabId, moodboard }) => {
+const TabContent = ({ tabId, moodboard, generationPhase }) => {
   const narrative = moodboard.designNarrative;
   const colorPalette = moodboard.colorPalette || [];
   const moodDescription =
     moodboard.compositeMoodboard?.metadata?.moodDescription;
 
+  // Check if the tab content is loading
+  const isLoading = generationPhase === "descriptions";
+
   if (tabId === "overview") {
+    if (
+      isLoading &&
+      !narrative?.narrative &&
+      !moodDescription &&
+      colorPalette.length === 0
+    ) {
+      return <TabLoadingState />;
+    }
+
     return (
       <div className="space-y-6">
         {narrative?.narrative && (
@@ -541,11 +586,30 @@ const TabContent = ({ tabId, moodboard }) => {
             )}
           </div>
         )}
+
+        {isLoading &&
+          (narrative?.narrative ||
+            moodDescription ||
+            colorPalette.length > 0) && (
+            <div className="text-center py-6 text-gray-500">
+              <p className="text-sm">Updating details...</p>
+            </div>
+          )}
       </div>
     );
   }
 
   if (tabId === "materials") {
+    const hasContent =
+      moodboard.materials &&
+      Object.values(moodboard.materials).some(
+        (items) => items && items.length > 0
+      );
+
+    if (isLoading && !hasContent) {
+      return <TabLoadingState />;
+    }
+
     return (
       <div className="space-y-4">
         {moodboard.materials ? (
@@ -581,6 +645,8 @@ const TabContent = ({ tabId, moodboard }) => {
               </div>
             );
           })
+        ) : isLoading ? (
+          <TabLoadingState />
         ) : (
           <p className="text-gray-500">No materials specified</p>
         )}
@@ -589,6 +655,12 @@ const TabContent = ({ tabId, moodboard }) => {
   }
 
   if (tabId === "furniture") {
+    const hasContent = moodboard.furniture?.heroPieces?.length;
+
+    if (isLoading && !hasContent) {
+      return <TabLoadingState />;
+    }
+
     return (
       <div>
         {moodboard.furniture?.heroPieces?.length ? (
@@ -613,6 +685,8 @@ const TabContent = ({ tabId, moodboard }) => {
               </div>
             ))}
           </div>
+        ) : isLoading ? (
+          <TabLoadingState />
         ) : (
           <p className="text-gray-500">No furniture specified</p>
         )}
@@ -621,6 +695,14 @@ const TabContent = ({ tabId, moodboard }) => {
   }
 
   if (tabId === "lighting") {
+    const hasContent =
+      moodboard.lightingConcept?.dayMood ||
+      moodboard.lightingConcept?.nightMood;
+
+    if (isLoading && !hasContent) {
+      return <TabLoadingState />;
+    }
+
     return (
       <div className="space-y-4">
         {moodboard.lightingConcept ? (
@@ -642,6 +724,8 @@ const TabContent = ({ tabId, moodboard }) => {
               </div>
             )}
           </div>
+        ) : isLoading ? (
+          <TabLoadingState />
         ) : (
           <p className="text-gray-500">No lighting concept specified</p>
         )}
@@ -650,6 +734,12 @@ const TabContent = ({ tabId, moodboard }) => {
   }
 
   if (tabId === "layout") {
+    const hasContent = moodboard.zones?.length;
+
+    if (isLoading && !hasContent) {
+      return <TabLoadingState />;
+    }
+
     return (
       <div className="grid md:grid-cols-2 gap-4">
         {moodboard.zones?.length ? (
@@ -679,6 +769,8 @@ const TabContent = ({ tabId, moodboard }) => {
               </div>
             </div>
           ))
+        ) : isLoading ? (
+          <TabLoadingState />
         ) : (
           <p className="text-gray-500">No layout zones specified</p>
         )}
@@ -688,6 +780,7 @@ const TabContent = ({ tabId, moodboard }) => {
 
   return null;
 };
+
 {
   /* Loading Animation Component */
 }
@@ -700,7 +793,7 @@ const LoadingAnimation = () => (
         style={{ borderTopColor: BRAND_COLOR }}
       ></div>
       <div className="absolute inset-0 flex items-center justify-center">
-        <Wand2
+        <Sparkles
           className="w-8 h-8 animate-pulse"
           style={{ color: BRAND_COLOR }}
         />
@@ -717,7 +810,9 @@ const LoadingAnimation = () => (
     </div>
   </div>
 );
-{ /* Image Modal Component */
+
+{
+  /* Image Modal Component */
 }
 const ImageModal = ({ imageUrl, onClose, onDownload }) => (
   <motion.div

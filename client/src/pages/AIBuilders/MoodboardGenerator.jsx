@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/pages/AIBuilders/MoodboardGenerator.jsx
 import TopBar from '@/components/Layout/Topbar'
 import {
   useCreateMoodboard,
