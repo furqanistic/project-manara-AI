@@ -1,11 +1,96 @@
 // File: client/src/components/Moodboard/MoodboardHistory.jsx
-// FIXED VERSION - Loading state issue resolved + View/Delete buttons removed
+
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Clock, Search, ChevronDown, Loader } from "lucide-react";
+import {
+  X,
+  Clock,
+  Search,
+  ChevronDown,
+  Loader,
+  RotateCcw,
+  Filter,
+  CheckCircle,
+  Image,
+  FileText,
+  AlertCircle,
+} from "lucide-react";
 import { getUserMoodboards } from "@/services/moodboardService";
 import { BRAND_COLOR } from "./Moodboardconfig";
 import toast from "react-hot-toast";
+
+// Custom Dropdown Component
+const CustomDropdown = ({
+  value,
+  onChange,
+  options,
+  isOpen,
+  setIsOpen,
+  triggerIcon: TriggerIcon,
+  onOpen,
+}) => {
+  const handleOpen = () => {
+    onOpen(); // Close other dropdowns
+    setIsOpen(true);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => {
+          if (isOpen) {
+            setIsOpen(false);
+          } else {
+            handleOpen();
+          }
+        }}
+        className="appearance-none px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none transition-colors cursor-pointer flex items-center justify-between bg-white hover:border-gray-300 w-full"
+        style={{
+          borderColor: value && value !== "all" ? BRAND_COLOR : "#e5e7eb",
+        }}
+      >
+        <div className="flex items-center gap-2">
+          {TriggerIcon && (
+            <TriggerIcon className="w-4 h-4 " style={{ color: BRAND_COLOR }} />
+          )}
+          <span className="text-sm font-medium text-gray-900">
+            {options.find((opt) => opt.value === value)?.label}
+          </span>
+        </div>
+        <ChevronDown
+          className={`w-4 h-4 ml-1 text-gray-400 transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-200 rounded-lg shadow-lg z-10 min-w-max">
+          {options.map((option) => (
+            <button
+              key={option.value}
+              onClick={() => {
+                onChange(option.value);
+                setIsOpen(false);
+              }}
+              className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0 text-left transition-colors whitespace-nowrap"
+            >
+              {option.icon && (
+                <option.icon
+                  className="w-4 h-4 flex-shrink-0"
+                  style={{ color: BRAND_COLOR }}
+                />
+              )}
+              <span className="text-sm font-medium text-gray-900">
+                {option.label}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const MoodboardHistory = ({ isOpen, onClose }) => {
   const [moodboards, setMoodboards] = useState([]);
@@ -17,6 +102,32 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
   const [hasMore, setHasMore] = useState(true);
   const [sortBy, setSortBy] = useState("recent");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [sortOpen, setSortOpen] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+
+  // Dropdown options with icons
+  const sortOptions = [
+    { value: "recent", label: "Most Recent", icon: Clock },
+    { value: "oldest", label: "Oldest First", icon: RotateCcw },
+  ];
+
+  const filterOptions = [
+    { value: "all", label: "All Status", icon: Filter },
+    { value: "completed", label: "Completed", icon: CheckCircle },
+    { value: "image_generated", label: "Image Generated", icon: Image },
+    { value: "draft", label: "Draft", icon: FileText },
+    { value: "generating", label: "Generating", icon: Loader },
+    { value: "failed", label: "Failed", icon: AlertCircle },
+  ];
+
+  // Handlers to ensure only one dropdown is open
+  const handleSortOpen = () => {
+    setFilterOpen(false);
+  };
+
+  const handleFilterOpen = () => {
+    setSortOpen(false);
+  };
 
   // Reset state when modal opens
   useEffect(() => {
@@ -34,6 +145,8 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
       setSearchQuery("");
       setSortBy("recent");
       setFilterStatus("all");
+      setSortOpen(false);
+      setFilterOpen(false);
     }
   }, [isOpen]);
 
@@ -167,40 +280,25 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
                   </div>
                 </div>
 
-                <div className="relative">
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value)}
-                    className="appearance-none px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none transition-colors cursor-pointer pr-10"
-                    style={{
-                      borderColor: sortBy ? BRAND_COLOR : "#e5e7eb",
-                    }}
-                  >
-                    <option value="recent">Most Recent</option>
-                    <option value="oldest">Oldest First</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-                </div>
+                <CustomDropdown
+                  value={sortBy}
+                  onChange={setSortBy}
+                  options={sortOptions}
+                  isOpen={sortOpen}
+                  setIsOpen={setSortOpen}
+                  triggerIcon={Clock}
+                  onOpen={handleSortOpen}
+                />
 
-                <div className="relative">
-                  <select
-                    value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}
-                    className="appearance-none px-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none transition-colors cursor-pointer pr-10"
-                    style={{
-                      borderColor:
-                        filterStatus !== "all" ? BRAND_COLOR : "#e5e7eb",
-                    }}
-                  >
-                    <option value="all">All Status</option>
-                    <option value="completed">Completed</option>
-                    <option value="image_generated">Image Generated</option>
-                    <option value="draft">Draft</option>
-                    <option value="generating">Generating</option>
-                    <option value="failed">Failed</option>
-                  </select>
-                  <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-                </div>
+                <CustomDropdown
+                  value={filterStatus}
+                  onChange={setFilterStatus}
+                  options={filterOptions}
+                  isOpen={filterOpen}
+                  setIsOpen={setFilterOpen}
+                  triggerIcon={Filter}
+                  onOpen={handleFilterOpen}
+                />
               </div>
             </div>
 
