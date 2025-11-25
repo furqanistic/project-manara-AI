@@ -129,19 +129,16 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
     setSortOpen(false);
   };
 
-  // Reset state when modal opens
+  // ✅ FIX: Only fetch on first open, keep cached data when closing
   useEffect(() => {
-    if (isOpen) {
-      if (moodboards.length === 0) {
-        setPage(1);
-        setHasLoaded(false);
-      }
-    } else {
-      // Reset everything when closing
-      setHasLoaded(false);
-      setMoodboards([]);
-      setFilteredMoodboards([]);
+    if (isOpen && !hasLoaded && moodboards.length === 0) {
       setPage(1);
+    }
+  }, [isOpen, hasLoaded, moodboards.length]);
+
+  // Reset UI state (filters/search) when closing, but keep cached data
+  useEffect(() => {
+    if (!isOpen) {
       setSearchQuery("");
       setSortBy("recent");
       setFilterStatus("all");
