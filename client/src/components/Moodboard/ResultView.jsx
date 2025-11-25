@@ -442,7 +442,7 @@ const EditModal = ({ moodboard, onClose, onSave }) => {
 {
   /* Cute Loading Indicator for Tabs */
 }
-const TabLoadingState = () => {
+const TabLoadingState = ({ tabName }) => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -469,7 +469,7 @@ const TabLoadingState = () => {
       </motion.div>
 
       <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">
-        Generating Details
+        Generating {tabName} details
       </h3>
       <p className="text-sm text-gray-600 text-center mb-6">
         It usually takes 1–2 minutes to generate.
@@ -513,7 +513,7 @@ const TabContent = ({ tabId, moodboard, generationPhase }) => {
       !moodDescription &&
       colorPalette.length === 0
     ) {
-      return <TabLoadingState />;
+      return <TabLoadingState tabName="Overview" />;
     }
 
     return (
@@ -607,7 +607,7 @@ const TabContent = ({ tabId, moodboard, generationPhase }) => {
       );
 
     if (isLoading && !hasContent) {
-      return <TabLoadingState />;
+      return <TabLoadingState tabName="Materials" />;
     }
 
     return (
@@ -658,7 +658,7 @@ const TabContent = ({ tabId, moodboard, generationPhase }) => {
     const hasContent = moodboard.furniture?.heroPieces?.length;
 
     if (isLoading && !hasContent) {
-      return <TabLoadingState />;
+      return <TabLoadingState tabName="Furniture" />;
     }
 
     return (
@@ -700,7 +700,7 @@ const TabContent = ({ tabId, moodboard, generationPhase }) => {
       moodboard.lightingConcept?.nightMood;
 
     if (isLoading && !hasContent) {
-      return <TabLoadingState />;
+      return <TabLoadingState tabName="Lighting" />;
     }
 
     return (
@@ -737,7 +737,7 @@ const TabContent = ({ tabId, moodboard, generationPhase }) => {
     const hasContent = moodboard.zones?.length;
 
     if (isLoading && !hasContent) {
-      return <TabLoadingState />;
+      return <TabLoadingState tabName="Layout" />;
     }
 
     return (
