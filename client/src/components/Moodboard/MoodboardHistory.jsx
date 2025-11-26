@@ -276,7 +276,7 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto min-h-0">
               {!hasLoaded ? (
-                <div className="text-center">
+                <div className="text-center py-2">
                   <Loader
                     className="w-8 h-8 animate-spin mx-auto mb-3"
                     style={{ color: BRAND_COLOR }}
