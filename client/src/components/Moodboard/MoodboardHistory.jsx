@@ -1,5 +1,6 @@
 // File: project-manara-AI/client/src/components/Moodboard/MoodboardHistory.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
@@ -13,6 +14,7 @@ import {
   Image,
   FileText,
   AlertCircle,
+  ArrowRight,
 } from "lucide-react";
 import { getUserMoodboards } from "@/services/moodboardService";
 import { BRAND_COLOR } from "./Moodboardconfig";
@@ -50,8 +52,27 @@ const CustomDropdown = ({
   triggerIcon: TriggerIcon,
   onOpen,
 }) => {
+  const dropdownRef = useRef(null);
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    }
+
+    if (isOpen) {
+      window.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      window.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, setIsOpen]);
+
   return (
-    <div className="relative">
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => {
           if (isOpen) {
@@ -110,6 +131,7 @@ const CustomDropdown = ({
 };
 
 export const MoodboardHistory = ({ isOpen, onClose }) => {
+  const navigate = useNavigate();
   const [moodboards, setMoodboards] = useState([]);
   const [filteredMoodboards, setFilteredMoodboards] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -160,6 +182,8 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
     }
   };
 
+  console.log(moodboards);
+
   // Filter and sort moodboards
   useEffect(() => {
     let filtered = moodboards;
@@ -189,6 +213,11 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
 
   const handleLoadMore = () => setPage((p) => p + 1);
 
+  const handleCardClick = (moodboardId) => {
+    onClose();
+    navigate(`/moodboards/${moodboardId}`);
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -209,93 +238,102 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <div
-                  className="p-2 rounded-lg"
+                  className="p-2 rounded-lg flex-shrink-0"
                   style={{ backgroundColor: `${BRAND_COLOR}20` }}
                 >
-                  <Clock className="w-6 h-6" style={{ color: BRAND_COLOR }} />
+                  <Clock
+                    className="w-5 h-5 sm:w-6 sm:h-6"
+                    style={{ color: BRAND_COLOR }}
+                  />
                 </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">
+                <div className="min-w-0">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900">
                     Moodboard History
                   </h2>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs sm:text-sm text-gray-600">
                     {moodboards.length} total moodboards
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
               >
-                <X className="w-6 h-6 text-gray-500" />
+                <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500" />
               </button>
             </div>
 
             {/* Search & Filters */}
-            <div className="p-6 border-b border-gray-200 space-y-4">
-              <div className="flex gap-4 flex-wrap">
-                <div className="flex-1 min-w-[200px] relative">
-                  <Search className="absolute left-3 top-3 w-5 h-5 text-gray-400" />
+            <div className="p-4 sm:p-6 border-b border-gray-200 space-y-3 sm:space-y-4">
+              <div className="flex gap-2 sm:gap-4 flex-col sm:flex-row">
+                <div className="flex-1 min-w-0 relative">
+                  <Search className="absolute left-3 top-2.5 sm:top-3 w-4 h-4 sm:w-5 sm:h-5 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Search by title, style, or room..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none transition-colors"
+                    className="w-full pl-9 sm:pl-10 pr-4 py-2 border-2 border-gray-200 rounded-lg focus:outline-none transition-colors text-sm"
                     style={{
                       borderColor: searchQuery ? BRAND_COLOR : "#e5e7eb",
                     }}
                   />
                 </div>
 
-                <CustomDropdown
-                  value={sortBy}
-                  onChange={setSortBy}
-                  options={SORT_OPTIONS}
-                  isOpen={sortOpen}
-                  setIsOpen={setSortOpen}
-                  triggerIcon={Clock}
-                  onOpen={() => setFilterOpen(false)}
-                />
+                <div className="flex gap-2 sm:gap-3">
+                  <CustomDropdown
+                    value={sortBy}
+                    onChange={setSortBy}
+                    options={SORT_OPTIONS}
+                    isOpen={sortOpen}
+                    setIsOpen={setSortOpen}
+                    triggerIcon={Clock}
+                    onOpen={() => setFilterOpen(false)}
+                  />
 
-                <CustomDropdown
-                  value={filterStatus}
-                  onChange={setFilterStatus}
-                  options={FILTER_OPTIONS}
-                  isOpen={filterOpen}
-                  setIsOpen={setFilterOpen}
-                  triggerIcon={Filter}
-                  onOpen={() => setSortOpen(false)}
-                />
+                  <CustomDropdown
+                    value={filterStatus}
+                    onChange={setFilterStatus}
+                    options={FILTER_OPTIONS}
+                    isOpen={filterOpen}
+                    setIsOpen={setFilterOpen}
+                    triggerIcon={Filter}
+                    onOpen={() => setSortOpen(false)}
+                  />
+                </div>
               </div>
             </div>
 
             {/* Content Area */}
             <div className="flex-1 overflow-y-auto min-h-0">
               {!hasLoaded ? (
-                <div className="text-center py-2">
+                <div className="text-center py-2 min-h-[350px] flex items-center justify-center flex-col p-4">
                   <Loader
                     className="w-8 h-8 animate-spin mx-auto mb-3"
                     style={{ color: BRAND_COLOR }}
                   />
-                  <p className="text-gray-600">Loading moodboards...</p>
+                  <p className="text-gray-600 text-sm">Loading moodboards...</p>
                 </div>
               ) : filteredMoodboards.length === 0 ? (
-                <div className="text-center">
+                <div className="text-center min-h-[350px] flex items-center justify-center flex-col p-4">
                   <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3 blur-sm" />
-                  <p className="text-gray-600">
+                  <p className="text-gray-600 text-sm">
                     {searchQuery
                       ? "No moodboards match your search"
                       : "No moodboards yet. Create your first moodboard!"}
                   </p>
                 </div>
               ) : (
-                <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-4 p-6">
+                <div className="w-full grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-4 sm:p-6">
                   {filteredMoodboards.map((moodboard) => (
-                    <MoodboardCard key={moodboard._id} moodboard={moodboard} />
+                    <MoodboardCard
+                      key={moodboard._id}
+                      moodboard={moodboard}
+                      onClick={() => handleCardClick(moodboard._id)}
+                    />
                   ))}
                 </div>
               )}
@@ -303,11 +341,11 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
 
             {/* Load More Button */}
             {hasMore && hasLoaded && (
-              <div className="flex justify-center p-4 border-t border-gray-200">
+              <div className="flex justify-center p-3 sm:p-4 border-t border-gray-200">
                 <button
                   onClick={handleLoadMore}
                   disabled={isLoading}
-                  className="px-6 py-2 text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
+                  className="px-4  sm:px-6 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors disabled:opacity-50"
                   style={{
                     backgroundColor: `${BRAND_COLOR}20`,
                     color: BRAND_COLOR,
@@ -331,50 +369,60 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
 };
 
 // Extracted card component for better readability
-const MoodboardCard = ({ moodboard }) => {
+const MoodboardCard = ({ moodboard, onClick }) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow group"
+      onClick={onClick}
+      className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all group cursor-pointer active:scale-95"
+      whileHover={{ y: -4 }}
     >
       {moodboard.compositeMoodboard?.url && (
         <div className="relative h-32 bg-black overflow-hidden">
           <img
             src={moodboard.compositeMoodboard.url}
             alt={moodboard.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 sm:p-3">
+              <ArrowRight
+                className="w-4 h-4 sm:w-5 sm:h-5"
+                style={{ color: BRAND_COLOR }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
-      <div className="p-4">
-        <h3 className="font-bold text-gray-900 mb-2 line-clamp-1">
+      <div className="p-3 sm:p-4">
+        <h3 className="font-bold text-sm sm:text-base text-gray-900 mb-2 line-clamp-1">
           {moodboard.title}
         </h3>
 
-        <div className="grid grid-cols-2 gap-2 text-sm mb-3">
+        <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm mb-3">
           {moodboard.style && (
             <div>
-              <p className="text-gray-600">Style</p>
-              <p className="font-medium text-gray-900 capitalize line-clamp-1">
+              <p className="text-gray-600 text-xs">Style</p>
+              <p className="font-medium text-gray-900 capitalize line-clamp-1 text-xs sm:text-sm">
                 {moodboard.style}
               </p>
             </div>
           )}
           {moodboard.roomType && (
             <div>
-              <p className="text-gray-600">Room</p>
-              <p className="font-medium text-gray-900 capitalize line-clamp-1">
+              <p className="text-gray-600 text-xs">Room</p>
+              <p className="font-medium text-gray-900 capitalize line-clamp-1 text-xs sm:text-sm">
                 {moodboard.roomType.replace("_", " ")}
               </p>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <span
             className={`px-2 py-1 rounded-full text-xs font-semibold ${
               STATUS_COLORS[moodboard.status] || STATUS_COLORS.draft
@@ -382,8 +430,14 @@ const MoodboardCard = ({ moodboard }) => {
           >
             {moodboard.status.replace("_", " ").toUpperCase()}
           </span>
-          <span className="text-xs text-gray-500">
-            {new Date(moodboard.createdAt).toLocaleDateString()}
+          <span className="text-xs text-gray-500 flex-shrink-0">
+            {(() => {
+              const d = new Date(moodboard.createdAt);
+              const day = d.getDate();
+              const month = d.toLocaleString("en-US", { month: "long" });
+              const year = d.getFullYear();
+              return `${day} ${month}, ${year}`;
+            })()}
           </span>
         </div>
       </div>

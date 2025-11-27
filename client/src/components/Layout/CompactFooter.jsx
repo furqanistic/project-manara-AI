@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/components/Layout/CompactFooter.jsx
 import {
   ArrowRight,
   Instagram,

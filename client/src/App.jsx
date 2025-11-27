@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/App.jsx
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import React from 'react'
 import { Toaster } from 'react-hot-toast'
@@ -18,6 +19,7 @@ import HomePage from './pages/Home/HomePage'
 import PricingPage from './pages/Pricing/PricingPage'
 import { persistor, store } from './redux/store'
 import Profile from './pages/Profile/Profile'
+import MoodboardHistroyDetails from './components/Moodboard/MoodboardHistroyDeatils'
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -52,15 +54,15 @@ const RequireAuth = ({ children, requireAdmin = false }) => {
 const AppRoutes = () => {
   return (
     <Routes>
-      <Route path='/'>
+      <Route path="/">
         <Route index element={<HomePage />} />
-        <Route path='/about' element={<AboutPage />} />
-        <Route path='/pricing' element={<PricingPage />} />
-        <Route path='/auth' element={<AuthPage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/auth" element={<AuthPage />} />
 
         {/* Protected routes - wrap with RequireAuth */}
         <Route
-          path='/moodboard'
+          path="/moodboard"
           element={
             <RequireAuth>
               <MoodboardGenerator />
@@ -68,18 +70,28 @@ const AppRoutes = () => {
           }
         />
         <Route
-          path='/floorplans'
+          path="/floorplans"
           element={
             <RequireAuth>
               <FloorPlanGenerator />
             </RequireAuth>
           }
         />
-        <Route path='/profile' element={
-          <RequireAuth>
-            <Profile />
-          </RequireAuth>
-        }
+        <Route
+          path="/profile"
+          element={
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/moodboards/:id"
+          element={
+            <RequireAuth>
+              <MoodboardHistroyDetails />
+            </RequireAuth>
+          }
         />
 
         {/* Example admin-only route */}
@@ -93,7 +105,7 @@ const AppRoutes = () => {
         /> */}
       </Route>
     </Routes>
-  )
+  );
 }
 
 const App = () => {
