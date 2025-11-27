@@ -15,8 +15,12 @@ import {
   FileText,
   AlertCircle,
   ArrowRight,
+  Trash2,
 } from "lucide-react";
-import { getUserMoodboards } from "@/services/moodboardService";
+import {
+  getUserMoodboards,
+  deleteMoodboard,
+} from "@/services/moodboardService";
 import { BRAND_COLOR } from "./Moodboardconfig";
 import toast from "react-hot-toast";
 
@@ -130,6 +134,83 @@ const CustomDropdown = ({
   );
 };
 
+// Confirmation Dialog Component
+const DeleteConfirmationDialog = ({
+  isOpen,
+  title,
+  onConfirm,
+  onCancel,
+  isDeleting,
+}) => {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onCancel}
+            className="fixed inset-0 bg-black/50 z-50"
+          />
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-xl shadow-xl z-50 w-[90%] max-w-sm p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="p-2 rounded-lg"
+                style={{ backgroundColor: "#fee2e2" }}
+              >
+                <AlertCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900">
+                Delete Moodboard
+              </h3>
+            </div>
+
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete "<strong>{title}</strong>"? This
+              action cannot be undone.
+            </p>
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={onCancel}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={onConfirm}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg font-medium text-white bg-red-600 hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </>
+      )}
+    </AnimatePresence>
+  );
+};
+
 export const MoodboardHistory = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
   const [moodboards, setMoodboards] = useState([]);
@@ -180,6 +261,10 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
       setIsLoading(false);
       setHasLoaded(true);
     }
+  };
+
+  const handleDeleteMoodboard = (moodboardId) => {
+    setMoodboards((prev) => prev.filter((m) => m._id !== moodboardId));
   };
 
   console.log(moodboards);
@@ -333,6 +418,7 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
                       key={moodboard._id}
                       moodboard={moodboard}
                       onClick={() => handleCardClick(moodboard._id)}
+                      onDelete={handleDeleteMoodboard}
                     />
                   ))}
                 </div>
@@ -369,78 +455,117 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
 };
 
 // Extracted card component for better readability
-const MoodboardCard = ({ moodboard, onClick }) => {
+const MoodboardCard = ({ moodboard, onClick, onDelete }) => {
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    try {
+      setIsDeleting(true);
+      await deleteMoodboard(moodboard._id);
+      toast.success("Moodboard deleted successfully");
+      onDelete(moodboard._id);
+      setDeleteDialogOpen(false);
+    } catch (error) {
+      console.error("Error deleting moodboard:", error);
+      toast.error("Failed to delete moodboard");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      onClick={onClick}
-      className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all group cursor-pointer active:scale-95"
-      whileHover={{ y: -4 }}
-    >
-      {moodboard.compositeMoodboard?.url && (
-        <div className="relative h-32 bg-black overflow-hidden">
-          <img
-            src={moodboard.compositeMoodboard.url}
-            alt={moodboard.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 sm:p-3">
-              <ArrowRight
-                className="w-4 h-4 sm:w-5 sm:h-5"
-                style={{ color: BRAND_COLOR }}
-              />
+    <>
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        onClick={onClick}
+        className="bg-gray-50 rounded-xl border border-gray-200 overflow-hidden hover:shadow-lg hover:border-gray-300 transition-all group cursor-pointer active:scale-95"
+        whileHover={{ y: -4 }}
+      >
+        {moodboard.compositeMoodboard?.url && (
+          <div className="relative h-32 bg-black overflow-hidden">
+            <img
+              src={moodboard.compositeMoodboard.url}
+              alt={moodboard.title}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <div className="bg-white/90 backdrop-blur-sm rounded-full p-2 sm:p-3">
+                <ArrowRight
+                  className="w-4 h-4 sm:w-5 sm:h-5"
+                  style={{ color: BRAND_COLOR }}
+                />
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <div className="p-3 sm:p-4">
-        <h3 className="font-bold text-sm sm:text-base text-gray-900 mb-2 line-clamp-1">
-          {moodboard.title}
-        </h3>
+        <div className="p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <h3 className="font-bold text-sm sm:text-base text-gray-900 line-clamp-1 flex-1">
+              {moodboard.title}
+            </h3>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setDeleteDialogOpen(true);
+              }}
+              className="p-1.5 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0 group/delete"
+            >
+              <Trash2 className="w-4 h-4 text-gray-400 group-hover/delete:text-red-600 transition-colors" />
+            </button>
+          </div>
 
-        <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm mb-3">
-          {moodboard.style && (
-            <div>
-              <p className="text-gray-600 text-xs">Style</p>
-              <p className="font-medium text-gray-900 capitalize line-clamp-1 text-xs sm:text-sm">
-                {moodboard.style}
-              </p>
-            </div>
-          )}
-          {moodboard.roomType && (
-            <div>
-              <p className="text-gray-600 text-xs">Room</p>
-              <p className="font-medium text-gray-900 capitalize line-clamp-1 text-xs sm:text-sm">
-                {moodboard.roomType.replace("_", " ")}
-              </p>
-            </div>
-          )}
-        </div>
+          <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm mb-3">
+            {moodboard.style && (
+              <div>
+                <p className="text-gray-600 text-xs">Style</p>
+                <p className="font-medium text-gray-900 capitalize line-clamp-1 text-xs sm:text-sm">
+                  {moodboard.style}
+                </p>
+              </div>
+            )}
+            {moodboard.roomType && (
+              <div>
+                <p className="text-gray-600 text-xs">Room</p>
+                <p className="font-medium text-gray-900 capitalize line-clamp-1 text-xs sm:text-sm">
+                  {moodboard.roomType.replace("_", " ")}
+                </p>
+              </div>
+            )}
+          </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-              STATUS_COLORS[moodboard.status] || STATUS_COLORS.draft
-            }`}
-          >
-            {moodboard.status.replace("_", " ").toUpperCase()}
-          </span>
-          <span className="text-xs text-gray-500 flex-shrink-0">
-            {(() => {
-              const d = new Date(moodboard.createdAt);
-              const day = d.getDate();
-              const month = d.toLocaleString("en-US", { month: "long" });
-              const year = d.getFullYear();
-              return `${day} ${month}, ${year}`;
-            })()}
-          </span>
+          <div className="flex items-center justify-between gap-2">
+            <span
+              className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                STATUS_COLORS[moodboard.status] || STATUS_COLORS.draft
+              }`}
+            >
+              {moodboard.status.replace("_", " ").toUpperCase()}
+            </span>
+            <span className="text-xs text-gray-500 flex-shrink-0">
+              {(() => {
+                const d = new Date(moodboard.createdAt);
+                const day = d.getDate();
+                const month = d.toLocaleString("en-US", { month: "long" });
+                const year = d.getFullYear();
+                return `${day} ${month}, ${year}`;
+              })()}
+            </span>
+          </div>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+
+      <DeleteConfirmationDialog
+        isOpen={deleteDialogOpen}
+        title={moodboard.title}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteDialogOpen(false)}
+        isDeleting={isDeleting}
+      />
+    </>
   );
 };
