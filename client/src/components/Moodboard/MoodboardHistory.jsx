@@ -253,7 +253,11 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
           ? response.data.moodboards
           : [...prev, ...response.data.moodboards]
       );
-      setHasMore(page < response.totalPages);
+
+      // If we got fewer results than the limit, we're on the last page
+      const receivedCount = response.data.moodboards.length;
+      const isLastPage = receivedCount < 20;
+      setHasMore(!isLastPage && page < response.totalPages);
     } catch (error) {
       console.error("Error fetching moodboards:", error);
       toast.error("Failed to load moodboard history");
