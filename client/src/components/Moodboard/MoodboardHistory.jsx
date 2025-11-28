@@ -519,7 +519,7 @@ const MoodboardCard = ({ moodboard, onClick, onDelete }) => {
               }}
               className="p-1.5 rounded-lg hover:bg-red-50 transition-colors flex-shrink-0 group/delete"
             >
-              <Trash2 className="w-4 h-4 text-gray-400 group-hover/delete:text-red-600 transition-colors" />
+              <Trash2 className="w-4 h-4 text-gray-400 group-hover/delete:text-red-600 transition-colors cursor-pointer" />
             </button>
           </div>
 

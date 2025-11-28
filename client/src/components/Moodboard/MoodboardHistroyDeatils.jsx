@@ -230,21 +230,21 @@ export const MoodboardHistroyDeatils = () => {
                         `${moodboard.title}-moodboard.png`
                       )
                     }
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 font-medium text-sm"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors text-gray-700 font-medium text-sm"
                   >
                     <Download className="w-4 h-4" />
                     <span className="hidden sm:inline">Download</span>
                   </button>
                   <button
                     onClick={handleCopyLink}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 font-medium text-sm"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 font-medium text-sm cursor-pointer"
                   >
                     <Copy className="w-4 h-4" />
                     <span className="hidden sm:inline">Copy Link</span>
                   </button>
                   <button
                     onClick={handleShare}
-                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 font-medium text-sm ml-auto"
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-700 font-medium text-sm ml-auto cursor-pointer"
                   >
                     <Share2 className="w-4 h-4" />
                     <span className="hidden sm:inline">Share</span>
@@ -397,7 +397,7 @@ export const MoodboardHistroyDeatils = () => {
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 font-medium transition-all whitespace-nowrap border-b-2 text-sm sm:text-base ${
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-3 font-medium transition-all whitespace-nowrap border-b-2 text-sm sm:text-base cursor-pointer  ${
                       activeTab === tab.id
                         ? "text-gray-900 border-gray-900"
                         : "text-gray-500 border-transparent hover:text-gray-700"
@@ -447,34 +447,32 @@ export const MoodboardHistroyDeatils = () => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={() => setSelectedImage(null)}
-          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-2 sm:p-4"
         >
           <motion.div
             initial={{ scale: 0.9 }}
             animate={{ scale: 1 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative max-w-4xl max-h-[90vh] w-full"
+            className="relative max-w-4xl max-h-[90vh] w-full pb-14 sm:pb-0"
           >
             <button
               onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-10"
+              className="absolute top-2 sm:top-4 right-2 sm:right-4 p-2 sm:p-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors z-10"
             >
-              <X className="w-6 h-6 text-white" />
+              <X className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </button>
-
             <img
               src={selectedImage}
               alt="Fullscreen preview"
               className="w-full h-full object-contain rounded-lg"
             />
-
             <button
               onClick={() =>
                 handleDownload(selectedImage, `${moodboard.title}-image.png`)
               }
-              className="absolute bottom-4 left-4 flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white font-medium"
+              className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 bg-white/10 hover:bg-white/20 rounded-lg transition-colors text-white font-medium text-xs sm:text-base"
             >
-              <Download className="w-5 h-5" />
+              <Download className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
               <span>Download</span>
             </button>
           </motion.div>
