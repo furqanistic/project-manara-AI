@@ -19,7 +19,7 @@ import HomePage from './pages/Home/HomePage'
 import PricingPage from './pages/Pricing/PricingPage'
 import { persistor, store } from './redux/store'
 import Profile from './pages/Profile/Profile'
-import MoodboardHistroyDetails from './components/Moodboard/MoodboardHistroyDeatils'
+import { MoodboardHistroyDeatils } from './components/Moodboard/MoodboardHistroyDeatils'
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -89,7 +89,7 @@ const AppRoutes = () => {
           path="/moodboards/:id"
           element={
             <RequireAuth>
-              <MoodboardHistroyDetails />
+              <MoodboardHistroyDeatils />
             </RequireAuth>
           }
         />

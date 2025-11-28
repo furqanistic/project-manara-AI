@@ -1,3 +1,4 @@
+// File: project-manara-AI/client/src/components/Moodboard/MoodboardHistroyDeatils.jsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,7 +44,7 @@ const formatDate = (dateString) => {
   return date.toLocaleDateString("en-US", options);
 };
 
-export const MoodboardDetails = () => {
+export const MoodboardHistroyDeatils = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [moodboard, setMoodboard] = useState(null);
@@ -389,7 +390,7 @@ export const MoodboardDetails = () => {
             className="mt-8 bg-white rounded-2xl shadow-lg p-4 sm:p-6 lg:p-8"
           >
             {/* Tab Navigation */}
-            <div className="flex gap-1 mb-8 overflow-x-auto pb-2 border-b border-gray-200">
+            <div className="flex gap-3 sm:gap-1 mb-8 overflow-x-auto pb-2 border-b border-gray-200">
               {TABS.map((tab) => {
                 const Icon = tab.icon;
                 return (
@@ -960,4 +961,4 @@ const EmptyState = ({ message }) => (
   </div>
 );
 
-export default MoodboardDetails;
+export default MoodboardHistroyDeatils;
