@@ -20,6 +20,7 @@ import PricingPage from './pages/Pricing/PricingPage'
 import { persistor, store } from './redux/store'
 import Profile from './pages/Profile/Profile'
 import { MoodboardHistroyDeatils } from './components/Moodboard/MoodboardHistroyDeatils'
+import SubscriptionPage from './pages/Subscription/Subscription'
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -59,7 +60,6 @@ const AppRoutes = () => {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/auth" element={<AuthPage />} />
-
         {/* Protected routes - wrap with RequireAuth */}
         <Route
           path="/moodboard"
@@ -92,8 +92,15 @@ const AppRoutes = () => {
               <MoodboardHistroyDeatils />
             </RequireAuth>
           }
+        />{" "}
+        <Route
+          path="/subscription"
+          element={
+            <RequireAuth>
+              <SubscriptionPage />
+            </RequireAuth>
+          }
         />
-
         {/* Example admin-only route */}
         {/* <Route
           path="/admin"
