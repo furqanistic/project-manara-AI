@@ -188,12 +188,12 @@ const CurrentPlanSection = ({ currentPlan, onChangePlan, onCancel }) => {
     >
       <Card className="overflow-hidden">
         <div
-          className="p-8 text-white"
+          className="p-8 text-white rounded"
           style={{
             background: `linear-gradient(to right, ${color}, ${color}dd)`,
           }}
         >
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between ">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-white/20 rounded-lg">
                 <Icon size={32} />
@@ -270,7 +270,9 @@ const CurrentPlanSection = ({ currentPlan, onChangePlan, onCancel }) => {
                   />
                   <div className="relative w-11 h-6 rounded-full transition-colors peer-checked:bg-[#937c60] bg-gray-400/50">
                     <div
-                      className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 ${!autoRenew && "translate-x-5"}`}
+                      className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5 ${
+                        !autoRenew && "translate-x-5"
+                      }`}
                     ></div>
                   </div>
                 </label>
@@ -633,7 +635,7 @@ const PaymentMethodSection = () => {
             </div>
           )}
 
-          <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+          <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.97 }}>
             <Button className="w-full sm:w-auto py-5 px-8 bg-[#937c60] hover:bg-[#7a654f] text-white border-none">
               {hasCard ? "Update Card" : "Add Payment Method"}
             </Button>
