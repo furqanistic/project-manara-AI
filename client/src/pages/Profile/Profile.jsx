@@ -1,20 +1,12 @@
-// File: client/src/pages/Profile/Profile.jsx
-// ✨ FIXED VERSION - Password change success/error messages now work properly
-
+// File: project-manara-AI/client/src/pages/Profile/Profile.jsx
 import TopBar from "@/components/Layout/Topbar";
 import React, { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
 import {
   useCurrentUser,
   useChangePassword,
   useUpdateProfile,
 } from "@/hooks/useAuth";
-import {
-  BRAND_COLOR,
-  BRAND_COLOR_LIGHT,
-  BRAND_COLOR_DARK,
-} from "@/components/Moodboard/Moodboardconfig";
-
-// Lucide Icons
 import {
   User,
   Mail,
@@ -24,7 +16,6 @@ import {
   Crown,
   Calendar,
   RefreshCw,
-  Key,
   Clock,
   TrendingUp,
   Shield,
@@ -32,393 +23,291 @@ import {
   Eye,
   EyeOff,
   AlertCircle,
-  MapPin,
   Edit2,
   Save,
   X,
-  LogIn,
 } from "lucide-react";
 
+// ============ Constants ============
+const BRAND_COLOR = "#937c60";
+
+const TAB_CONFIG = [
+  { id: "profile", label: "Profile", icon: User },
+  { id: "security", label: "Security", icon: Lock },
+  { id: "activity", label: "Activity", icon: Activity },
+];
+
+const CLASS_CARD =
+  "flex flex-col p-3 bg-[#faf8f5] rounded-lg border border-[#937c6013]";
+const CLASS_INPUT_BASE =
+  "w-full px-3 py-2.5 rounded-lg text-xs md:text-sm font-inherit transition-all focus:outline-none border";
+const CLASS_INPUT_ERROR =
+  "border-red-300 bg-red-50 focus:border-[#937c60] focus:ring-2 focus:ring-[#937c6024]";
+const CLASS_INPUT_NORMAL =
+  "border-[#937c6032] bg-[#faf8f5] focus:border-[#937c60] focus:ring-2 focus:ring-[#937c6024]";
+const CLASS_BUTTON_PRIMARY =
+  "px-4 md:px-6 py-2.5 bg-[#937c60] hover:bg-[#6b5d50] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1.5 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0";
+const CLASS_BUTTON_SECONDARY =
+  "px-4 md:px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-[#937c6024] rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1.5 transition-all duration-300";
+const CLASS_STATUS_BADGE =
+  "text-xs md:text-sm font-semibold text-white bg-[#937c60] rounded px-2.5 py-1.5 w-fit flex items-center gap-1.5";
+const CLASS_LABEL =
+  "block text-xs md:text-sm font-semibold mb-1.5 md:mb-2 text-[#1a1a1a]";
+const CLASS_SECTION_HEADER =
+  "flex items-center gap-3 mb-4 md:mb-5 pb-3 border-b border-[#937c6013]";
+
+// ============ Validation Rules ============
+const PROFILE_VALIDATION = {
+  name: {
+    required: "Full name is required",
+    minLength: { value: 2, message: "Name must be at least 2 characters" },
+  },
+  email: {
+    required: "Email is required",
+    pattern: {
+      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      message: "Invalid email format",
+    },
+  },
+};
+
+const PASSWORD_VALIDATION = {
+  currentPassword: { required: "Current password required" },
+  newPassword: {
+    required: "New password required",
+    validate: {
+      minLength: (v) =>
+        v.length >= 8 || "Password must be at least 8 characters",
+      hasUppercase: (v) => /[A-Z]/.test(v) || "Need uppercase letter",
+      hasLowercase: (v) => /[a-z]/.test(v) || "Need lowercase letter",
+      hasNumber: (v) => /[0-9]/.test(v) || "Need a number",
+    },
+  },
+  confirmPassword: {
+    required: "Please confirm password",
+    validate: (v, { newPassword }) =>
+      v === newPassword || "Passwords do not match",
+  },
+};
+
+// ============ Reusable Components ============
+const FormInput = ({ label, error, required = false, ...props }) => (
+  <div className="mb-4 md:mb-5">
+    <label className={CLASS_LABEL}>
+      {label} {required && <span className="text-red-600">*</span>}
+    </label>
+    <input
+      className={`${CLASS_INPUT_BASE} ${
+        error ? CLASS_INPUT_ERROR : CLASS_INPUT_NORMAL
+      }`}
+      {...props}
+    />
+    {error && (
+      <p className="text-xs text-red-700 mt-1 flex items-center gap-1">
+        <AlertCircle size={12} />
+        {error.message}
+      </p>
+    )}
+  </div>
+);
+
+const PasswordInput = ({
+  label,
+  hint,
+  value,
+  error,
+  fieldName,
+  showPassword,
+  onToggle,
+  required = false,
+  ...props
+}) => (
+  <div className="mb-4 md:mb-5">
+    <label className={CLASS_LABEL}>
+      {label} {required && <span className="text-red-600">*</span>}
+    </label>
+    {hint && <p className="text-xs text-gray-600 mb-2 font-medium">{hint}</p>}
+    <div className="relative flex items-center">
+      <input
+        type={showPassword ? "text" : "password"}
+        className={`${CLASS_INPUT_BASE} pr-10 ${
+          error ? CLASS_INPUT_ERROR : CLASS_INPUT_NORMAL
+        }`}
+        {...props}
+      />
+      <button
+        type="button"
+        onClick={() => onToggle(fieldName)}
+        className="absolute right-3 text-gray-500 hover:text-gray-700 p-1 flex items-center justify-center"
+      >
+        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+      </button>
+    </div>
+    {error && (
+      <p className="text-xs text-red-700 mt-1 flex items-center gap-1">
+        <AlertCircle size={12} />
+        {error.message}
+      </p>
+    )}
+    {value && !error && (
+      <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
+        <CheckCircle2 size={12} />
+        {fieldName === "confirmPassword" ? "Match" : "Password OK"}
+      </p>
+    )}
+  </div>
+);
+
+const InfoCard = ({ icon: Icon, label, value, isStatus = false }) => (
+  <div className={CLASS_CARD}>
+    <p className="text-xs font-bold text-gray-500 uppercase mb-1.5 md:mb-2 flex items-center gap-1">
+      <Icon size={12} /> {label}
+    </p>
+    {isStatus ? (
+      <p className={CLASS_STATUS_BADGE}>
+        <CheckCircle2 size={12} />
+        {value}
+      </p>
+    ) : (
+      <p className="text-sm md:text-base font-semibold text-[#1a1a1a]">
+        {value}
+      </p>
+    )}
+  </div>
+);
+
+const SectionHeader = ({ icon: Icon, title }) => (
+  <div className={CLASS_SECTION_HEADER}>
+    <Icon size={18} style={{ color: BRAND_COLOR }} />
+    <h3 className="text-xs md:text-sm font-bold text-[#1a1a1a] uppercase tracking-wide">
+      {title}
+    </h3>
+  </div>
+);
+
+// ============ Main Component ============
 function Profile() {
-  // ============ Hooks & State ============
   const currentUser = useCurrentUser();
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
 
   const [activeTab, setActiveTab] = useState("profile");
   const [isEditMode, setIsEditMode] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [isTablet, setIsTablet] = useState(
-    window.innerWidth >= 768 && window.innerWidth < 1024
-  );
-
-  // Profile form states
-  const [profileForm, setProfileForm] = useState({
-    name: currentUser?.name || "",
-    email: currentUser?.email || "",
-  });
-
-  // Password form states
-  const [passwordForm, setPasswordForm] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-  });
-
-  // Password visibility states
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
     confirm: false,
   });
 
-  // Real-time validation errors
-  const [validationErrors, setValidationErrors] = useState({});
-  const [fieldTouched, setFieldTouched] = useState({});
+  // Profile Form
+  const {
+    register: registerProfile,
+    handleSubmit: handleProfileSubmit,
+    formState: { errors: profileErrors, isSubmitting: isProfileSubmitting },
+    reset: resetProfile,
+  } = useForm({
+    mode: "onChange",
+    defaultValues: {
+      name: currentUser?.name || "",
+      email: currentUser?.email || "",
+    },
+  });
+
+  // Password Form
+  const {
+    register: registerPassword,
+    handleSubmit: handlePasswordSubmit,
+    formState: { errors: passwordErrors, isSubmitting: isPasswordSubmitting },
+    reset: resetPassword,
+    watch: watchPassword,
+  } = useForm({
+    mode: "onChange",
+    defaultValues: {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
 
   // ============ Effects ============
   useEffect(() => {
-    const handleResize = () => {
-      const width = window.innerWidth;
-      setIsMobile(width < 768);
-      setIsTablet(width >= 768 && width < 1024);
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
     if (currentUser) {
-      setProfileForm({
+      resetProfile({
         name: currentUser.name || "",
         email: currentUser.email || "",
       });
     }
-  }, [currentUser]);
+  }, [currentUser, resetProfile]);
 
-  // ✅ FIXED: Better success message handling with longer timeout
   useEffect(() => {
     if (successMessage) {
-      console.log("Success message set:", successMessage);
-      const timer = setTimeout(() => {
-        console.log("Clearing success message");
-        setSuccessMessage("");
-      }, 4000); // Increased from 3000 to 4000ms
+      const timer = setTimeout(() => setSuccessMessage(""), 4000);
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
 
-  // ✅ FIXED: Better error message handling
   useEffect(() => {
     if (errorMessage) {
-      console.log("Error message set:", errorMessage);
-      const timer = setTimeout(() => {
-        console.log("Clearing error message");
-        setErrorMessage("");
-      }, 6000); // Increased from 5000 to 6000ms
+      const timer = setTimeout(() => setErrorMessage(""), 6000);
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
 
-  // ============ Validation Functions ============
-  const validateEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-
-  const validatePasswordStrength = (password) => {
-    const errors = [];
-    if (password.length < 8) errors.push("8+ characters required");
-    if (!/[A-Z]/.test(password)) errors.push("Need uppercase letter");
-    if (!/[a-z]/.test(password)) errors.push("Need lowercase letter");
-    if (!/[0-9]/.test(password)) errors.push("Need a number");
-    return errors;
-  };
-
-  const validateField = (name, value) => {
-    const errors = { ...validationErrors };
-
-    switch (name) {
-      case "name":
-        if (!value.trim()) {
-          errors.name = "Full name is required";
-        } else if (value.trim().length < 2) {
-          errors.name = "Name must be at least 2 characters";
-        } else {
-          delete errors.name;
-        }
-        break;
-
-      case "email":
-        if (!value.trim()) {
-          errors.email = "Email is required";
-        } else if (!validateEmail(value)) {
-          errors.email = "Invalid email format";
-        } else {
-          delete errors.email;
-        }
-        break;
-
-      case "currentPassword":
-        if (!value) {
-          errors.currentPassword = "Current password required";
-        } else {
-          delete errors.currentPassword;
-        }
-        break;
-
-      case "newPassword":
-        if (!value) {
-          errors.newPassword = "New password required";
-        } else {
-          const strengthErrors = validatePasswordStrength(value);
-          if (strengthErrors.length > 0) {
-            errors.newPassword = strengthErrors[0];
-          } else {
-            delete errors.newPassword;
-          }
-        }
-        break;
-
-      case "confirmPassword":
-        if (!value) {
-          errors.confirmPassword = "Please confirm password";
-        } else if (value !== passwordForm.newPassword) {
-          errors.confirmPassword = "Passwords do not match";
-        } else {
-          delete errors.confirmPassword;
-        }
-        break;
-
-      default:
-        break;
-    }
-
-    setValidationErrors(errors);
-  };
-
   // ============ Event Handlers ============
-  const handleProfileChange = (e) => {
-    const { name, value } = e.target;
-    setProfileForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setErrorMessage("");
-    validateField(name, value);
-  };
-
-  const handleProfileTouch = (name) => {
-    setFieldTouched((prev) => ({
-      ...prev,
-      [name]: true,
-    }));
-  };
-
-  const handlePasswordChange = (e) => {
-    const { name, value } = e.target;
-    setPasswordForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    setErrorMessage("");
-    validateField(name, value);
-  };
-
-  const handlePasswordTouch = (name) => {
-    setFieldTouched((prev) => ({
-      ...prev,
-      [name]: true,
-    }));
-  };
-
-  const handleEditClick = () => {
-    setIsEditMode(true);
-    setValidationErrors({});
-    setFieldTouched({});
-  };
-
-  const handleCancel = () => {
-    setIsEditMode(false);
-    setProfileForm({
-      name: currentUser?.name || "",
-      email: currentUser?.email || "",
-    });
-    setValidationErrors({});
-    setFieldTouched({});
-    setErrorMessage("");
-    setSuccessMessage("");
-  };
-
-  const handleProfileSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setSuccessMessage("");
-    setErrorMessage("");
-
-    setFieldTouched({
-      name: true,
-      email: true,
-    });
-
+  const onProfileSubmit = async (data) => {
     try {
-      if (!profileForm.name.trim()) {
-        setErrorMessage("Full name is required");
-        setLoading(false);
-        return;
-      }
-
-      if (!profileForm.email.trim()) {
-        setErrorMessage("Email is required");
-        setLoading(false);
-        return;
-      }
-
-      if (!validateEmail(profileForm.email)) {
-        setErrorMessage("Invalid email format");
-        setLoading(false);
-        return;
-      }
-
-      if (Object.keys(validationErrors).length > 0) {
-        setErrorMessage("Please fix the errors before submitting");
-        setLoading(false);
-        return;
-      }
-
+      setErrorMessage("");
       await updateProfileMutation.mutateAsync({
-        name: profileForm.name.trim(),
-        email: profileForm.email.toLowerCase().trim(),
+        name: data.name.trim(),
+        email: data.email.toLowerCase().trim(),
       });
-
       setSuccessMessage("Profile updated successfully!");
       setIsEditMode(false);
-      setFieldTouched({});
     } catch (error) {
       const errorMsg =
-        error?.message ||
         error?.response?.data?.message ||
+        error?.message ||
         "Failed to update profile";
       setErrorMessage(errorMsg);
-      console.error("Profile update error:", error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // ✅ FIXED: Completely rewritten password submit handler
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-
-    // Clear previous messages first
-    setSuccessMessage("");
-    setErrorMessage("");
-    setLoading(true);
-
-    // Mark all fields as touched for validation
-    setFieldTouched({
-      currentPassword: true,
-      newPassword: true,
-      confirmPassword: true,
-    });
-
+  const onPasswordSubmit = async (data) => {
     try {
-      // ✅ VALIDATION CHECKS
-      if (!passwordForm.currentPassword) {
-        const msg = "Current password is required";
-        setErrorMessage(msg);
-        console.error(msg);
-        setLoading(false);
-        return;
-      }
-
-      if (!passwordForm.newPassword) {
-        const msg = "New password is required";
-        setErrorMessage(msg);
-        console.error(msg);
-        setLoading(false);
-        return;
-      }
-
-      const strengthErrors = validatePasswordStrength(passwordForm.newPassword);
-      if (strengthErrors.length > 0) {
-        const msg = `Password: ${strengthErrors[0]}`;
-        setErrorMessage(msg);
-        console.error(msg);
-        setLoading(false);
-        return;
-      }
-
-      if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-        const msg = "Passwords do not match";
-        setErrorMessage(msg);
-        console.error(msg);
-        setLoading(false);
-        return;
-      }
-
-      if (Object.keys(validationErrors).length > 0) {
-        const msg = "Please fix the errors before submitting";
-        setErrorMessage(msg);
-        console.error(msg);
-        setLoading(false);
-        return;
-      }
-
-      // ✅ API CALL - Wait for response
-      console.log("Submitting password change...");
-      const response = await changePasswordMutation.mutateAsync({
-        currentPassword: passwordForm.currentPassword,
-        newPassword: passwordForm.newPassword,
-        confirmPassword: passwordForm.confirmPassword,
+      setErrorMessage("");
+      await changePasswordMutation.mutateAsync({
+        currentPassword: data.currentPassword,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
       });
-
-      console.log("Password change response:", response);
-
-      // ✅ SUCCESS - Reset form and show message
-      setPasswordForm({
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      });
-      setFieldTouched({});
-      setValidationErrors({});
-
-      const successMsg = "Password changed successfully!";
-      console.log("Setting success message:", successMsg);
-      setSuccessMessage(successMsg);
+      resetPassword();
+      setSuccessMessage("Password changed successfully!");
     } catch (error) {
-      // ✅ ERROR HANDLING
-      console.error("Password change error:", error);
-
-      let errorMsg = "Failed to change password";
-
-      if (error?.response?.data?.message) {
-        errorMsg = error.response.data.message;
-      } else if (error?.response?.data?.error) {
-        errorMsg = error.response.data.error;
-      } else if (error?.message) {
-        errorMsg = error.message;
-      }
-
-      console.log("Final error message:", errorMsg);
+      const errorMsg =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Failed to change password";
       setErrorMessage(errorMsg);
-
-      // Don't reset form on error - user might want to retry
-    } finally {
-      setLoading(false);
-      console.log("Loading state set to false");
     }
+  };
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    setErrorMessage("");
+    setSuccessMessage("");
+  };
+
+  const handleEditCancel = () => {
+    setIsEditMode(false);
+    resetProfile();
+    setErrorMessage("");
   };
 
   const togglePasswordVisibility = (field) => {
-    setShowPasswords((prev) => ({
-      ...prev,
-      [field]: !prev[field],
-    }));
+    setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
   // ============ Utility Functions ============
@@ -433,424 +322,343 @@ function Profile() {
     );
   };
 
-  const getStatusBadge = (role) => {
-    if (role === "admin") return { text: "Administrator", color: "#e74c3c" };
-    return { text: "User", color: "#3498db" };
-  };
-
   const formatDate = (date) => {
     if (!date) return "N/A";
     return new Date(date).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
-  };
-
-  // ============ Enhanced Styles ============
-  const pageContainerStyle = {
-    display: "flex",
-    flexDirection: "column",
-    minHeight: "100vh",
-    background: `linear-gradient(135deg, #faf8f5 0%, #f5f1ed 100%)`,
-  };
-
-  const topbarWrapperStyle = {
-    position: "sticky",
-    top: 0,
-    zIndex: 1000,
-    width: "100%",
-    backgroundColor: "white",
-    boxShadow: "0 2px 12px rgba(147, 124, 96, 0.08)",
-    backdropFilter: "blur(10px)",
-  };
-
-  const mainContentStyle = {
-    flex: 1,
-    paddingTop: isMobile ? "80px" : isTablet ? "90px" : "100px",
-    paddingBottom: "40px",
-  };
-
-  const contentWrapperStyle = {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: isMobile ? "20px 16px" : isTablet ? "32px 28px" : "48px 40px",
-    width: "100%",
-    boxSizing: "border-box",
-  };
-
-  const headerStyle = {
-    marginBottom: isMobile ? "36px" : "48px",
-    display: "flex",
-    alignItems: "flex-end",
-    gap: isMobile ? "16px" : "28px",
-    padding: isMobile ? "24px 16px" : isTablet ? "32px 24px" : "40px 32px",
-    backgroundColor: "white",
-    borderRadius: "16px",
-    boxShadow: "0 4px 24px rgba(147, 124, 96, 0.12)",
-    border: `1px solid rgba(147, 124, 96, 0.08)`,
-  };
-
-  const avatarStyle = {
-    width: isMobile ? "80px" : isTablet ? "100px" : "120px",
-    height: isMobile ? "80px" : isTablet ? "100px" : "120px",
-    borderRadius: "50%",
-    background: `linear-gradient(135deg, ${BRAND_COLOR} 0%, ${BRAND_COLOR_DARK} 100%)`,
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: isMobile ? "40px" : "52px",
-    fontWeight: "700",
-    boxShadow: `0 8px 28px rgba(147, 124, 96, 0.2)`,
-    flexShrink: 0,
-  };
-
-  const headerTextStyle = {
-    flex: 1,
-  };
-
-  const titleStyle = {
-    fontSize: isMobile ? "26px" : isTablet ? "30px" : "36px",
-    fontWeight: "700",
-    color: "#1a1a1a",
-    margin: "0 0 8px 0",
-    letterSpacing: "-0.5px",
-  };
-
-  const subtitleStyle = {
-    fontSize: isMobile ? "13px" : "14px",
-    color: "#666",
-    margin: "0 0 14px 0",
-    fontWeight: "500",
-  };
-
-  const statusBadgeStyle = {
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: "8px 14px",
-    backgroundColor: `${BRAND_COLOR}15`,
-    color: BRAND_COLOR,
-    borderRadius: "8px",
-    fontSize: "12px",
-    fontWeight: "600",
-    border: `1px solid ${BRAND_COLOR}30`,
-  };
-
-  // ✅ IMPROVED: Better alert styling
-  const alertStyle = (type) => ({
-    padding: isMobile ? "14px 16px" : "16px 20px",
-    marginBottom: "24px",
-    backgroundColor: type === "success" ? "#f0fdf4" : "#fef2f2",
-    color: type === "success" ? "#166534" : "#b91c1c",
-    borderRadius: "10px",
-    border: `2px solid ${type === "success" ? "#86efac" : "#fecaca"}`,
-    fontSize: isMobile ? "13px" : "14px",
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "12px",
-    boxSizing: "border-box",
-    animation: "slideIn 0.3s ease-out",
-    boxShadow:
-      type === "success"
-        ? "0 4px 12px rgba(22, 163, 74, 0.15)"
-        : "0 4px 12px rgba(185, 28, 28, 0.15)",
-  });
-
-  const tabContainerStyle = {
-    display: "flex",
-    gap: isMobile ? "0" : "8px",
-    marginBottom: "28px",
-    borderBottom: `2px solid ${BRAND_COLOR}20`,
-    overflowX: "auto",
-    scrollBehavior: "smooth",
-  };
-
-  const tabButtonStyle = (isActive) => ({
-    padding: isMobile ? "14px 14px" : isTablet ? "16px 20px" : "16px 24px",
-    border: "none",
-    background: "none",
-    cursor: "pointer",
-    fontSize: isMobile ? "13px" : "14px",
-    fontWeight: isActive ? "600" : "500",
-    color: isActive ? BRAND_COLOR : "#6b7280",
-    borderBottom: isActive ? `3px solid ${BRAND_COLOR}` : "none",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    whiteSpace: "nowrap",
-    marginBottom: "-2px",
-    position: "relative",
-    opacity: isActive ? 1 : 0.7,
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  });
-
-  const cardStyle = {
-    backgroundColor: "white",
-    padding: isMobile ? "24px 18px" : isTablet ? "32px 28px" : "40px 36px",
-    borderRadius: "16px",
-    boxShadow: "0 4px 24px rgba(147, 124, 96, 0.1)",
-    border: `1px solid rgba(147, 124, 96, 0.06)`,
-  };
-
-  const infoSectionStyle = {
-    marginBottom: isMobile ? "36px" : "48px",
-    paddingBottom: isMobile ? "28px" : "36px",
-    borderBottom: `1px solid ${BRAND_COLOR}12`,
-  };
-
-  const infoSectionLastStyle = {
-    marginBottom: "0",
-    paddingBottom: "0",
-    borderBottom: "none",
-  };
-
-  const sectionHeaderStyle = {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    marginBottom: isMobile ? "24px" : "32px",
-    paddingBottom: isMobile ? "16px" : "20px",
-    borderBottom: `2px solid ${BRAND_COLOR}15`,
-  };
-
-  const sectionIconStyle = {
-    fontSize: isMobile ? "22px" : "28px",
-    display: "flex",
-    alignItems: "center",
-    color: BRAND_COLOR,
-  };
-
-  const infoSectionTitleStyle = {
-    fontSize: isMobile ? "15px" : "16px",
-    fontWeight: "700",
-    color: "#1a1a1a",
-    textTransform: "uppercase",
-    margin: "0",
-    letterSpacing: "1px",
-  };
-
-  const infoGridStyle = {
-    display: "grid",
-    gridTemplateColumns: isMobile
-      ? "1fr"
-      : isTablet
-      ? "repeat(2, 1fr)"
-      : "repeat(3, 1fr)",
-    gap: isMobile ? "16px" : isTablet ? "20px" : "24px",
-  };
-
-  const infoItemStyle = {
-    display: "flex",
-    flexDirection: "column",
-    padding: isMobile ? "16px 14px" : "20px 18px",
-    backgroundColor: "#faf8f5",
-    borderRadius: "12px",
-    border: `1px solid ${BRAND_COLOR}15`,
-    transition: "all 0.3s ease",
-    cursor: "default",
-  };
-
-  const infoLabelStyle = {
-    fontSize: isMobile ? "11px" : "12px",
-    color: "#6b7280",
-    textTransform: "uppercase",
-    marginBottom: isMobile ? "10px" : "12px",
-    fontWeight: "700",
-    letterSpacing: "0.8px",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  };
-
-  const infoValueStyle = {
-    fontSize: isMobile ? "15px" : "16px",
-    color: "#1a1a1a",
-    fontWeight: "600",
-    wordBreak: "break-word",
-    lineHeight: "1.6",
-  };
-
-  const roleStatusBadgeStyle = {
-    fontSize: isMobile ? "12px" : "13px",
-    color: "white",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    padding: isMobile ? "6px 12px" : "8px 14px",
-    backgroundColor: BRAND_COLOR,
-    borderRadius: "8px",
-    textTransform: "capitalize",
-    fontWeight: "600",
-    width: "fit-content",
-  };
-
-  const activityItemStyle = {
-    padding: isMobile ? "14px" : "18px",
-    borderLeft: `4px solid ${BRAND_COLOR}`,
-    backgroundColor: "#faf8f5",
-    borderRadius: "8px",
-    marginBottom: "14px",
-    transition: "all 0.3s ease",
-  };
-
-  const activityTitleStyle = {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#1a1a1a",
-    margin: "0 0 6px 0",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  };
-
-  const activityTimeStyle = {
-    fontSize: "12px",
-    color: "#6b7280",
-    margin: "0",
-  };
-
-  const buttonGroupStyle = {
-    display: "flex",
-    gap: isMobile ? "12px" : "16px",
-    marginTop: isMobile ? "28px" : "36px",
-    flexWrap: "wrap",
-  };
-
-  const editButtonStyle = {
-    padding: isMobile ? "11px 20px" : "12px 28px",
-    backgroundColor: BRAND_COLOR,
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: isMobile ? "13px" : "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    boxShadow: `0 4px 12px rgba(147, 124, 96, 0.15)`,
-    flex: isMobile ? "1 1 auto" : "0 0 auto",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    justifyContent: "center",
-  };
-
-  const cancelButtonStyle = {
-    padding: isMobile ? "11px 20px" : "12px 28px",
-    backgroundColor: "#f3f4f6",
-    color: "#374151",
-    border: `1px solid ${BRAND_COLOR}30`,
-    borderRadius: "8px",
-    fontSize: isMobile ? "13px" : "14px",
-    fontWeight: "600",
-    cursor: "pointer",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    flex: isMobile ? "1 1 auto" : "0 0 auto",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    justifyContent: "center",
-  };
-
-  const formGroupStyle = {
-    marginBottom: isMobile ? "20px" : "24px",
-  };
-
-  const formGroupLastStyle = {
-    marginBottom: isMobile ? "20px" : "24px",
-  };
-
-  const labelStyle = {
-    display: "block",
-    fontSize: isMobile ? "13px" : "14px",
-    fontWeight: "600",
-    marginBottom: isMobile ? "8px" : "10px",
-    color: "#1a1a1a",
-  };
-
-  const inputStyle = (hasError = false) => ({
-    width: "100%",
-    padding: isMobile ? "11px 13px" : "12px 14px",
-    border: `2px solid ${hasError ? "#fecaca" : `${BRAND_COLOR}30`}`,
-    borderRadius: "8px",
-    fontSize: isMobile ? "13px" : "14px",
-    fontFamily: "inherit",
-    boxSizing: "border-box",
-    transition: "all 0.3s ease",
-    backgroundColor: hasError ? "#fef2f2" : "#faf8f5",
-    color: "#1a1a1a",
-    outline: "none",
-  });
-
-  const errorTextStyle = {
-    fontSize: isMobile ? "12px" : "13px",
-    color: "#b91c1c",
-    marginTop: "6px",
-    marginBottom: "8px",
-    fontWeight: "500",
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-  };
-
-  const helperTextStyle = {
-    fontSize: isMobile ? "12px" : "13px",
-    color: "#6b7280",
-    marginTop: "6px",
-    fontWeight: "500",
-  };
-
-  const passwordInputContainerStyle = {
-    position: "relative",
-    display: "flex",
-    alignItems: "center",
-  };
-
-  const passwordInputStyle = (hasError = false) => ({
-    ...inputStyle(hasError),
-    paddingRight: "44px",
-  });
-
-  const toggleButtonStyle = {
-    position: "absolute",
-    right: isMobile ? "12px" : "14px",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: "#6b7280",
-    padding: "6px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    transition: "color 0.2s ease",
-  };
-
-  const submitButtonStyle = {
-    padding: isMobile ? "11px 20px" : "12px 32px",
-    backgroundColor: BRAND_COLOR,
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    fontSize: isMobile ? "13px" : "14px",
-    fontWeight: "600",
-    cursor: loading ? "not-allowed" : "pointer",
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    opacity: loading ? 0.6 : 1,
-    width: isMobile ? "100%" : "auto",
-    boxShadow: `0 4px 12px rgba(147, 124, 96, 0.15)`,
-    flex: isMobile ? "1 1 100%" : "0 0 auto",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    justifyContent: "center",
   };
 
   // ============ Render ============
   return (
-    <div style={pageContainerStyle}>
+    <div className="flex flex-col min-h-screen bg-gradient-to-br from-[#faf8f5] to-[#f5f1ed]">
+      {/* Topbar */}
+      <div className="sticky top-0 z-1000 w-full bg-white border-b border-[#937c6033]">
+        <TopBar />
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 pt-[70px] md:pt-[75px] lg:pt-[80px] pb-8">
+        <div className="max-w-4xl mx-auto px-4 md:px-5 lg:px-6 w-full">
+          {/* Header */}
+          <div className="mb-5 md:mb-7 lg:mb-7 flex items-end gap-3 md:gap-4 lg:gap-4 p-3 md:p-3 lg:p-5 bg-white rounded-lg border border-[#937c6014]">
+            <div className="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-[#937c60] to-[#6b5d50] text-white flex items-center justify-center text-2xl md:text-3xl lg:text-5xl font-bold flex-shrink-0">
+              {getInitials(currentUser?.name)}
+            </div>
+            <div className="flex-1">
+              <h1 className="text-lg md:text-2xl lg:text-2xl font-bold text-[#1a1a1a] mb-1">
+                {currentUser?.name || "User Profile"}
+              </h1>
+              <p className="text-xs md:text-sm text-gray-500 font-medium">
+                {currentUser?.email}
+              </p>
+              <div
+                className="inline-flex items-center gap-1 mt-1.5 px-3 py-1.5 bg-[#937c6024] rounded-md text-xs font-semibold border border-[#937c6030]"
+                style={{ color: BRAND_COLOR }}
+              >
+                <CheckCircle2 size={12} />
+                <span>
+                  {currentUser?.role === "admin" ? "Administrator" : "User"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Alerts */}
+          {successMessage && (
+            <div className="mb-4 p-3 md:p-4 bg-green-50 text-green-900 rounded-lg border border-green-200 flex gap-3 items-start animate-slideIn">
+              <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Success!</p>
+                <p className="text-xs md:text-sm mt-0.5">{successMessage}</p>
+              </div>
+            </div>
+          )}
+
+          {errorMessage && (
+            <div className="mb-4 p-3 md:p-4 bg-red-50 text-red-900 rounded-lg border border-red-200 flex gap-3 items-start animate-slideIn">
+              <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold">Error!</p>
+                <p className="text-xs md:text-sm mt-0.5">{errorMessage}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Tabs */}
+          <div className="flex gap-0 md:gap-1 mb-5 border-b border-[#937c6014] overflow-x-auto">
+            {TAB_CONFIG.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                onClick={() => handleTabChange(id)}
+                className={`px-3 md:px-4 lg:px-5 py-3 text-xs md:text-sm font-medium whitespace-nowrap flex items-center gap-1.5 transition-all border-b-2 -mb-px ${
+                  activeTab === id
+                    ? "text-[#937c60] border-b-2 border-[#937c60] font-semibold"
+                    : "text-gray-500 border-b-2 border-transparent"
+                }`}
+              >
+                <Icon size={14} />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Profile Tab */}
+          {activeTab === "profile" && (
+            <div className="bg-white p-4 md:p-6 rounded-lg border border-[#937c6014]">
+              {!isEditMode ? (
+                <>
+                  {/* Basic Information */}
+                  <div className="mb-6 md:mb-8 pb-6 md:pb-8 border-b border-[#937c6013]">
+                    <SectionHeader icon={User} title="Basic Info" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                      <InfoCard
+                        icon={User}
+                        label="Full Name"
+                        value={currentUser?.name || "Not set"}
+                      />
+                      <InfoCard
+                        icon={Mail}
+                        label="Email"
+                        value={currentUser?.email || "Not set"}
+                      />
+                      <InfoCard
+                        icon={CheckCircle2}
+                        label="Status"
+                        value={currentUser?.isActive ? "Active" : "Inactive"}
+                        isStatus={true}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Account Details */}
+                  <div className="mb-0 pb-0">
+                    <SectionHeader icon={Lock} title="Account Details" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                      <InfoCard
+                        icon={Fingerprint}
+                        label="User ID"
+                        value={currentUser?._id?.slice(0, 16) || "N/A"}
+                      />
+                      <InfoCard
+                        icon={Crown}
+                        label="Role"
+                        value={currentUser?.role === "admin" ? "Admin" : "User"}
+                        isStatus={true}
+                      />
+                      <InfoCard
+                        icon={Calendar}
+                        label="Member Since"
+                        value={formatDate(currentUser?.createdAt)}
+                      />
+                      <InfoCard
+                        icon={RefreshCw}
+                        label="Last Updated"
+                        value={formatDate(currentUser?.updatedAt)}
+                      />
+                      <InfoCard
+                        icon={CheckCircle2}
+                        label="Email Verified"
+                        value="Verified"
+                        isStatus={true}
+                      />
+                      <InfoCard
+                        icon={Clock}
+                        label="Last Login"
+                        value={formatDate(currentUser?.lastLogin)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Edit Button */}
+                  <div className="flex gap-2.5 md:gap-3 mt-5 md:mt-6 flex-wrap">
+                    <button
+                      onClick={() => setIsEditMode(true)}
+                      className={`${CLASS_BUTTON_PRIMARY}  md:w-auto`}
+                    >
+                      <Edit2 size={14} />
+                      Edit Profile
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* Edit Mode */
+                <form onSubmit={handleProfileSubmit(onProfileSubmit)}>
+                  <FormInput
+                    label="Full Name"
+                    placeholder="Enter your full name"
+                    required
+                    error={profileErrors.name}
+                    {...registerProfile("name", PROFILE_VALIDATION.name)}
+                  />
+                  <FormInput
+                    label="Email Address"
+                    type="email"
+                    placeholder="Enter your email address"
+                    required
+                    error={profileErrors.email}
+                    {...registerProfile("email", PROFILE_VALIDATION.email)}
+                  />
+
+                  <div className="flex gap-2.5 md:gap-3 mt-5 md:mt-6 flex-wrap">
+                    <button
+                      type="submit"
+                      disabled={
+                        isProfileSubmitting || updateProfileMutation.isPending
+                      }
+                      className={`${CLASS_BUTTON_PRIMARY} w-full md:w-auto`}
+                    >
+                      <Save size={14} />
+                      {isProfileSubmitting || updateProfileMutation.isPending
+                        ? "Saving..."
+                        : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleEditCancel}
+                      className={`${CLASS_BUTTON_SECONDARY} w-full md:w-auto`}
+                    >
+                      <X size={14} />
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
+          )}
+
+          {/* Security Tab */}
+          {activeTab === "security" && (
+            <div className="bg-white p-4 md:p-6 rounded-lg border border-[#937c6014]">
+              <form onSubmit={handlePasswordSubmit(onPasswordSubmit)}>
+                <SectionHeader icon={Lock} title="Change Password" />
+
+                <PasswordInput
+                  label="Current Password"
+                  placeholder="Enter current password"
+                  fieldName="current"
+                  showPassword={showPasswords.current}
+                  onToggle={togglePasswordVisibility}
+                  value={watchPassword("currentPassword")}
+                  error={passwordErrors.currentPassword}
+                  required
+                  {...registerPassword(
+                    "currentPassword",
+                    PASSWORD_VALIDATION.currentPassword
+                  )}
+                />
+
+                <PasswordInput
+                  label="New Password"
+                  hint="8+ chars, uppercase, lowercase, number"
+                  placeholder="Enter new password"
+                  fieldName="new"
+                  showPassword={showPasswords.new}
+                  onToggle={togglePasswordVisibility}
+                  value={watchPassword("newPassword")}
+                  error={passwordErrors.newPassword}
+                  required
+                  {...registerPassword(
+                    "newPassword",
+                    PASSWORD_VALIDATION.newPassword
+                  )}
+                />
+
+                <PasswordInput
+                  label="Confirm Password"
+                  placeholder="Confirm new password"
+                  fieldName="confirm"
+                  showPassword={showPasswords.confirm}
+                  onToggle={togglePasswordVisibility}
+                  value={watchPassword("confirmPassword")}
+                  error={passwordErrors.confirmPassword}
+                  required
+                  {...registerPassword(
+                    "confirmPassword",
+                    PASSWORD_VALIDATION.confirmPassword
+                  )}
+                />
+
+                <div className="flex gap-2.5 md:gap-3 mt-5 md:mt-6 flex-wrap">
+                  <button
+                    type="submit"
+                    disabled={
+                      isPasswordSubmitting || changePasswordMutation.isPending
+                    }
+                    className={`${CLASS_BUTTON_PRIMARY} w-full md:w-auto`}
+                  >
+                    <Lock size={14} />
+                    {isPasswordSubmitting || changePasswordMutation.isPending
+                      ? "Changing..."
+                      : "Change Password"}
+                  </button>
+                </div>
+              </form>
+
+              {/* Security Info */}
+              <div className="mt-6 md:mt-7 pt-5 md:pt-6 border-t border-[#937c6013]">
+                <SectionHeader icon={Shield} title="Security Info" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                  <InfoCard
+                    icon={Lock}
+                    label="Active Sessions"
+                    value="1 Session"
+                  />
+                  <InfoCard
+                    icon={CheckCircle2}
+                    label="Login Alerts"
+                    value="Enabled"
+                    isStatus={true}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Activity Tab */}
+          {activeTab === "activity" && (
+            <div className="bg-white p-4 md:p-6 rounded-lg border border-[#937c6014]">
+              <SectionHeader icon={Activity} title="Activity" />
+
+              <div className="mb-6 md:mb-8">
+                <h4 className="text-xs font-bold text-gray-600 uppercase mb-3 md:mb-3.5 tracking-wide">
+                  Recent Events
+                </h4>
+                <div className="border-l-4 border-[#937c60] bg-[#faf8f5] rounded p-3">
+                  <p className="text-xs md:text-sm font-semibold text-[#1a1a1a] flex items-center gap-2 mb-1">
+                    <CheckCircle2 size={14} /> Account Created
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {formatDate(currentUser?.createdAt)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-5 md:pt-6 border-t border-[#937c6013]">
+                <h4 className="text-xs font-bold text-gray-600 uppercase mb-3 md:mb-3.5 tracking-wide">
+                  Login Stats
+                </h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  <InfoCard
+                    icon={Clock}
+                    label="Last Login"
+                    value={formatDate(currentUser?.lastLogin)}
+                  />
+                  <InfoCard icon={TrendingUp} label="Total Logins" value="—" />
+                  <InfoCard
+                    icon={AlertCircle}
+                    label="Failed Attempts"
+                    value="—"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       <style>{`
         @keyframes slideIn {
           from {
@@ -862,714 +670,7 @@ function Profile() {
             transform: translateY(0);
           }
         }
-
-        button:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(147, 124, 96, 0.18);
-        }
-
-        button:active:not(:disabled) {
-          transform: translateY(0);
-        }
-
-        input:focus {
-          border-color: ${BRAND_COLOR} !important;
-          box-shadow: 0 0 0 3px ${BRAND_COLOR}20;
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-          height: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-          background: #f3f4f6;
-        }
-
-        ::-webkit-scrollbar-thumb {
-          background: ${BRAND_COLOR}40;
-          border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-          background: ${BRAND_COLOR}60;
-        }
       `}</style>
-
-      <div style={topbarWrapperStyle}>
-        <TopBar />
-      </div>
-
-      <div style={mainContentStyle}>
-        <div style={contentWrapperStyle}>
-          {/* Enhanced Header with Avatar */}
-          <div style={headerStyle}>
-            <div style={avatarStyle}>{getInitials(currentUser?.name)}</div>
-            <div style={headerTextStyle}>
-              <h1 style={titleStyle}>{currentUser?.name || "User Profile"}</h1>
-              <p style={subtitleStyle}>{currentUser?.email}</p>
-              <div style={statusBadgeStyle}>
-                <CheckCircle2 size={14} />
-                <span>{getStatusBadge(currentUser?.role).text}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* ✅ ALERTS - Now display consistently */}
-          {successMessage && (
-            <div style={alertStyle("success")}>
-              <CheckCircle2
-                size={20}
-                style={{ marginTop: "0px", flexShrink: 0 }}
-              />
-              <div>
-                <p style={{ margin: "0", fontWeight: "600" }}>Success!</p>
-                <p style={{ margin: "4px 0 0 0" }}>{successMessage}</p>
-              </div>
-            </div>
-          )}
-
-          {errorMessage && (
-            <div style={alertStyle("error")}>
-              <AlertCircle
-                size={20}
-                style={{ marginTop: "0px", flexShrink: 0 }}
-              />
-              <div>
-                <p style={{ margin: "0", fontWeight: "600" }}>Error!</p>
-                <p style={{ margin: "4px 0 0 0" }}>{errorMessage}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Enhanced Tabs */}
-          <div style={tabContainerStyle}>
-            <button
-              onClick={() => {
-                setActiveTab("profile");
-                setErrorMessage("");
-                setSuccessMessage("");
-              }}
-              style={tabButtonStyle(activeTab === "profile")}
-              title="View profile information"
-            >
-              <User size={16} />
-              Profile Info
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("security");
-                setErrorMessage("");
-                setSuccessMessage("");
-              }}
-              style={tabButtonStyle(activeTab === "security")}
-              title="Manage security settings"
-            >
-              <Lock size={16} />
-              Security
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("activity");
-                setErrorMessage("");
-                setSuccessMessage("");
-              }}
-              style={tabButtonStyle(activeTab === "activity")}
-              title="View activity history"
-            >
-              <Activity size={16} />
-              Activity
-            </button>
-          </div>
-
-          {/* Profile Tab */}
-          {activeTab === "profile" && (
-            <div style={cardStyle}>
-              {!isEditMode ? (
-                <>
-                  {/* Basic Information */}
-                  <div style={infoSectionStyle}>
-                    <div style={sectionHeaderStyle}>
-                      <User
-                        size={isMobile ? 22 : 28}
-                        style={sectionIconStyle}
-                      />
-                      <h3 style={infoSectionTitleStyle}>Basic Information</h3>
-                    </div>
-                    <div style={infoGridStyle}>
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <User size={14} /> Full Name
-                        </p>
-                        <p style={infoValueStyle}>
-                          {currentUser?.name || "Not set"}
-                        </p>
-                      </div>
-
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <Mail size={14} /> Email Address
-                        </p>
-                        <p style={infoValueStyle}>
-                          {currentUser?.email || "Not set"}
-                        </p>
-                      </div>
-
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <CheckCircle2 size={14} /> Account Status
-                        </p>
-                        <p style={roleStatusBadgeStyle}>
-                          <CheckCircle2 size={14} />
-                          {currentUser?.isActive ? "Active" : "Inactive"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Account Details */}
-                  <div style={infoSectionStyle}>
-                    <div style={sectionHeaderStyle}>
-                      <Lock
-                        size={isMobile ? 22 : 28}
-                        style={sectionIconStyle}
-                      />
-                      <h3 style={infoSectionTitleStyle}>Account Details</h3>
-                    </div>
-                    <div style={infoGridStyle}>
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <Fingerprint size={14} /> User ID
-                        </p>
-                        <p
-                          style={{
-                            ...infoValueStyle,
-                            fontFamily: "monospace",
-                            fontSize: isMobile ? "12px" : "13px",
-                          }}
-                        >
-                          {currentUser?._id?.slice(0, 16) || "N/A"}...
-                        </p>
-                      </div>
-
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <Crown size={14} /> Role
-                        </p>
-                        <p style={roleStatusBadgeStyle}>
-                          <Crown size={14} />
-                          {currentUser?.role === "admin"
-                            ? "Administrator"
-                            : "User"}
-                        </p>
-                      </div>
-
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <CheckCircle2 size={14} /> Email Verification
-                        </p>
-                        <p style={roleStatusBadgeStyle}>
-                          <CheckCircle2 size={14} />
-                          Verified
-                        </p>
-                      </div>
-
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <Calendar size={14} /> Member Since
-                        </p>
-                        <p style={infoValueStyle}>
-                          {currentUser?.createdAt
-                            ? new Date(
-                                currentUser.createdAt
-                              ).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : "N/A"}
-                        </p>
-                      </div>
-
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <RefreshCw size={14} /> Last Updated
-                        </p>
-                        <p style={infoValueStyle}>
-                          {currentUser?.updatedAt
-                            ? new Date(
-                                currentUser.updatedAt
-                              ).toLocaleDateString("en-US", {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : "N/A"}
-                        </p>
-                      </div>
-
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <Key size={14} /> 2FA Status
-                        </p>
-                        <p style={roleStatusBadgeStyle}>Disabled</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Last Login Information */}
-                  <div style={{ ...infoSectionStyle, ...infoSectionLastStyle }}>
-                    <div style={sectionHeaderStyle}>
-                      <LogIn
-                        size={isMobile ? 22 : 28}
-                        style={sectionIconStyle}
-                      />
-                      <h3 style={infoSectionTitleStyle}>Last Login</h3>
-                    </div>
-                    <div style={infoGridStyle}>
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <Clock size={14} /> Last Access
-                        </p>
-                        <p style={infoValueStyle}>
-                          {currentUser?.lastLogin
-                            ? new Date(currentUser.lastLogin).toLocaleString(
-                                "en-US",
-                                {
-                                  year: "numeric",
-                                  month: "short",
-                                  day: "numeric",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  hour12: true,
-                                }
-                              )
-                            : "Never"}
-                        </p>
-                      </div>
-
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <TrendingUp size={14} /> Access Frequency
-                        </p>
-                        <p style={infoValueStyle}>Regular</p>
-                      </div>
-
-                      <div style={infoItemStyle}>
-                        <p style={infoLabelStyle}>
-                          <CheckCircle2 size={14} /> Session Status
-                        </p>
-                        <p style={roleStatusBadgeStyle}>
-                          <CheckCircle2 size={14} />
-                          Active
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Edit Button */}
-                  <div style={buttonGroupStyle}>
-                    <button
-                      onClick={handleEditClick}
-                      style={editButtonStyle}
-                      onMouseEnter={(e) =>
-                        (e.target.style.backgroundColor = BRAND_COLOR_DARK)
-                      }
-                      onMouseLeave={(e) =>
-                        (e.target.style.backgroundColor = BRAND_COLOR)
-                      }
-                    >
-                      <Edit2 size={16} />
-                      Edit Profile
-                    </button>
-                  </div>
-                </>
-              ) : (
-                /* Edit Mode */
-                <form onSubmit={handleProfileSubmit}>
-                  <div style={formGroupStyle}>
-                    <label style={labelStyle}>Full Name *</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={profileForm.name}
-                      onChange={handleProfileChange}
-                      onBlur={() => handleProfileTouch("name")}
-                      placeholder="Enter your full name"
-                      style={inputStyle(
-                        fieldTouched.name && !!validationErrors.name
-                      )}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor = BRAND_COLOR)
-                      }
-                    />
-                    {fieldTouched.name && validationErrors.name && (
-                      <p style={errorTextStyle}>
-                        <AlertCircle size={14} />
-                        {validationErrors.name}
-                      </p>
-                    )}
-                  </div>
-
-                  <div style={formGroupLastStyle}>
-                    <label style={labelStyle}>Email Address *</label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={profileForm.email}
-                      onChange={handleProfileChange}
-                      onBlur={() => handleProfileTouch("email")}
-                      placeholder="Enter your email address"
-                      style={inputStyle(
-                        fieldTouched.email && !!validationErrors.email
-                      )}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor = BRAND_COLOR)
-                      }
-                    />
-                    {fieldTouched.email && validationErrors.email && (
-                      <p style={errorTextStyle}>
-                        <AlertCircle size={14} />
-                        {validationErrors.email}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Buttons */}
-                  <div style={buttonGroupStyle}>
-                    <button
-                      type="submit"
-                      disabled={
-                        loading ||
-                        updateProfileMutation.isPending ||
-                        Object.keys(validationErrors).length > 0
-                      }
-                      style={submitButtonStyle}
-                      onMouseEnter={(e) =>
-                        !loading &&
-                        (e.target.style.backgroundColor = BRAND_COLOR_DARK)
-                      }
-                      onMouseLeave={(e) =>
-                        !loading &&
-                        (e.target.style.backgroundColor = BRAND_COLOR)
-                      }
-                    >
-                      <Save size={16} />
-                      {loading || updateProfileMutation.isPending
-                        ? "Saving..."
-                        : "Save Changes"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCancel}
-                      style={cancelButtonStyle}
-                      onMouseEnter={(e) =>
-                        (e.target.style.backgroundColor = `${BRAND_COLOR}15`)
-                      }
-                      onMouseLeave={(e) =>
-                        (e.target.style.backgroundColor = "#f3f4f6")
-                      }
-                    >
-                      <X size={16} />
-                      Cancel
-                    </button>
-                  </div>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* Security Tab */}
-          {activeTab === "security" && (
-            <div style={cardStyle}>
-              <form onSubmit={handlePasswordSubmit}>
-                <div style={sectionHeaderStyle}>
-                  <Lock size={isMobile ? 22 : 28} style={sectionIconStyle} />
-                  <h3 style={infoSectionTitleStyle}>Change Your Password</h3>
-                </div>
-
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>Current Password *</label>
-                  <div style={passwordInputContainerStyle}>
-                    <input
-                      type={showPasswords.current ? "text" : "password"}
-                      name="currentPassword"
-                      value={passwordForm.currentPassword}
-                      onChange={handlePasswordChange}
-                      onBlur={() => handlePasswordTouch("currentPassword")}
-                      placeholder="Enter your current password"
-                      style={passwordInputStyle(
-                        fieldTouched.currentPassword &&
-                          !!validationErrors.currentPassword
-                      )}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor = BRAND_COLOR)
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePasswordVisibility("current")}
-                      style={toggleButtonStyle}
-                      title="Toggle password visibility"
-                    >
-                      {showPasswords.current ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
-                    </button>
-                  </div>
-                  {fieldTouched.currentPassword &&
-                    validationErrors.currentPassword && (
-                      <p style={errorTextStyle}>
-                        <AlertCircle size={14} />
-                        {validationErrors.currentPassword}
-                      </p>
-                    )}
-                </div>
-
-                <div style={formGroupStyle}>
-                  <label style={labelStyle}>New Password *</label>
-                  <p style={{ ...helperTextStyle, marginTop: "0" }}>
-                    Must contain: 8+ characters, uppercase, lowercase, number
-                  </p>
-                  <div style={passwordInputContainerStyle}>
-                    <input
-                      type={showPasswords.new ? "text" : "password"}
-                      name="newPassword"
-                      value={passwordForm.newPassword}
-                      onChange={handlePasswordChange}
-                      onBlur={() => handlePasswordTouch("newPassword")}
-                      placeholder="Enter new password"
-                      style={passwordInputStyle(
-                        fieldTouched.newPassword &&
-                          !!validationErrors.newPassword
-                      )}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor = BRAND_COLOR)
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePasswordVisibility("new")}
-                      style={toggleButtonStyle}
-                      title="Toggle password visibility"
-                    >
-                      {showPasswords.new ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
-                    </button>
-                  </div>
-                  {fieldTouched.newPassword && validationErrors.newPassword && (
-                    <p style={errorTextStyle}>
-                      <AlertCircle size={14} />
-                      {validationErrors.newPassword}
-                    </p>
-                  )}
-                  {passwordForm.newPassword &&
-                    !validationErrors.newPassword && (
-                      <p style={{ ...helperTextStyle, color: "#16a34a" }}>
-                        <CheckCircle2
-                          size={14}
-                          style={{ display: "inline", marginRight: "4px" }}
-                        />
-                        Password strength OK
-                      </p>
-                    )}
-                </div>
-
-                <div style={formGroupLastStyle}>
-                  <label style={labelStyle}>Confirm New Password *</label>
-                  <div style={passwordInputContainerStyle}>
-                    <input
-                      type={showPasswords.confirm ? "text" : "password"}
-                      name="confirmPassword"
-                      value={passwordForm.confirmPassword}
-                      onChange={handlePasswordChange}
-                      onBlur={() => handlePasswordTouch("confirmPassword")}
-                      placeholder="Confirm your new password"
-                      style={passwordInputStyle(
-                        fieldTouched.confirmPassword &&
-                          !!validationErrors.confirmPassword
-                      )}
-                      onFocus={(e) =>
-                        (e.target.style.borderColor = BRAND_COLOR)
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() => togglePasswordVisibility("confirm")}
-                      style={toggleButtonStyle}
-                      title="Toggle password visibility"
-                    >
-                      {showPasswords.confirm ? (
-                        <EyeOff size={18} />
-                      ) : (
-                        <Eye size={18} />
-                      )}
-                    </button>
-                  </div>
-                  {fieldTouched.confirmPassword &&
-                    validationErrors.confirmPassword && (
-                      <p style={errorTextStyle}>
-                        <AlertCircle size={14} />
-                        {validationErrors.confirmPassword}
-                      </p>
-                    )}
-                  {passwordForm.confirmPassword &&
-                    passwordForm.newPassword === passwordForm.confirmPassword &&
-                    !validationErrors.confirmPassword && (
-                      <p style={{ ...helperTextStyle, color: "#16a34a" }}>
-                        <CheckCircle2
-                          size={14}
-                          style={{ display: "inline", marginRight: "4px" }}
-                        />
-                        Passwords match
-                      </p>
-                    )}
-                </div>
-
-                <div style={buttonGroupStyle}>
-                  <button
-                    type="submit"
-                    disabled={
-                      loading ||
-                      changePasswordMutation.isPending ||
-                      Object.keys(validationErrors).length > 0
-                    }
-                    style={submitButtonStyle}
-                    onMouseEnter={(e) =>
-                      !loading &&
-                      (e.target.style.backgroundColor = BRAND_COLOR_DARK)
-                    }
-                    onMouseLeave={(e) =>
-                      !loading && (e.target.style.backgroundColor = BRAND_COLOR)
-                    }
-                  >
-                    <Lock size={16} />
-                    {loading || changePasswordMutation.isPending
-                      ? "Changing..."
-                      : "Change Password"}
-                  </button>
-                </div>
-              </form>
-
-              {/* Security Settings */}
-              <div style={{ ...infoSectionStyle, marginTop: "40px" }}>
-                <div style={sectionHeaderStyle}>
-                  <Shield size={isMobile ? 22 : 28} style={sectionIconStyle} />
-                  <h3 style={infoSectionTitleStyle}>Security Settings</h3>
-                </div>
-                <div style={infoGridStyle}>
-                  <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>
-                      <Key size={14} /> Two-Factor Auth
-                    </p>
-                    <p
-                      style={{
-                        ...roleStatusBadgeStyle,
-                        backgroundColor: "#f3f4f6",
-                        color: "#6b7280",
-                      }}
-                    >
-                      Not Enabled
-                    </p>
-                  </div>
-                  <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>
-                      <Lock size={14} /> Active Sessions
-                    </p>
-                    <p style={infoValueStyle}>1 Session</p>
-                  </div>
-                  <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>
-                      <CheckCircle2 size={14} /> Login Alerts
-                    </p>
-                    <p
-                      style={{
-                        ...roleStatusBadgeStyle,
-                        backgroundColor: "#16a34a",
-                      }}
-                    >
-                      <CheckCircle2 size={14} />
-                      Enabled
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Activity Tab */}
-          {activeTab === "activity" && (
-            <div style={cardStyle}>
-              <div style={sectionHeaderStyle}>
-                <Activity size={isMobile ? 22 : 28} style={sectionIconStyle} />
-                <h3 style={infoSectionTitleStyle}>Account Activity</h3>
-              </div>
-
-              <div style={{ marginBottom: "36px" }}>
-                <h4 style={{ ...infoLabelStyle, marginBottom: "20px" }}>
-                  Recent Activity
-                </h4>
-
-                <div style={activityItemStyle}>
-                  <p style={activityTitleStyle}>
-                    <CheckCircle2 size={16} /> Profile Updated
-                  </p>
-                  <p style={activityTimeStyle}>Last updated today</p>
-                </div>
-
-                <div style={activityItemStyle}>
-                  <p style={activityTitleStyle}>
-                    <Lock size={16} /> Password Changed
-                  </p>
-                  <p style={activityTimeStyle}>Last changed 2 months ago</p>
-                </div>
-
-                <div style={activityItemStyle}>
-                  <p style={activityTitleStyle}>
-                    <CheckCircle2 size={16} /> Account Created
-                  </p>
-                  <p style={activityTimeStyle}>
-                    {formatDate(currentUser?.createdAt)}
-                  </p>
-                </div>
-              </div>
-
-              <div style={infoSectionStyle}>
-                <h4 style={{ ...infoLabelStyle, marginBottom: "20px" }}>
-                  Login History
-                </h4>
-                <div style={infoGridStyle}>
-                  <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>
-                      <Clock size={14} /> Last Login
-                    </p>
-                    <p style={infoValueStyle}>
-                      {formatDate(currentUser?.lastLogin)}
-                    </p>
-                  </div>
-                  <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>
-                      <TrendingUp size={14} /> Total Logins
-                    </p>
-                    <p style={infoValueStyle}>24</p>
-                  </div>
-                  <div style={infoItemStyle}>
-                    <p style={infoLabelStyle}>
-                      <AlertCircle size={14} /> Failed Attempts
-                    </p>
-                    <p style={infoValueStyle}>0</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
     </div>
   );
 }

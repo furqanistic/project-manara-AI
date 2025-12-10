@@ -66,66 +66,42 @@ export const ResultView = ({
   ];
 
   return (
-    <div className="min-h-screen pt-32 pb-12">
-      {/* Phase 2 Loading Banner */}
-      {generationPhase === "descriptions" && (
+    <div className="min-h-screen pt-20 sm:pt-24 lg:pt-32 pb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="fixed top-20 left-0 right-0 z-50 bg-gradient-to-r from-amber-900 via-amber-900 to-brown-950 shadow-lg"
+          className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
         >
-          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-center gap-3">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            >
-              <Sparkles className="w-5 h-5 text-white" />
-            </motion.div>
-            <span className="text-white font-medium">
-              Generating detailed descriptions in background...
-            </span>
-            <span className="text-white/80 text-sm">
-              (Materials, Furniture, Lighting, Zones)
-            </span>
-          </div>
-        </motion.div>
-      )}
-      <div className="max-w-7xl mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex items-center justify-between"
-        >
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
+          <div className="min-w-0">
+            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 break-words">
               {currentMoodboard.title}
             </h1>
-            <p className="text-gray-500">
+            <p className="text-gray-500 text-sm sm:text-base">
               Created on{" "}
               {new Date(currentMoodboard.createdAt).toLocaleDateString()}
             </p>
           </div>
           <button
             onClick={onBackToCreate}
-            className="px-6 py-3 rounded-lg font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-all"
+            className="px-6 py-3 rounded-lg font-semibold text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 transition-all whitespace-nowrap flex-shrink-0"
           >
             Create New
           </button>
         </motion.div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+          <div className="lg:col-span-2 space-y-6 sm:space-y-8">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="relative group bg-black rounded-2xl overflow-hidden shadow-lg"
+              className="relative group bg-black rounded-xl sm:rounded-2xl overflow-hidden shadow-lg w-full aspect-video"
             >
               <img
                 src={currentMoodboard.compositeMoodboard.url}
                 alt="Moodboard"
-                className="w-full h-full object-contain cursor-pointer hover:opacity-95 transition-opacity"
+                className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
                 onClick={() => setShowImageModal(true)}
               />
 
@@ -170,15 +146,15 @@ export const ResultView = ({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="bg-white rounded-2xl shadow-lg overflow-hidden"
+              className="bg-white rounded-xl sm:rounded-2xl shadow-lg overflow-hidden"
             >
-              <div className="border-b border-gray-200 px-6 pt-6">
-                <div className="flex gap-2 overflow-x-auto">
+              <div className="border-b border-gray-200 px-3 sm:px-6 pt-4 sm:pt-6">
+                <div className="flex gap-2 overflow-x-auto -mx-3 sm:-mx-6 px-3 sm:px-6">
                   {tabs.map((tab) => (
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`px-4 py-3 font-medium transition-all whitespace-nowrap relative`}
+                      className={`px-3 sm:px-4 py-3 font-medium text-sm sm:text-base transition-all whitespace-nowrap relative`}
                       style={{
                         color: activeTab === tab.id ? BRAND_COLOR : "#9ca3af",
                       }}
@@ -195,7 +171,7 @@ export const ResultView = ({
                 </div>
               </div>
 
-              <div className="p-6">
+              <div className="p-4 sm:p-6">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
@@ -207,6 +183,7 @@ export const ResultView = ({
                     <TabContent
                       tabId={activeTab}
                       moodboard={currentMoodboard}
+                      generationPhase={generationPhase}
                     />
                   </motion.div>
                 </AnimatePresence>
@@ -214,21 +191,23 @@ export const ResultView = ({
             </motion.div>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.1 }}
-              className="bg-white rounded-2xl shadow-lg p-6 sticky top-32"
+              className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 lg:sticky lg:top-32"
             >
-              <h3 className="text-lg font-bold text-gray-900 mb-4">Actions</h3>
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-4">
+                Actions
+              </h3>
 
-              <div className="space-y-3">
+              <div className="space-y-2 sm:space-y-3">
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => setShowEditModal(true)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 text-white font-semibold rounded-lg transition-all"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 text-sm sm:text-base text-white font-semibold rounded-lg transition-all"
                   style={{ backgroundColor: BRAND_COLOR }}
                   onMouseEnter={(e) =>
                     (e.target.style.backgroundColor = BRAND_COLOR_DARK)
@@ -237,7 +216,7 @@ export const ResultView = ({
                     (e.target.style.backgroundColor = BRAND_COLOR)
                   }
                 >
-                  <Edit3 className="w-5 h-5" />
+                  <Edit3 className="w-4 h-4 sm:w-5 sm:h-5" />
                   Edit Moodboard
                 </motion.button>
 
@@ -246,9 +225,9 @@ export const ResultView = ({
                   whileTap={{ scale: 0.98 }}
                   onClick={onRegenerate}
                   disabled={loadingState === "generating"}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all disabled:opacity-50"
                 >
-                  <RefreshCw className="w-5 h-5" />
+                  <RefreshCw className="w-4 h-4 sm:w-5 sm:h-5" />
                   New Variation
                 </motion.button>
 
@@ -256,9 +235,9 @@ export const ResultView = ({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={onDownload}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all"
                 >
-                  <Download className="w-5 h-5" />
+                  <Download className="w-4 h-4 sm:w-5 sm:h-5" />
                   Download Image
                 </motion.button>
 
@@ -266,9 +245,9 @@ export const ResultView = ({
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={onDownloadPDF}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 text-sm sm:text-base bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold rounded-lg transition-all"
                 >
-                  <FileText className="w-5 h-5" />
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                   Download PDF
                 </motion.button>
               </div>
@@ -278,9 +257,9 @@ export const ResultView = ({
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.2 }}
-              className="space-y-4"
+              className="space-y-3 sm:space-y-4"
             >
-              <div className="bg-white rounded-xl p-5 shadow-lg">
+              <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-lg">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                   Design Style
                 </p>
@@ -289,7 +268,7 @@ export const ResultView = ({
                 </p>
               </div>
 
-              <div className="bg-white rounded-xl p-5 shadow-lg">
+              <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-lg">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
                   Room Type
                 </p>
@@ -299,7 +278,7 @@ export const ResultView = ({
               </div>
 
               {currentMoodboard.colorPalette?.length > 0 && (
-                <div className="bg-white rounded-xl p-5 shadow-lg">
+                <div className="bg-white rounded-lg sm:rounded-xl p-4 sm:p-5 shadow-lg">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
                     Color Palette
                   </p>
@@ -309,7 +288,7 @@ export const ResultView = ({
                       .map((color, idx) => (
                         <div
                           key={idx}
-                          className="flex-1 h-10 rounded-lg shadow border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
+                          className="flex-1 h-8 sm:h-10 rounded shadow border border-gray-200 cursor-pointer hover:shadow-md transition-shadow"
                           style={{ backgroundColor: color.hex }}
                           title={`${color.name} - ${color.hex}`}
                         />
@@ -399,7 +378,7 @@ const EditModal = ({ moodboard, onClose, onSave }) => {
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.9, opacity: 0 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8"
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 sm:p-8"
       >
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-gray-900">
@@ -407,7 +386,7 @@ const EditModal = ({ moodboard, onClose, onSave }) => {
           </h2>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           >
             <X className="w-6 h-6 text-gray-500" />
           </button>
@@ -431,7 +410,7 @@ const EditModal = ({ moodboard, onClose, onSave }) => {
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={onClose}
             disabled={isEditing}
@@ -461,16 +440,84 @@ const EditModal = ({ moodboard, onClose, onSave }) => {
     </motion.div>
   );
 };
+
+{
+  /* Cute Loading Indicator for Tabs */
+}
+const TabLoadingState = ({ tabName }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="flex flex-col items-center justify-center py-20"
+    >
+      <motion.div
+        animate={{ scale: [1, 1.1, 1] }}
+        transition={{ duration: 2, repeat: Infinity }}
+        className="mb-6"
+      >
+        <div
+          className="w-16 h-16 rounded-full flex items-center justify-center"
+          style={{ backgroundColor: `${BRAND_COLOR}20` }}
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+          >
+            <Sparkles className="w-8 h-8" style={{ color: BRAND_COLOR }} />
+          </motion.div>
+        </div>
+      </motion.div>
+
+      <h3 className="text-lg font-semibold text-gray-900 mb-2 text-center">
+        Generating {tabName} details
+      </h3>
+      <p className="text-sm text-gray-600 text-center mb-6">
+        It usually takes 1–2 minutes to generate.
+      </p>
+
+      <div className="flex gap-2">
+        {[0, 0.2, 0.4].map((delay, i) => (
+          <motion.div
+            key={i}
+            animate={{ y: [0, -8, 0] }}
+            transition={{
+              duration: 1.2,
+              repeat: Infinity,
+              delay: delay,
+            }}
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: BRAND_COLOR }}
+          />
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
 {
   /* Tab Content Component */
 }
-const TabContent = ({ tabId, moodboard }) => {
+const TabContent = ({ tabId, moodboard, generationPhase }) => {
   const narrative = moodboard.designNarrative;
   const colorPalette = moodboard.colorPalette || [];
   const moodDescription =
     moodboard.compositeMoodboard?.metadata?.moodDescription;
 
+  // Check if the tab content is loading
+  const isLoading = generationPhase === "descriptions";
+
   if (tabId === "overview") {
+    if (
+      isLoading &&
+      !narrative?.narrative &&
+      !moodDescription &&
+      colorPalette.length === 0
+    ) {
+      return <TabLoadingState tabName="Overview" />;
+    }
+
     return (
       <div className="space-y-6">
         {narrative?.narrative && (
@@ -522,7 +569,7 @@ const TabContent = ({ tabId, moodboard }) => {
                 <h4 className="text-lg font-bold text-gray-900 mb-4">
                   Color Palette
                 </h4>
-                <div className="grid grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                   {colorPalette.map((color, index) => (
                     <div key={index} className="text-center">
                       <div
@@ -541,11 +588,30 @@ const TabContent = ({ tabId, moodboard }) => {
             )}
           </div>
         )}
+
+        {isLoading &&
+          (narrative?.narrative ||
+            moodDescription ||
+            colorPalette.length > 0) && (
+            <div className="text-center py-6 text-gray-500">
+              <p className="text-sm">Updating details...</p>
+            </div>
+          )}
       </div>
     );
   }
 
   if (tabId === "materials") {
+    const hasContent =
+      moodboard.materials &&
+      Object.values(moodboard.materials).some(
+        (items) => items && items.length > 0
+      );
+
+    if (isLoading && !hasContent) {
+      return <TabLoadingState tabName="Materials" />;
+    }
+
     return (
       <div className="space-y-4">
         {moodboard.materials ? (
@@ -581,6 +647,8 @@ const TabContent = ({ tabId, moodboard }) => {
               </div>
             );
           })
+        ) : isLoading ? (
+          <TabLoadingState />
         ) : (
           <p className="text-gray-500">No materials specified</p>
         )}
@@ -589,6 +657,12 @@ const TabContent = ({ tabId, moodboard }) => {
   }
 
   if (tabId === "furniture") {
+    const hasContent = moodboard.furniture?.heroPieces?.length;
+
+    if (isLoading && !hasContent) {
+      return <TabLoadingState tabName="Furniture" />;
+    }
+
     return (
       <div>
         {moodboard.furniture?.heroPieces?.length ? (
@@ -613,6 +687,8 @@ const TabContent = ({ tabId, moodboard }) => {
               </div>
             ))}
           </div>
+        ) : isLoading ? (
+          <TabLoadingState />
         ) : (
           <p className="text-gray-500">No furniture specified</p>
         )}
@@ -621,6 +697,14 @@ const TabContent = ({ tabId, moodboard }) => {
   }
 
   if (tabId === "lighting") {
+    const hasContent =
+      moodboard.lightingConcept?.dayMood ||
+      moodboard.lightingConcept?.nightMood;
+
+    if (isLoading && !hasContent) {
+      return <TabLoadingState tabName="Lighting" />;
+    }
+
     return (
       <div className="space-y-4">
         {moodboard.lightingConcept ? (
@@ -642,6 +726,8 @@ const TabContent = ({ tabId, moodboard }) => {
               </div>
             )}
           </div>
+        ) : isLoading ? (
+          <TabLoadingState />
         ) : (
           <p className="text-gray-500">No lighting concept specified</p>
         )}
@@ -650,6 +736,12 @@ const TabContent = ({ tabId, moodboard }) => {
   }
 
   if (tabId === "layout") {
+    const hasContent = moodboard.zones?.length;
+
+    if (isLoading && !hasContent) {
+      return <TabLoadingState tabName="Layout" />;
+    }
+
     return (
       <div className="grid md:grid-cols-2 gap-4">
         {moodboard.zones?.length ? (
@@ -679,6 +771,8 @@ const TabContent = ({ tabId, moodboard }) => {
               </div>
             </div>
           ))
+        ) : isLoading ? (
+          <TabLoadingState />
         ) : (
           <p className="text-gray-500">No layout zones specified</p>
         )}
@@ -688,6 +782,7 @@ const TabContent = ({ tabId, moodboard }) => {
 
   return null;
 };
+
 {
   /* Loading Animation Component */
 }
@@ -700,7 +795,7 @@ const LoadingAnimation = () => (
         style={{ borderTopColor: BRAND_COLOR }}
       ></div>
       <div className="absolute inset-0 flex items-center justify-center">
-        <Wand2
+        <Sparkles
           className="w-8 h-8 animate-pulse"
           style={{ color: BRAND_COLOR }}
         />
@@ -717,14 +812,16 @@ const LoadingAnimation = () => (
     </div>
   </div>
 );
-{ /* Image Modal Component */
+
+{
+  /* Image Modal Component */
 }
 const ImageModal = ({ imageUrl, onClose, onDownload }) => (
   <motion.div
     initial={{ opacity: 0 }}
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
-    className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+    className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-3 sm:p-4"
     onClick={onClose}
   >
     <motion.div
@@ -732,11 +829,11 @@ const ImageModal = ({ imageUrl, onClose, onDownload }) => (
       animate={{ scale: 1 }}
       exit={{ scale: 0.9 }}
       onClick={(e) => e.stopPropagation()}
-      className="relative max-w-5xl"
+      className="relative w-full max-w-5xl"
     >
       <button
         onClick={onClose}
-        className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
+        className="absolute top-3 right-3 sm:top-4 sm:right-4 p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
       >
         <X className="w-6 h-6 text-white" />
       </button>
@@ -745,15 +842,17 @@ const ImageModal = ({ imageUrl, onClose, onDownload }) => (
           e.stopPropagation();
           onDownload();
         }}
-        className="absolute top-4 right-16 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full flex items-center gap-2 transition-colors z-10"
+        className="absolute top-3 right-14 sm:top-4 sm:right-16 px-3 sm:px-4 py-2 bg-white/10 hover:bg-white/20 rounded-full flex items-center gap-2 transition-colors z-10"
       >
-        <Download className="w-5 h-5 text-white" />
-        <span className="text-white text-sm font-medium">Download</span>
+        <Download className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+        <span className="text-white text-xs sm:text-sm font-medium">
+          Download
+        </span>
       </button>
       <img
         src={imageUrl}
         alt="Full View"
-        className="max-w-[95vw] max-h-[95vh] object-contain rounded-lg"
+        className="w-full max-h-[90vh] object-contain rounded-lg"
       />
     </motion.div>
   </motion.div>

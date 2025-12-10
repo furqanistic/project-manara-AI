@@ -1,3 +1,4 @@
+// File: project-manara-AI/server/controllers/moodboard.js
 import mongoose from 'mongoose'
 import { createError } from '../error.js'
 import Moodboard from '../models/Moodboard.js'
