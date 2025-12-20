@@ -2,17 +2,19 @@
 import express from 'express'
 import multer from 'multer'
 import {
-  autoSave,
-  createFloorPlan,
-  deleteFloorPlan,
-  exportFloorPlan,
-  generateWithAI,
-  getFloorPlan,
-  getUserFloorPlans,
-  importFromDXF,
-  importFromImage,
-  shareFloorPlan,
-  updateFloorPlan,
+    autoSave,
+    createFloorPlan,
+    deleteFloorPlan,
+    editFloorPlanImage,
+    exportFloorPlan,
+    generateFloorPlanImage,
+    generateWithAI,
+    getFloorPlan,
+    getUserFloorPlans,
+    importFromDXF,
+    importFromImage,
+    shareFloorPlan,
+    updateFloorPlan,
 } from '../controllers/floorPlan.js'
 import { verifyToken } from '../middleware/authMiddleware.js'
 
@@ -62,6 +64,8 @@ router.post('/:id/export', exportFloorPlan)
 
 // AI Generation
 router.post('/generate', generateWithAI)
+router.post('/generate-image', generateFloorPlanImage) // New image-based generation
+router.post('/edit-image', editFloorPlanImage) // New image-based editing
 
 // Import
 router.post('/import-image', upload.single('image'), importFromImage)

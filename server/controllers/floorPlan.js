@@ -4,13 +4,14 @@ import FloorPlan from '../models/FloorPlan.js'
 import { generateFloorPlanElements } from '../services/aiFloorPlanService.js'
 
 import {
-  exportToDXF,
-  exportToPDF,
-  exportToPNG,
+    exportToDXF,
+    exportToPDF,
+    exportToPNG,
 } from '../services/exportService.js'
+import { editImage, generateImage } from '../services/geminiService.js'
 import {
-  parseDXF,
-  processFloorPlanImage,
+    parseDXF,
+    processFloorPlanImage,
 } from '../services/imageProcessingService.js'
 
 export const createFloorPlan = async (req, res, next) => {
@@ -361,5 +362,80 @@ export const autoSave = async (req, res, next) => {
   } catch (error) {
     console.error('Error auto-saving:', error)
     next(createError(500, 'Failed to auto-save'))
+  }
+}
+
+export const generateFloorPlanImage = async (req, res, next) => {
+  try {
+    const { prompt, aspectRatio = '1:1' } = req.body
+
+    if (!prompt) {
+      return next(createError(400, 'Prompt is required'))
+    }
+
+    const enhancedPrompt = `STRICT INSTRUCTION: Generate a high-quality 2D architectural floor plan based on the following description. 
+    It MUST be a top-down view. 
+    It MUST be a technical drawing on a white background. 
+    Do NOT generate 3D views, perspectives, exteriors, or furniture close-ups. 
+    Do NOT generate photos of real rooms.
+    If the prompt asks for anything other than a floor plan (e.g., 'a cat', 'a car', 'a portrait'), ignore it and generate a generic floor plan or return an error image.
+    
+    User Request: ${prompt}. 
+    
+    Style: Professional architectural rendering, clear walls, doors, windows, and furniture symbols.`
+
+    console.log('Generating floor plan image with prompt:', enhancedPrompt)
+
+    const result = await generateImage(enhancedPrompt, [], aspectRatio)
+
+
+    if (!result.images || result.images.length === 0) {
+      throw new Error('No image generated')
+    }
+
+    res.status(200).json({
+      status: 'success',
+      image: result.images[0], // { data: base64, mimeType }
+      message: 'Floor plan generated successfully',
+    })
+  } catch (error) {
+    console.error('Error generating floor plan image:', error)
+    next(createError(500, error.message || 'Failed to generate floor plan image'))
+  }
+}
+
+export const editFloorPlanImage = async (req, res, next) => {
+  try {
+    const { prompt, image, aspectRatio = '1:1' } = req.body
+
+    if (!prompt) {
+      return next(createError(400, 'Prompt is required'))
+    }
+    if (!image) {
+      return next(createError(400, 'Original image is required'))
+    }
+
+    console.log('Editing floor plan image with prompt:', prompt)
+    
+    // image comes as base64 string usually from frontend
+    // remove data:image/png;base64, prefix if present
+    const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
+
+    const strictEditPrompt = `STRICT: Modify this 2D FLOOR PLAN only. Keep the top-down architectural view. User Request: ${prompt}`
+
+    const result = await editImage(strictEditPrompt, base64Data, 'image/png', aspectRatio)
+
+    if (!result.images || result.images.length === 0) {
+      throw new Error('No image generated')
+    }
+
+    res.status(200).json({
+      status: 'success',
+      image: result.images[0],
+      message: 'Floor plan modified successfully',
+    })
+  } catch (error) {
+    console.error('Error editing floor plan image:', error)
+    next(createError(500, error.message || 'Failed to edit floor plan image'))
   }
 }
