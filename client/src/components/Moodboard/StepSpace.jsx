@@ -1,15 +1,14 @@
 // File: project-manara-AI/client/src/components/Moodboard/StepSpace.jsx
 
 import {
-  BRAND_COLOR,
-  BRAND_COLOR_DARK,
-  BRAND_COLOR_LIGHT,
-  SPACE_TYPES,
+    BRAND_COLOR,
+    BRAND_COLOR_DARK,
+    BRAND_COLOR_LIGHT,
+    SPACE_TYPES,
 } from "./Moodboardconfig";
 
-import { Sofa, Home, ChefHat, Utensils, Lightbulb, Layers } from "lucide-react";
-import {motion} from "framer-motion";
-import { CheckCircle2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { CheckCircle2, ChefHat, Home, Layers, Lightbulb, Sofa, Utensils } from "lucide-react";
 export const StepSpace = ({ selectedSpace, setSelectedSpace }) => {
   const IconMap = {
     Sofa: Sofa,
@@ -21,75 +20,64 @@ export const StepSpace = ({ selectedSpace, setSelectedSpace }) => {
   };
 
   return (
-    <div>
-      <div className="text-center mb-10">
-        <h2 className="text-4xl font-bold text-gray-900 mb-3">
+    <div className="max-w-4xl mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
           What space are you decorating?
         </h2>
-        <p className="text-lg text-gray-600">
+        <p className="text-base text-gray-500">
           Select the room or area for your design project
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
         {SPACE_TYPES.map((space) => {
           const IconComponent = IconMap[space.icon] || Home;
+          const isSelected = selectedSpace === space.name;
 
           return (
             <motion.button
               key={space.name}
               onClick={() => setSelectedSpace(space.name)}
-              whileHover={{ scale: 1.05, y: -5 }}
-              whileTap={{ scale: 0.95 }}
-              className={`relative p-6 rounded-2xl border-2 transition-all text-center group overflow-hidden`}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              className={`relative p-3 rounded-xl border transition-all text-center group`}
               style={{
-                borderColor:
-                  selectedSpace === space.name ? BRAND_COLOR : "#e5e7eb",
-                backgroundColor:
-                  selectedSpace === space.name
-                    ? `${BRAND_COLOR}10`
-                    : "transparent",
+                borderColor: isSelected ? BRAND_COLOR : "#f3f4f6",
+                backgroundColor: isSelected ? `${BRAND_COLOR}05` : "#ffffff",
+                boxShadow: isSelected 
+                  ? `0 10px 20px ${BRAND_COLOR}10` 
+                  : "0 1px 3px rgba(0,0,0,0.02)",
               }}
             >
-              {selectedSpace === space.name && (
-                <motion.div
-                  layoutId="selected-space"
-                  className="absolute inset-0 rounded-2xl"
-                  style={{
-                    background: `linear-gradient(135deg, ${BRAND_COLOR}15, ${BRAND_COLOR_LIGHT}15)`,
-                  }}
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
-                />
-              )}
-
               <div className="relative z-10">
                 <div
-                  className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all shadow-lg`}
+                  className={`w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-2 transition-all`}
                   style={{
-                    backgroundColor:
-                      selectedSpace === space.name ? BRAND_COLOR : "#f3f4f6",
-                    color: selectedSpace === space.name ? "white" : "#6b7280",
+                    backgroundColor: isSelected ? BRAND_COLOR : "#f9fafb",
+                    color: isSelected ? "white" : "#9ca3af",
                   }}
                 >
-                  <IconComponent className="w-8 h-8" />
+                  <IconComponent className="w-6 h-6" />
                 </div>
-                <h3 className="font-bold text-gray-900 text-base mb-1">
+                <h3 className={`font-bold text-sm transition-colors ${
+                  isSelected ? "text-gray-900" : "text-gray-600"
+                }`}>
                   {space.name}
                 </h3>
-                <p className="text-sm text-gray-500">{space.description}</p>
               </div>
 
-              {selectedSpace === space.name && (
+              {isSelected && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute top-3 right-3 z-20"
+                  className="absolute top-2 right-2 z-20"
                 >
                   <div
-                    className="w-6 h-6 rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: BRAND_COLOR_DARK }}
+                    className="w-4 h-4 rounded-full flex items-center justify-center shadow-sm"
+                    style={{ backgroundColor: BRAND_COLOR }}
                   >
-                    <CheckCircle2 className="w-4 h-4 text-white" />
+                    <CheckCircle2 className="w-3 h-3 text-white" />
                   </div>
                 </motion.div>
               )}

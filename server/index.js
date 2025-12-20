@@ -162,11 +162,21 @@ const connect = () => {
 }
 
 const PORT = process.env.PORT || 8800
+const isProduction = process.env.NODE_ENV === 'production'
+
 app.listen(PORT, () => {
   connect()
   console.log(`🚀 Server running on port ${PORT}`)
-  console.log(`📍 API: https://api.manaradesign.ai`)
-  console.log(`🎨 Frontend: https://manaradesign.ai`)
+  console.log(
+    `📍 API: ${
+      isProduction ? 'https://api.manaradesign.ai' : `http://localhost:${PORT}`
+    }`
+  )
+  console.log(
+    `🎨 Frontend: ${
+      isProduction ? 'https://manaradesign.ai' : process.env.FRONTEND_URL || 'http://localhost:5173'
+    }`
+  )
   console.log(`📌 NODE_ENV: ${process.env.NODE_ENV || 'development'}`)
   console.log(`🎨 Moodboard generation with Gemini 2.5 Flash Image enabled`)
   console.log('========================================')

@@ -6,7 +6,7 @@ dotenv.config({ quiet: true })
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image' // Image generation model
-const GEMINI_TEXT_MODEL = 'gemini-2.5-flash' // Text generation model (higher quota)
+const GEMINI_TEXT_MODEL = 'gemini-1.5-flash-8b' // Text generation model (faster/cheaper)
 const USE_MOCK = process.env.USE_MOCK_GEMINI === 'true'
 
 let genAI = null
@@ -553,7 +553,7 @@ export const generateDesignNarrative = async ({
     initializeGemini()
 
     // Add delay to avoid rate limiting
-    await delay(1000)
+    await delay(100)
 
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 
@@ -614,7 +614,7 @@ export const generateMaterials = async ({
     initializeGemini()
 
     // Add delay to avoid rate limiting
-    await delay(1000)
+    await delay(100)
 
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 
@@ -676,7 +676,7 @@ export const generateFurniture = async ({
     initializeGemini()
 
     // Add delay to avoid rate limiting
-    await delay(1000)
+    await delay(100)
 
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 
@@ -743,7 +743,7 @@ export const generateLightingConcept = async ({
     initializeGemini()
 
     // Add delay to avoid rate limiting
-    await delay(1000)
+    await delay(100)
 
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 
@@ -800,7 +800,7 @@ export const generateZones = async ({ style, roomType, prompt }) => {
     initializeGemini()
 
     // Add delay to avoid rate limiting
-    await delay(1000)
+    await delay(100)
 
     const zonesPrompt = `As an interior design expert, define functional zones for:
 
@@ -855,7 +855,7 @@ export const generateVariants = async ({
     initializeGemini()
 
     // Add delay to avoid rate limiting
-    await delay(1000)
+    await delay(100)
 
     const colorNames = colorPalette.map((c) => c.name).join(', ')
 

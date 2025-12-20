@@ -1,5 +1,9 @@
 // File: project-manara-AI/client/src/pages/AIBuilders/MoodboardGenerator.jsx
 import TopBar from "@/components/Layout/Topbar";
+import BeautifulLoader from "@/components/Moodboard/BeautifulLoader.jsx";
+import { MoodboardHistory } from "@/components/Moodboard/MoodboardHistory";
+import { ResultView } from "@/components/Moodboard/ResultView.jsx";
+import { StepSpace } from "@/components/Moodboard/StepSpace.jsx";
 import {
   useCreateMoodboard,
   useGenerateMoodboard,
@@ -10,11 +14,12 @@ import {
   ArrowLeft,
   ArrowRight,
   CheckCircle2,
-  Sparkles,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
 import {
   BRAND_COLOR,
   BRAND_COLOR_DARK,
@@ -24,10 +29,6 @@ import {
   SPACE_TYPES,
   getColorDescriptionForPalette,
 } from "../../components/Moodboard/Moodboardconfig.js";
-import BeautifulLoader from "@/components/Moodboard/BeautifulLoader.jsx";
-import { StepSpace } from "@/components/Moodboard/StepSpace.jsx";
-import { ResultView } from "@/components/Moodboard/ResultView.jsx";
-import { MoodboardHistory } from "@/components/Moodboard/MoodboardHistory";
 
 const MoodboardGenerator = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -45,6 +46,7 @@ const MoodboardGenerator = () => {
   const createMutation = useCreateMoodboard();
   const generateMutation = useGenerateMoodboard();
   const generateDescriptionsMutation = useGenerateMoodboardDescriptions();
+  const navigate = useNavigate();
 
   const handleGenerate = async () => {
     if (!changes.trim()) {
@@ -58,6 +60,12 @@ const MoodboardGenerator = () => {
       setGenerationPhase("image");
       setProgressSteps(["Creating moodboard draft"]);
 
+      // Safety timeout: Clear loading state after 60s if nothing happens
+      const safetyTimeout = setTimeout(() => {
+        setLoadingState(null);
+        setGenerationPhase(null);
+      }, 60000);
+
       const spaceValue =
         SPACE_TYPES.find((s) => s.name === selectedSpace)?.value ||
         "living_room";
@@ -66,11 +74,17 @@ const MoodboardGenerator = () => {
 
       const colorDescription = getColorDescriptionForPalette(selectedColor);
 
+      const selectedPalette = COLOR_PALETTES.find(
+        (p) => p.name === selectedColor
+      );
+      const paletteColors = selectedPalette ? selectedPalette.colors : [];
+
       const createPayload = {
         title: `${selectedStyle || "Modern"} ${selectedSpace}`,
         style: styleValue,
         roomType: spaceValue,
         colorPreferences: [selectedColor],
+        paletteColors: paletteColors, // Pass the hex colors
         customPrompt: changes.trim(),
         layout: "collage",
         imageCount: 1,
@@ -96,13 +110,16 @@ const MoodboardGenerator = () => {
         data: generatePayload,
       });
 
+      // Clear the safety timeout if we finished Phase 1
+      if (safetyTimeout) clearTimeout(safetyTimeout);
+
       // Image is ready! Show it to the user
       setCurrentMoodboard(generateResult.data.moodboard);
       setProgressSteps(["Image generated", "Colors extracted", "Image ready!"]);
       setLoadingState(null);
       setGenerationPhase(null);
-      toast.success("Moodboard image ready! Generating details...");
-      setCurrentStep(3);
+      toast.success("Moodboard image ready! Loading details...");
+      navigate(`/moodboards/${moodboardId}`);
 
       // ========== PHASE 2: Generate Descriptions (Background) ==========
       // Start Phase 2 immediately but don't block the UI
@@ -401,10 +418,12 @@ const MoodboardGenerator = () => {
       eventSource.addEventListener("complete", () => {
         eventSource.close();
         onProgress([]); // Clear progress
+        setLoadingState(null); // Ensure loader is cleared
       });
 
       eventSource.addEventListener("error", () => {
         eventSource.close();
+        setLoadingState(null); // Clear loader on error
       });
 
       return () => {
@@ -671,119 +690,61 @@ const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
   };
 
   return (
-    <div>
-      <div className="text-center mb-12">
-        <h2 className="text-4xl font-bold text-gray-900 mb-3">
-          What's your design style?
+    <div className="max-w-5xl mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          Design style?
         </h2>
-        <p className="text-lg text-gray-600">
+        <p className="text-base text-gray-500">
           Choose the aesthetic that resonates with you
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
         {DESIGN_STYLES.map((style) => (
           <motion.button
             key={style.value}
             onClick={() => setSelectedStyle(style.label)}
-            whileHover={{ scale: 1.08, y: -8 }}
-            whileTap={{ scale: 0.92 }}
-            className={`relative group p-6 rounded-2xl transition-all duration-300 overflow-hidden`}
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            className={`relative p-4 rounded-xl transition-all duration-300 border text-center group`}
             style={{
-              background:
-                selectedStyle === style.label
-                  ? `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR_LIGHT})`
-                  : "white",
-              boxShadow:
-                selectedStyle === style.label
-                  ? `0 20px 40px ${BRAND_COLOR}30`
-                  : "0 2px 8px rgba(0,0,0,0.08)",
-              border:
-                selectedStyle === style.label ? "none" : "1px solid #e5e7eb",
+              borderColor: selectedStyle === style.label ? BRAND_COLOR : "#f3f4f6",
+              backgroundColor: selectedStyle === style.label ? `${BRAND_COLOR}05` : "#ffffff",
+              boxShadow: selectedStyle === style.label 
+                ? `0 10px 20px ${BRAND_COLOR}10` 
+                : "0 1px 3px rgba(0,0,0,0.02)",
             }}
           >
-            {/* Background gradient animation on hover */}
-            <motion.div
-              className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-              style={{
-                background:
-                  selectedStyle !== style.label
-                    ? `linear-gradient(135deg, ${BRAND_COLOR}08, ${BRAND_COLOR_LIGHT}08)`
-                    : "transparent",
-              }}
-            />
-
-            {/* Icon */}
-            <div className="relative z-10 mb-4 text-center">
-              <motion.div
-                animate={
-                  selectedStyle === style.label ? { scale: [1, 1.2, 1] } : {}
-                }
-                transition={{ duration: 0.6, repeat: Infinity }}
-                className="text-4xl"
-              >
+            <div className="relative z-10 mb-2">
+              <div className="text-2xl">
                 {styleIcons[style.label] || "🎨"}
-              </motion.div>
+              </div>
             </div>
 
-            {/* Content */}
-            <div className="relative z-10 text-center">
-              <h3
-                className={`font-bold text-base mb-1 transition-colors ${
-                  selectedStyle === style.label ? "text-white" : "text-gray-900"
-                }`}
-              >
+            <div className="relative z-10">
+              <h3 className={`font-bold text-sm mb-0.5 transition-colors ${
+                selectedStyle === style.label ? "text-gray-900" : "text-gray-600"
+              }`}>
                 {style.label}
               </h3>
-              <p
-                className={`text-xs transition-colors ${
-                  selectedStyle === style.label
-                    ? "text-white/80"
-                    : "text-gray-600"
-                }`}
-              >
-                {style.description}
-              </p>
             </div>
 
-            {/* Selection checkmark */}
             {selectedStyle === style.label && (
               <motion.div
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.1, type: "spring", bounce: 0.5 }}
-                className="absolute top-3 right-3 z-20"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="absolute top-2 right-2 z-20"
               >
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-lg"
-                >
-                  <CheckCircle2
-                    className="w-5 h-5"
-                    style={{ color: BRAND_COLOR }}
-                  />
-                </motion.div>
+                <div className="w-4 h-4 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: BRAND_COLOR }}>
+                  <CheckCircle2 className="w-3 h-3 text-white" />
+                </div>
               </motion.div>
             )}
-
-            {/* Hover shine effect */}
-            <motion.div
-              className="absolute inset-0 opacity-0 group-hover:opacity-20"
-              style={{
-                background: `linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.8) 50%, transparent 70%)`,
-                transform: "translateX(-100%)",
-              }}
-              whileHover={{
-                x: "100%",
-              }}
-              transition={{ duration: 0.6 }}
-            />
           </motion.button>
         ))}
       </div>
 
-      {/* Style count indicator */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -810,83 +771,128 @@ const StepColorsAndVision = ({
   setSelectedColor,
   changes,
   setChanges,
-}) => (
-  <div>
-    <div className="text-center mb-10">
-      <h2 className="text-4xl font-bold text-gray-900 mb-3">
-        Colors & Your Vision
-      </h2>
-      <p className="text-lg text-gray-600">
-        Select your palette and describe your design
-      </p>
-    </div>
+}) => {
+  const suggestions = [
+    "Natural lighting", "Minimalist furniture", "Indoor plants",
+    "Cozy atmosphere", "Industrial accents", "Wooden elements",
+    "Open space concept", "Professional office", "Warm textures",
+    "Modern lighting fixtures", "Sustainable materials", "Bold colors"
+  ];
 
-    <div className="grid lg:grid-cols-2 gap-8">
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-4">
-          Color Palette
-        </label>
-        <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto pr-2">
-          {COLOR_PALETTES.map((palette) => (
-            <motion.button
-              key={palette.name}
-              onClick={() => setSelectedColor(palette.name)}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`p-3 rounded-xl border-2 transition-all text-left`}
-              style={{
-                borderColor:
-                  selectedColor === palette.name ? BRAND_COLOR : "#e5e7eb",
-                backgroundColor:
-                  selectedColor === palette.name ? `${BRAND_COLOR}15` : "white",
-              }}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="font-semibold text-gray-900 text-sm">
-                  {palette.name}
-                </h3>
-                {selectedColor === palette.name && (
-                  <div
-                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                    style={{ backgroundColor: BRAND_COLOR }}
-                  >
-                    <CheckCircle2 className="w-4 h-4 text-white" />
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-1">
-                {palette.colors.map((color, idx) => (
-                  <div
-                    key={idx}
-                    className="flex-1 h-8 rounded"
-                    style={{ backgroundColor: color }}
-                  />
-                ))}
-              </div>
-            </motion.button>
-          ))}
-        </div>
-      </div>
+  const addSuggestion = (suggestion) => {
+    if (changes.includes(suggestion)) return;
+    setChanges(prev => prev ? `${prev}, ${suggestion}` : suggestion);
+  };
 
-      <div>
-        <label className="block text-sm font-semibold text-gray-900 mb-4">
-          Your Design Vision *
-        </label>
-        <textarea
-          value={changes}
-          onChange={(e) => setChanges(e.target.value)}
-          placeholder='Describe your design vision in detail. For example: "Modern office with natural wood elements, warm lighting, comfortable seating, plants, and professional minimalist aesthetic..."'
-          className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none resize-none h-[400px] text-gray-900 placeholder-gray-400"
-          style={{
-            borderColor: changes.trim() ? BRAND_COLOR : "#e5e7eb",
-          }}
-        />
-        <p className="text-xs text-gray-500 mt-2">
-          {changes.length} characters • More details = better results
+  return (
+    <div className="max-w-6xl mx-auto">
+      <div className="text-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          Colors & Your Vision
+        </h2>
+        <p className="text-base text-gray-500">
+          Select your palette and describe your design goals
         </p>
       </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+          <label className="block text-sm font-bold text-gray-900 mb-4">
+            Color Palette
+          </label>
+          <div className="grid grid-cols-2 gap-3 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+            {COLOR_PALETTES.map((palette) => (
+              <motion.button
+                key={palette.name}
+                onClick={() => setSelectedColor(palette.name)}
+                whileHover={{ scale: 1.01 }}
+                whileTap={{ scale: 0.99 }}
+                className={`p-3 rounded-xl border transition-all text-left bg-white`}
+                style={{
+                  borderColor: selectedColor === palette.name ? BRAND_COLOR : "#f3f4f6",
+                  boxShadow: selectedColor === palette.name 
+                    ? `0 4px 12px ${BRAND_COLOR}15` 
+                    : "0 1px 2px rgba(0,0,0,0.02)",
+                }}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className={`font-bold text-[13px] truncate ${
+                    selectedColor === palette.name ? "text-gray-900" : "text-gray-500"
+                  }`}>
+                    {palette.name}
+                  </h3>
+                  {selectedColor === palette.name && (
+                    <CheckCircle2 className="w-4 h-4" style={{ color: BRAND_COLOR }} />
+                  )}
+                </div>
+                <div className="flex gap-0.5 h-4 rounded-md overflow-hidden">
+                  {palette.colors.map((color, idx) => (
+                    <div
+                      key={idx}
+                      className="flex-1"
+                      style={{ backgroundColor: color }}
+                    />
+                  ))}
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-900 mb-3">
+              Your Design Vision *
+            </label>
+            <textarea
+              value={changes}
+              onChange={(e) => setChanges(e.target.value)}
+              placeholder='Example: "Modern office with natural wood, warm lighting, cozy atmosphere..."'
+              className="w-full p-4 border-2 border-gray-100 rounded-xl focus:border-brand-color focus:outline-none resize-none h-48 text-gray-900 transition-all placeholder-gray-400 bg-gray-50/50"
+              style={{
+                borderColor: changes.trim() ? BRAND_COLOR : "#f3f4f6",
+              }}
+            />
+            <div className="flex justify-between mt-2">
+              <p className="text-[11px] text-gray-400">
+                {changes.length} characters
+              </p>
+              <button 
+                onClick={() => setChanges("")}
+                className="text-[11px] text-gray-400 hover:text-red-500 transition-colors"
+                disabled={!changes}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-900 mb-3">
+              Suggestions
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => addSuggestion(s)}
+                  className="px-3 py-1.5 rounded-full text-xs font-semibold bg-white border border-gray-100 text-gray-600 hover:border-brand-color hover:text-brand-color transition-all shadow-sm"
+                  style={{ 
+                    '--brand-color': BRAND_COLOR,
+                    borderColor: changes.includes(s) ? BRAND_COLOR : "#f3f4f6",
+                    color: changes.includes(s) ? BRAND_COLOR : "#4b5563",
+                    backgroundColor: changes.includes(s) ? `${BRAND_COLOR}05` : "white"
+                  }}
+                >
+                  + {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default MoodboardGenerator;
