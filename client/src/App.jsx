@@ -11,15 +11,16 @@ import {
   useLocation,
 } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
+import { MoodboardHistroyDeatils } from './components/Moodboard/MoodboardHistroyDeatils'
 import AboutPage from './pages/About/AboutPage'
 import FloorPlanGenerator from './pages/AIBuilders/FloorPlanGenerator'
 import MoodboardGenerator from './pages/AIBuilders/MoodboardGenerator'
+import ThreedGenerator from './pages/AIBuilders/ThreedGenerator'
 import AuthPage from './pages/Auth/AuthPage'
 import HomePage from './pages/Home/HomePage'
 import PricingPage from './pages/Pricing/PricingPage'
-import { persistor, store } from './redux/store'
 import Profile from './pages/Profile/Profile'
-import { MoodboardHistroyDeatils } from './components/Moodboard/MoodboardHistroyDeatils'
+import { persistor, store } from './redux/store'
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -61,6 +62,14 @@ const AppRoutes = () => {
         <Route path="/auth" element={<AuthPage />} />
 
         {/* Protected routes - wrap with RequireAuth */}
+        <Route
+          path="/visualizer"
+          element={
+            <RequireAuth>
+              <ThreedGenerator />
+            </RequireAuth>
+          }
+        />
         <Route
           path="/moodboard"
           element={

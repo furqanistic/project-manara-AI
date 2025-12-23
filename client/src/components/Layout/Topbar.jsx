@@ -68,7 +68,7 @@ const TopBar = () => {
       href: "#",
       hasDropdown: true,
       dropdownItems: [
-        { name: "3D Visualization", href: "#" },
+        { name: "3D Visualization", href: "/visualizer" },
         { name: "Floor Plans (2D)", href: "/floorplans" },
         { name: "Mood Boards", href: "/moodboard" },
       ],
