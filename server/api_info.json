@@ -1,0 +1,414 @@
+{
+  "named_endpoints": {
+    "/start_session": {
+      "parameters": [],
+      "returns": [],
+      "type": {
+        "generator": false,
+        "cancel": false
+      }
+    },
+    "/preprocess_image": {
+      "parameters": [
+        {
+          "label": "Image Prompt",
+          "parameter_name": "input",
+          "parameter_has_default": false,
+          "parameter_default": null,
+          "type": "Blob | File | Buffer",
+          "python_type": {
+            "type": "dict(path: str | None (Path to a local file), url: str | None (Publicly available url or base64 encoded image), size: int | None (Size of image in bytes), orig_name: str | None (Original filename), mime_type: str | None (mime type of image), is_stream: bool (Can always be set to False), meta: dict(str, Any))",
+            "description": "For input, either path or url must be provided. For output, path is always provided."
+          },
+          "component": "Image",
+          "example_input": {
+            "path": "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png",
+            "meta": {
+              "_type": "gradio.FileData"
+            },
+            "orig_name": "bus.png",
+            "url": "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png"
+          }
+        }
+      ],
+      "returns": [
+        {
+          "label": "Image Prompt",
+          "type": "string",
+          "python_type": {
+            "type": "dict(path: str | None (Path to a local file), url: str | None (Publicly available url or base64 encoded image), size: int | None (Size of image in bytes), orig_name: str | None (Original filename), mime_type: str | None (mime type of image), is_stream: bool (Can always be set to False), meta: dict(str, Any))",
+            "description": ""
+          },
+          "component": "Image"
+        }
+      ],
+      "type": {
+        "generator": false,
+        "cancel": false
+      }
+    },
+    "/get_seed": {
+      "parameters": [
+        {
+          "label": "Randomize Seed",
+          "parameter_name": "randomize_seed",
+          "parameter_has_default": true,
+          "parameter_default": true,
+          "type": "boolean",
+          "python_type": {
+            "type": "bool",
+            "description": ""
+          },
+          "component": "Checkbox",
+          "example_input": true
+        },
+        {
+          "label": "Seed",
+          "parameter_name": "seed",
+          "parameter_has_default": true,
+          "parameter_default": 0,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 0,
+          "description": "numeric value between 0 and 2147483647"
+        }
+      ],
+      "returns": [
+        {
+          "label": "Seed",
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": "numeric value between 0 and 2147483647"
+          },
+          "component": "Slider",
+          "description": "numeric value between 0 and 2147483647"
+        }
+      ],
+      "type": {
+        "generator": false,
+        "cancel": false
+      }
+    },
+    "/lambda": {
+      "parameters": [],
+      "returns": [],
+      "type": {
+        "generator": false,
+        "cancel": false
+      }
+    },
+    "/image_to_3d": {
+      "parameters": [
+        {
+          "label": "Image Prompt",
+          "parameter_name": "image",
+          "parameter_has_default": false,
+          "parameter_default": null,
+          "type": "Blob | File | Buffer",
+          "python_type": {
+            "type": "dict(path: str | None (Path to a local file), url: str | None (Publicly available url or base64 encoded image), size: int | None (Size of image in bytes), orig_name: str | None (Original filename), mime_type: str | None (mime type of image), is_stream: bool (Can always be set to False), meta: dict(str, Any))",
+            "description": "For input, either path or url must be provided. For output, path is always provided."
+          },
+          "component": "Image",
+          "example_input": {
+            "path": "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png",
+            "meta": {
+              "_type": "gradio.FileData"
+            },
+            "orig_name": "bus.png",
+            "url": "https://raw.githubusercontent.com/gradio-app/gradio/main/test/test_files/bus.png"
+          }
+        },
+        {
+          "label": "Seed",
+          "parameter_name": "seed",
+          "parameter_has_default": true,
+          "parameter_default": 0,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 0,
+          "description": "numeric value between 0 and 2147483647"
+        },
+        {
+          "label": "Resolution",
+          "parameter_name": "resolution",
+          "parameter_has_default": true,
+          "parameter_default": "1024",
+          "type": "string",
+          "python_type": {
+            "type": "Literal['512', '1024', '1536']",
+            "description": ""
+          },
+          "component": "Radio",
+          "example_input": "512"
+        },
+        {
+          "label": "Guidance Strength",
+          "parameter_name": "ss_guidance_strength",
+          "parameter_has_default": true,
+          "parameter_default": 7.5,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1,
+          "description": "numeric value between 1.0 and 10.0"
+        },
+        {
+          "label": "Guidance Rescale",
+          "parameter_name": "ss_guidance_rescale",
+          "parameter_has_default": true,
+          "parameter_default": 0.7,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 0,
+          "description": "numeric value between 0.0 and 1.0"
+        },
+        {
+          "label": "Sampling Steps",
+          "parameter_name": "ss_sampling_steps",
+          "parameter_has_default": true,
+          "parameter_default": 12,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1,
+          "description": "numeric value between 1 and 50"
+        },
+        {
+          "label": "Rescale T",
+          "parameter_name": "ss_rescale_t",
+          "parameter_has_default": true,
+          "parameter_default": 5,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1,
+          "description": "numeric value between 1.0 and 6.0"
+        },
+        {
+          "label": "Guidance Strength",
+          "parameter_name": "shape_slat_guidance_strength",
+          "parameter_has_default": true,
+          "parameter_default": 7.5,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1,
+          "description": "numeric value between 1.0 and 10.0"
+        },
+        {
+          "label": "Guidance Rescale",
+          "parameter_name": "shape_slat_guidance_rescale",
+          "parameter_has_default": true,
+          "parameter_default": 0.5,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 0,
+          "description": "numeric value between 0.0 and 1.0"
+        },
+        {
+          "label": "Sampling Steps",
+          "parameter_name": "shape_slat_sampling_steps",
+          "parameter_has_default": true,
+          "parameter_default": 12,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1,
+          "description": "numeric value between 1 and 50"
+        },
+        {
+          "label": "Rescale T",
+          "parameter_name": "shape_slat_rescale_t",
+          "parameter_has_default": true,
+          "parameter_default": 3,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1,
+          "description": "numeric value between 1.0 and 6.0"
+        },
+        {
+          "label": "Guidance Strength",
+          "parameter_name": "tex_slat_guidance_strength",
+          "parameter_has_default": true,
+          "parameter_default": 1,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1,
+          "description": "numeric value between 1.0 and 10.0"
+        },
+        {
+          "label": "Guidance Rescale",
+          "parameter_name": "tex_slat_guidance_rescale",
+          "parameter_has_default": true,
+          "parameter_default": 0,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 0,
+          "description": "numeric value between 0.0 and 1.0"
+        },
+        {
+          "label": "Sampling Steps",
+          "parameter_name": "tex_slat_sampling_steps",
+          "parameter_has_default": true,
+          "parameter_default": 12,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1,
+          "description": "numeric value between 1 and 50"
+        },
+        {
+          "label": "Rescale T",
+          "parameter_name": "tex_slat_rescale_t",
+          "parameter_has_default": true,
+          "parameter_default": 3,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1,
+          "description": "numeric value between 1.0 and 6.0"
+        }
+      ],
+      "returns": [
+        {
+          "label": "3D Asset Preview",
+          "type": "string",
+          "python_type": {
+            "type": "str",
+            "description": ""
+          },
+          "component": "Html"
+        }
+      ],
+      "type": {
+        "generator": false,
+        "cancel": false
+      }
+    },
+    "/lambda_1": {
+      "parameters": [],
+      "returns": [],
+      "type": {
+        "generator": false,
+        "cancel": false
+      }
+    },
+    "/extract_glb": {
+      "parameters": [
+        {
+          "component": "state",
+          "example": null,
+          "parameter_default": null,
+          "parameter_has_default": true,
+          "parameter_name": null,
+          "hidden": true,
+          "type": ""
+        },
+        {
+          "label": "Decimation Target",
+          "parameter_name": "decimation_target",
+          "parameter_has_default": true,
+          "parameter_default": 300000,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 100000,
+          "description": "numeric value between 100000 and 500000"
+        },
+        {
+          "label": "Texture Size",
+          "parameter_name": "texture_size",
+          "parameter_has_default": true,
+          "parameter_default": 2048,
+          "type": "number",
+          "python_type": {
+            "type": "float",
+            "description": ""
+          },
+          "component": "Slider",
+          "example_input": 1024,
+          "description": "numeric value between 1024 and 4096"
+        }
+      ],
+      "returns": [
+        {
+          "label": "Extracted GLB",
+          "type": "",
+          "python_type": {
+            "type": "filepath",
+            "description": ""
+          },
+          "component": "Model3d"
+        },
+        {
+          "label": "Download GLB",
+          "type": "",
+          "python_type": {
+            "type": "filepath",
+            "description": ""
+          },
+          "component": "Downloadbutton"
+        }
+      ],
+      "type": {
+        "generator": false,
+        "cancel": false
+      }
+    }
+  },
+  "unnamed_endpoints": {}
+}

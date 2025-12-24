@@ -16,11 +16,14 @@ const threeDSchema = new mongoose.Schema(
     },
     glbUrl: {
       type: String,
-      required: true,
+      required: false,
     },
     glbPath: {
       type: String,
-      required: true,
+      required: false,
+    },
+    sceneJson: {
+      type: mongoose.Schema.Types.Mixed,
     },
     status: {
       type: String,

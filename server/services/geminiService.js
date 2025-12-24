@@ -5,8 +5,8 @@ import sharp from 'sharp'
 dotenv.config({ quiet: true })
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
-const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image' // Image generation model
-const GEMINI_TEXT_MODEL = 'gemini-1.5-flash-8b' // Text generation model (faster/cheaper)
+const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image' // Verified available model
+const GEMINI_TEXT_MODEL = 'gemini-2.5-flash'
 const USE_MOCK = process.env.USE_MOCK_GEMINI === 'true'
 
 let genAI = null
@@ -29,18 +29,25 @@ const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
  */
 const safeJsonParse = (jsonString, fallback = null) => {
   try {
-    // Try to extract JSON from the string if it's embedded in text
-    const jsonMatch = jsonString.match(/\{[\s\S]*\}|\[[\s\S]*\]/)
+    // 1. Remove markers like ```json and ```
+    let cleanString = jsonString.replace(/```json|```/g, '').trim()
+
+    // 2. Try to extract the JSON block if there's other text around it
+    const jsonMatch = cleanString.match(/\{[\s\S]*\}|\[[\s\S]*\]/)
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0])
+      cleanString = jsonMatch[0]
     }
-    return JSON.parse(jsonString)
+
+    // 3. Strip C-style comments (// and /* */) which Gemini often adds
+    cleanString = cleanString.replace(/\/\*[\s\S]*?\*\/|([^\\:]|^)\/\/.*$/gm, '$1')
+
+    return JSON.parse(cleanString)
   } catch (error) {
     console.error(
       'JSON parse error:',
       error.message,
-      'Input:',
-      jsonString.substring(0, 200)
+      'Input snippet:',
+      jsonString.substring(0, 200).replace(/\n/g, ' ')
     )
     return fallback
   }
@@ -261,10 +268,10 @@ export const generateImage = async (
 
     if (aspectRatio) {
       console.log(
-        `Generating with Gemini 2.5 Flash (target: ${aspectRatio} - ${targetWidth}x${targetHeight})...`
+        `Generating with ${GEMINI_IMAGE_MODEL} (target: ${aspectRatio} - ${targetWidth}x${targetHeight})...`
       )
     } else {
-      console.log('Generating with Gemini 2.5 Flash (AI-chosen aspect ratio)...')
+      console.log(`Generating with ${GEMINI_IMAGE_MODEL} (AI-chosen aspect ratio)...`)
     }
 
     const generationConfig = {
@@ -1252,3 +1259,114 @@ Make the text professional, stylish, and integrated into the moodboard design. U
 
   return prompt.trim()
 }
+
+/**
+ * Generate a 3D scene representation from a floor plan image using Gemini
+ */
+export const generateThreeDScene = async (imageBuffer, mimeType) => {
+  try {
+    if (USE_MOCK) {
+      console.log('Using mock 3D scene response')
+      return getMockThreeDScene()
+    }
+
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not defined')
+    }
+
+    initializeGemini()
+
+    const prompt = `
+      Analyze this floor plan image and generate a structured 3D scene representation in JSON format.
+      The output should include:
+      1. Overall room dimensions (width, height, depth in centimeters).
+      2. Walls (array of segments with start and end x/y/z coordinates, thickness, and height).
+      3. Windows and Doors (their positions on specific walls and dimensions).
+      4. Key furniture pieces identified (type, position, rotation, and basic dimensions).
+
+      Output format:
+      {
+        "metadata": { "name": "...", "unit": "cm" },
+        "room": { "width": 1000, "depth": 800, "height": 300 },
+        "walls": [
+          { "start": [0,0,0], "end": [1000,0,0], "height": 300, "thickness": 20 },
+          ...
+        ],
+        "openings": [
+          { "type": "door", "position": [500,0,100], "dimensions": [90, 210, 5] },
+          ...
+        ],
+        "furniture": [
+          { "type": "sofa", "position": [200, 0, 300], "rotation": [0, 1.57, 0], "dimensions": [220, 80, 90] },
+          ...
+        ]
+      }
+
+      CRITICAL: Ensure the JSON is valid. DO NOT include any comments (// or /* */) in the JSON output. 
+      Use a coordinate system where Y is UP, and the floor is at Y=0.
+    `
+
+    const result = await textModel.generateContent([
+      prompt,
+      {
+        inlineData: {
+          mimeType,
+          data: imageBuffer.toString('base64'),
+        },
+      },
+    ])
+
+    const response = result.response
+    const text = response.text()
+    const sceneData = safeJsonParse(text, null)
+
+    if (!sceneData) {
+      throw new Error('Failed to parse 3D scene data from Gemini')
+    }
+
+    return sceneData
+  } catch (error) {
+    console.error('Error generating 3D scene:', error)
+    if (USE_MOCK) return getMockThreeDScene()
+    throw error
+  }
+}
+
+/**
+ * Generate a 3D isometric architectural visualization from a 2D floor plan
+ * @param {Buffer} imageBuffer - The 2D floor plan image
+ * @param {string} mimeType - Image mime type
+ * @returns {Promise<Object>} - The generated image data
+ */
+export const generateThreeDVisualization = async (imageBuffer, mimeType) => {
+  const prompt = `Convert this 2D floor plan into a composite 3D architectural visualization. 
+    Show the SAME 3D floor plan model from 3 different isometric angles (e.g., Front-Left, Rear-Right, and Top-Iso) to fully display the layout structure.
+    Do NOT include interior eye-level perspective shots. Focus purely on the 3D dollhouse/cutaway view of the entire floor plan.
+    Arrange these views cleanly on a single neutral background.`
+
+  const referenceImages = [{ data: imageBuffer.toString('base64'), mimeType }]
+
+  return await generateImage(prompt, referenceImages, '1:1')
+}
+
+/**
+ * Mock 3D scene for fallback
+ */
+const getMockThreeDScene = () => ({
+  metadata: { name: 'Sample Room', unit: 'cm' },
+  room: { width: 800, depth: 600, height: 250 },
+  walls: [
+    { start: [0, 0, 0], end: [800, 0, 0], height: 250, thickness: 15 },
+    { start: [800, 0, 0], end: [800, 0, 600], height: 250, thickness: 15 },
+    { start: [800, 0, 600], end: [0, 0, 600], height: 250, thickness: 15 },
+    { start: [0, 0, 600], end: [0, 0, 0], height: 250, thickness: 15 },
+  ],
+  openings: [
+    { type: 'door', position: [400, 0, 0], dimensions: [90, 210, 10] },
+    { type: 'window', position: [800, 100, 300], dimensions: [120, 100, 10] },
+  ],
+  furniture: [
+    { type: 'sofa', position: [200, 0, 300], rotation: [0, 0, 0], dimensions: [220, 90, 80] },
+    { type: 'table', position: [500, 0, 300], rotation: [0, 0, 0], dimensions: [120, 60, 45] },
+  ],
+})

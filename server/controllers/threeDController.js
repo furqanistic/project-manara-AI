@@ -1,6 +1,7 @@
 import { createError } from '../error.js'
 import ThreeDModel from '../models/ThreeDModel.js'
-import { generate3DModel } from '../services/threeDService.js'
+import { generateThreeDScene, generateThreeDVisualization } from '../services/geminiService.js'
+import { generateTrellisModel } from '../services/trellisService.js'
 
 export const generate3D = async (req, res, next) => {
   try {
@@ -8,6 +9,7 @@ export const generate3D = async (req, res, next) => {
       return next(createError(400, 'Image is required'))
     }
 
+    const { mode, name } = req.body
     let imageBuffer
     let mimeType
 
@@ -21,28 +23,71 @@ export const generate3D = async (req, res, next) => {
       mimeType = req.body.mimeType || 'image/png'
     }
 
-    console.log(`Starting 3D generation for user ${req.user.id}...`)
+    console.log(`Starting 3D generation (${mode || 'trellis'}) for user ${req.user.id}...`)
 
-    const result = await generate3DModel(imageBuffer, mimeType)
+    let result = { url: '', path: '' }
+    let sceneJson = null
+
+    if (mode === 'gemini') {
+      sceneJson = await generateThreeDScene(imageBuffer, mimeType)
+    } else {
+      // Default to TRELLIS.2 (Gradio)
+      result = await generateTrellisModel(imageBuffer, mimeType)
+    }
 
     const newThreeD = new ThreeDModel({
-      userId: req.user.id,
-      name: req.body.name || `3D Model - ${new Date().toLocaleDateString()}`,
-      sourceImage: req.body.image || 'uploaded_image', // In real app, we'd save this image too
-      glbUrl: result.url,
-      glbPath: result.path,
-      status: 'completed',
+        userId: req.user.id,
+        name: name || `3D Model - ${new Date().toLocaleDateString()}`,
+        sourceImage: req.body.image || 'uploaded_image',
+        glbUrl: result.url,
+        glbPath: result.path,
+        sceneJson: sceneJson,
+        status: 'completed',
     })
 
     await newThreeD.save()
 
     res.status(200).json({
-      status: 'success',
-      data: newThreeD,
+        status: 'success',
+        data: newThreeD,
     })
   } catch (error) {
     console.error('Error in generate3D controller:', error)
     next(createError(500, error.message || 'Failed to generate 3D model'))
+  }
+}
+
+
+export const generateVisualization = async (req, res, next) => {
+  try {
+    if (!req.file && !req.body.image) {
+      return next(createError(400, 'Image is required'))
+    }
+
+    let imageBuffer
+    let mimeType
+
+    if (req.file) {
+      imageBuffer = req.file.buffer
+      mimeType = req.file.mimetype
+    } else {
+      const base64Data = req.body.image.replace(/^data:image\/\w+;base64,/, '')
+      imageBuffer = Buffer.from(base64Data, 'base64')
+      mimeType = req.body.mimeType || 'image/png'
+    }
+
+    console.log(`Starting 3D visualization generation for user ${req.user.id}...`)
+
+    const result = await generateThreeDVisualization(imageBuffer, mimeType)
+
+    res.status(200).json({
+      status: 'success',
+      data: result.images[0], // { data: base64, mimeType }
+      message: '3D visualization generated successfully',
+    })
+  } catch (error) {
+    console.error('Error in generateVisualization controller:', error)
+    next(createError(500, error.message || 'Failed to generate 3D visualization'))
   }
 }
 
