@@ -357,3 +357,33 @@ export const logout = async (req, res, next) => {
     next(error);
   }
 };
+
+export const completeOnboarding = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const onboardingData = req.body;
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      {
+        isOnboarded: true,
+        onboardingData,
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!user) {
+      return next(createError(404, "User not found"));
+    }
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        user,
+      },
+    });
+  } catch (error) {
+    console.error("Error in completeOnboarding:", error);
+    next(error);
+  }
+};

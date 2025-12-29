@@ -170,4 +170,21 @@ export const authService = {
       throw error.response?.data || error;
     }
   },
+
+  /**
+   * Complete onboarding and save data
+   * @param {Object} onboardingData - Data from onboarding form
+   * @returns {Promise} Updated user data
+   */
+  completeOnboarding: async (onboardingData) => {
+    try {
+      const response = await axiosInstance.post(
+        "/auth/onboarding",
+        onboardingData
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 };

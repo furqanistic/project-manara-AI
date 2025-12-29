@@ -1,14 +1,15 @@
 // File: routes/auth.js (FIXED VERSION)
 import express from "express";
 import {
-  changePassword,
-  deleteUser,
-  getAllUsers,
-  getUserProfile,
-  logout,
-  signin,
-  signup,
-  updateUser,
+    changePassword,
+    completeOnboarding,
+    deleteUser,
+    getAllUsers,
+    getUserProfile,
+    logout,
+    signin,
+    signup,
+    updateUser,
 } from "../controllers/auth.js";
 import { restrictTo, verifyToken } from "../middleware/authMiddleware.js";
 
@@ -74,6 +75,13 @@ router.put(
   },
   updateUser
 );
+
+/**
+ * POST /api/auth/onboarding
+ * Complete onboarding and save data
+ * Body: { ...onboardingData }
+ */
+router.post("/onboarding", completeOnboarding);
 
 /**
  * PUT /api/auth/users/:id

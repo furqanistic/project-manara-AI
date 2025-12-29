@@ -76,7 +76,7 @@ const HomePage = () => {
       variants={pageVariants}
       initial='initial'
       animate='animate'
-      className='relative bg-black'
+      className='relative bg-[#faf8f6]'
     >
       {/* Navigation */}
       <motion.div
@@ -153,7 +153,8 @@ const HomePage = () => {
       />
 
       {/* Background Gradient Overlay */}
-      <div className='fixed inset-0 bg-gradient-to-b from-black via-gray-900/50 to-black pointer-events-none' />
+      {/* Background Ambient Glow */}
+      <div className='fixed inset-0 bg-gradient-to-b from-[#937c60]/5 via-transparent to-transparent pointer-events-none' />
     </motion.div>
   )
 }

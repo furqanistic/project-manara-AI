@@ -1,14 +1,12 @@
-// File: client/src/components/Layout/Topbar.jsx
+import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Banknote,
-  BanknoteIcon,
-  ChevronDown,
-  LogOut,
-  Menu,
-  Settings,
-  Sparkles,
-  User,
-  X,
+    Banknote,
+    ChevronDown,
+    LogOut,
+    Menu,
+    Sparkles,
+    User,
+    X,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
@@ -27,20 +25,17 @@ const TopBar = () => {
   const dropdownRefs = useRef({});
   const mobileMenuRef = useRef(null);
 
-  const brandColor = "#937c60";
-  const brandColorLight = "#a68970";
-
-  // Track scroll for shadow effect
+  // Scroll detection for styling changes
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
+      setIsScrolled(window.scrollY > 10);
     };
     window.addEventListener("scroll", handleScroll);
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Click outside handler
+  // Click outside to close menus
   useEffect(() => {
     const handleClickOutside = (event) => {
       const isOutsideDropdowns = Object.values(dropdownRefs.current).every(
@@ -61,10 +56,20 @@ const TopBar = () => {
   const toggleDropdown = (dropdown) =>
     setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
 
+  const handleAuthRedirect = (type) => navigate(`/auth?type=${type}`);
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      setActiveDropdown(null);
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+  };
+
   const navItems = [
     { name: "Home", href: "/" },
     {
-      name: "Design Studio",
+      name: "Studio",
       href: "#",
       hasDropdown: true,
       dropdownItems: [
@@ -77,350 +82,246 @@ const TopBar = () => {
     { name: "About", href: "/about" },
   ];
 
-  const handleAuthRedirect = (type) => navigate(`/auth?type=${type}`);
-  const handleLogout = async () => {
-    try {
-      await logoutMutation.mutateAsync();
-      setActiveDropdown(null);
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-  };
-
-  // Colors for white background
-  const textColor = "text-gray-800";
-  const hoverTextColor = "hover:text-gray-900";
-  const hoverBg = "hover:bg-gray-100";
-  const borderColor = "border-gray-200";
-  const dropdownBg = "bg-white";
-  const buttonBg = "bg-gray-50";
-
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 lg:px-8 pt-4">
-      <div className="max-w-5xl mx-auto">
-        <nav
-          ref={mobileMenuRef}
-          className={`relative transition-all duration-300 ease-out rounded-full px-6 py-3 ${
-            isScrolled
-              ? "bg-white border border-gray-200 shadow-lg"
-              : "bg-white border border-gray-100"
-          }`}
-        >
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <div className="flex items-center">
-              <div className="relative">
-                <img
-                  src="/logo.png"
-                  alt="Manāra Logo"
-                  className="h-10 w-auto object-contain max-w-none"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                    e.target.nextSibling.style.display = "flex";
-                  }}
-                />
-                <div
-                  className="w-8 h-8 rounded-full items-center justify-center hidden"
-                  style={{
-                    background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
-                  }}
-                >
-                  <Sparkles className="w-4 h-4 text-white" />
-                </div>
-              </div>
+    <header
+      className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
+        isScrolled
+          ? "bg-white/80 backdrop-blur-md border-b border-gray-100 py-3 shadow-sm"
+          : "bg-transparent py-6"
+      }`}
+    >
+      <div className="max-w-[1600px] mx-auto px-6 md:px-12">
+        <div className="flex items-center justify-between">
+          
+          {/* Logo Section */}
+          <NavLink to="/" className="flex items-center gap-2 group z-50">
+            <div className="w-9 h-9 bg-[#937c60] rounded-xl flex items-center justify-center text-white shadow-lg shadow-[#937c60]/20 group-hover:scale-105 transition-transform duration-300">
+               <Sparkles size={18} fill="currentColor" className="text-white/90" />
             </div>
+            <span className={`text-xl font-bold tracking-tight transition-colors duration-300 ${isScrolled || isMenuOpen ? 'text-gray-900' : 'text-gray-900'}`}>
+              Manāra
+            </span>
+          </NavLink>
 
-            {/* Desktop Nav */}
-            <div className="hidden lg:flex items-center space-x-1">
-              {navItems.map((item, index) => (
-                <div key={index} className="relative">
-                  {item.hasDropdown ? (
-                    <div
-                      className="relative"
-                      ref={(el) => (dropdownRefs.current[item.name] = el)}
-                    >
-                      <button
-                        onClick={() => toggleDropdown(item.name)}
-                        className={`flex items-center space-x-1 px-4 py-2 transition-all duration-200 rounded-full group ${textColor} ${hoverTextColor} ${hoverBg}`}
-                      >
-                        <span className="text-sm font-medium">{item.name}</span>
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            activeDropdown === item.name ? "rotate-180" : ""
-                          }`}
-                        />
-                      </button>
-
-                      {activeDropdown === item.name && (
-                        <div
-                          className={`absolute top-full mt-2 left-0 min-w-48 border ${borderColor} rounded-2xl shadow-lg overflow-hidden ${dropdownBg}`}
-                        >
-                          <div className="py-2">
-                            {item.dropdownItems.map((dropdownItem, i) => (
-                              <a
-                                key={i}
-                                href={dropdownItem.href}
-                                className={`block px-4 py-2 text-sm transition-all duration-200 ${textColor} ${hoverTextColor} ${hoverBg}`}
-                              >
-                                {dropdownItem.name}
-                              </a>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <a
-                      href={item.href}
-                      className={`px-4 py-2 transition-all duration-200 rounded-full text-sm font-medium ${textColor} ${hoverTextColor} ${hoverBg}`}
+          {/* Desktop Navigation */}
+          <nav className="hidden lg:flex items-center gap-1">
+            {navItems.map((item, index) => (
+              <div key={index} className="relative group">
+                {item.hasDropdown ? (
+                  <div ref={(el) => (dropdownRefs.current[item.name] = el)}>
+                    <button
+                      onClick={() => toggleDropdown(item.name)}
+                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-full hover:bg-black/5"
                     >
                       {item.name}
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Right Section */}
-            <div className="flex items-center space-x-3">
-              {currentUser ? (
-                <div
-                  className="relative hidden lg:block"
-                  ref={(el) => (dropdownRefs.current["user"] = el)}
-                >
-                  <button
-                    onClick={() => toggleDropdown("user")}
-                    disabled={logoutMutation.isPending}
-                    className={`flex items-center space-x-2 px-3 py-2 border ${borderColor} rounded-full transition-all duration-200 group ${buttonBg} ${hoverBg} ${
-                      logoutMutation.isPending
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                    }`}
+                      <ChevronDown
+                        size={14}
+                        className={`transition-transform duration-200 ${
+                          activeDropdown === item.name ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                    <AnimatePresence>
+                      {activeDropdown === item.name && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          transition={{ duration: 0.2 }}
+                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 p-1.5 overflow-hidden"
+                        >
+                          {item.dropdownItems.map((subItem, i) => (
+                            <NavLink
+                              key={i}
+                              to={subItem.href}
+                              onClick={() => setActiveDropdown(null)}
+                              className="block px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                            >
+                              {subItem.name}
+                            </NavLink>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ) : (
+                  <NavLink
+                    to={item.href}
+                    className={({ isActive }) =>
+                      `px-4 py-2 text-sm font-medium transition-colors rounded-full hover:bg-black/5 ${
+                        isActive ? "text-gray-900 font-semibold" : "text-gray-600 hover:text-gray-900"
+                      }`
+                    }
                   >
-                    <div className="w-6 h-6 bg-gradient-to-br from-[#937c60] to-[#937c60] rounded-full flex items-center justify-center">
-                      <User className="w-3 h-3 text-white" />
-                    </div>
-                    <span className="text-sm text-gray-800 truncate max-w-[120px]">
-                      {currentUser.name || "User"}
-                    </span>
-                    <ChevronDown
-                      className={`w-4 h-4 text-gray-600 transition-transform duration-200 ${
-                        activeDropdown === "user" ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
+                    {item.name}
+                  </NavLink>
+                )}
+              </div>
+            ))}
+          </nav>
 
+          {/* Right Actions */}
+          <div className="flex items-center gap-4 z-50">
+            {currentUser ? (
+              <div
+                className="relative"
+                ref={(el) => (dropdownRefs.current["user"] = el)}
+              >
+                <button
+                  onClick={() => toggleDropdown("user")}
+                  className="flex items-center gap-3 pl-2 pr-4 py-1.5 bg-white border border-gray-200 rounded-full hover:border-gray-300 transition-all hover:shadow-sm"
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border border-white shadow-inner">
+                    <User size={16} className="text-gray-600" />
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700 max-w-[100px] truncate hidden md:block">
+                    {currentUser.name?.split(" ")[0]}
+                  </span>
+                  <ChevronDown size={14} className="text-gray-400" />
+                </button>
+
+                <AnimatePresence>
                   {activeDropdown === "user" && (
-                    <div
-                      className={`absolute top-full mt-2 right-0 min-w-48 border ${borderColor} rounded-2xl shadow-lg overflow-hidden ${dropdownBg}`}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute top-full right-0 mt-3 w-64 bg-white rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] border border-gray-100 overflow-hidden p-2"
                     >
-                      <div className="py-2">
-                        <div className="px-4 py-2 border-b border-gray-200">
-                          <p className="text-sm font-medium text-gray-900">
-                            {currentUser.name}
-                          </p>
-                          <p className="text-xs text-gray-600">
-                            {currentUser.email}
-                          </p>
-                          {currentUser.role === "admin" && (
-                            <span className="inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full bg-gradient-to-r from-violet-500 to-purple-500 text-white">
-                              ADMIN
-                            </span>
-                          )}
-                        </div>
+                      <div className="px-4 py-3 mb-2 bg-gray-50 rounded-xl">
+                        <p className="text-sm font-bold text-gray-900">
+                          {currentUser.name}
+                        </p>
+                        <p className="text-xs text-gray-500 font-medium truncate">
+                          {currentUser.email}
+                        </p>
+                      </div>
+
+                      <div className="space-y-0.5">
                         <NavLink
                           to="/profile"
-                          className={` flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${textColor} ${hoverTextColor} ${hoverBg}`}
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors"
                         >
-                          <User className="w-4 h-4" />
-                          <span>Profile</span>
+                          <User size={16} className="text-gray-400" /> Profile
                         </NavLink>
                         <NavLink
                           to="/subscription"
-                          className={` flex items-center space-x-2 px-4 py-2 text-sm transition-all duration-200 ${textColor} ${hoverTextColor} ${hoverBg}`}
+                          className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors"
                         >
-                          <BanknoteIcon className="w-4 h-4" />
-                          <span>Subscription</span>
+                          <Banknote size={16} className="text-gray-400" /> Subscription
                         </NavLink>
-                        <hr className="my-1 border-gray-200" />
+                        <div className="h-px bg-gray-100 my-1 mx-2" />
                         <button
                           onClick={handleLogout}
-                          disabled={logoutMutation.isPending}
-                          className="w-full flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 disabled:opacity-50"
+                          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-red-50 text-sm font-medium text-red-600 transition-colors text-left"
                         >
-                          {logoutMutation.isPending ? (
-                            <>
-                              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                              <span>Signing Out...</span>
-                            </>
-                          ) : (
-                            <>
-                              <LogOut className="w-4 h-4" />
-                              <span>Sign Out</span>
-                            </>
-                          )}
+                          <LogOut size={16} /> Sign Out
                         </button>
                       </div>
-                    </div>
+                    </motion.div>
                   )}
-                </div>
-              ) : (
-                <div className="hidden sm:flex items-center space-x-2">
+                </AnimatePresence>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-2">
+                <button
+                  onClick={() => handleAuthRedirect("login")}
+                  className="px-5 py-2.5 text-sm font-semibold text-gray-900 hover:text-black transition-colors"
+                >
+                  Log In
+                </button>
+                <button
+                  onClick={() => handleAuthRedirect("signup")}
+                  className="px-6 py-2.5 bg-[#1a1a1a] hover:bg-black text-white rounded-full text-sm font-bold shadow-lg shadow-gray-200 transition-all hover:scale-105 active:scale-95"
+                >
+                  Get Started
+                </button>
+              </div>
+            )}
+
+            {/* Mobile Menu Button - Keeping it simple */}
+            <button
+              onClick={toggleMenu}
+              className="lg:hidden p-2.5 text-gray-900 bg-white/50 backdrop-blur-md rounded-full border border-gray-200"
+            >
+              {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu Overlay - Full Screen */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-100 shadow-xl overflow-hidden"
+          >
+            <div className="px-6 py-8 space-y-8 h-[80vh] overflow-y-auto">
+              <div className="space-y-6">
+                {navItems.map((item, i) => (
+                  <div key={i} className="space-y-4">
+                    {item.hasDropdown ? (
+                      <div className="space-y-3">
+                        <div className="text-2xl font-bold text-gray-900 tracking-tight">
+                          {item.name}
+                        </div>
+                        <div className="pl-4 space-y-3 border-l-2 border-gray-100">
+                          {item.dropdownItems.map((sub, j) => (
+                            <NavLink
+                              key={j}
+                              to={sub.href}
+                              onClick={() => setIsMenuOpen(false)}
+                              className="block text-lg text-gray-500 font-medium py-1"
+                            >
+                              {sub.name}
+                            </NavLink>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <NavLink
+                        to={item.href}
+                        onClick={() => setIsMenuOpen(false)}
+                        className="block text-2xl font-bold text-gray-900 tracking-tight"
+                      >
+                        {item.name}
+                      </NavLink>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!currentUser && (
+                <div className="pt-8 border-t border-gray-100 grid gap-4">
                   <button
-                    onClick={() => handleAuthRedirect("login")}
-                    className={`px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 ${textColor} ${hoverTextColor} ${hoverBg}`}
+                    onClick={() => {
+                      handleAuthRedirect("login");
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full py-4 rounded-xl border border-gray-200 font-bold text-lg text-gray-900"
                   >
                     Log In
                   </button>
                   <button
-                    onClick={() => handleAuthRedirect("signup")}
-                    className="px-4 py-2 text-white text-sm font-semibold rounded-full hover:scale-105 transition-all duration-200 shadow-md"
-                    style={{
-                      background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
-                      boxShadow: `0 4px 15px ${brandColor}40`,
+                    onClick={() => {
+                      handleAuthRedirect("signup");
+                      setIsMenuOpen(false);
                     }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = `linear-gradient(to right, ${brandColorLight}, ${brandColor})`;
-                      e.target.style.boxShadow = `0 6px 20px ${brandColor}50`;
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = `linear-gradient(to right, ${brandColor}, ${brandColorLight})`;
-                      e.target.style.boxShadow = `0 4px 15px ${brandColor}40`;
-                    }}
+                    className="w-full py-4 rounded-xl bg-gray-900 text-white font-bold text-lg shadow-lg"
                   >
                     Sign Up
                   </button>
                 </div>
               )}
-
-              <button
-                onClick={toggleMenu}
-                className={`lg:hidden p-2 text-gray-800 hover:text-gray-900 transition-colors duration-200`}
-              >
-                {isMenuOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </button>
             </div>
-          </div>
-
-          {/* Mobile Menu */}
-          {isMenuOpen && (
-            <div
-              className={`lg:hidden absolute top-full left-0 right-0 mt-2 border ${borderColor} rounded-2xl shadow-lg overflow-hidden ${dropdownBg}`}
-            >
-              <div className="py-4 px-6 space-y-1">
-                {navItems.map((item, index) => (
-                  <div key={index}>
-                    {item.hasDropdown ? (
-                      <div>
-                        <button
-                          onClick={() => toggleDropdown(`mobile-${item.name}`)}
-                          className={`flex items-center justify-between w-full px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
-                        >
-                          <span>{item.name}</span>
-                          <ChevronDown
-                            className={`w-4 h-4 transition-transform duration-200 ${
-                              activeDropdown === `mobile-${item.name}`
-                                ? "rotate-180"
-                                : ""
-                            }`}
-                          />
-                        </button>
-                        {activeDropdown === `mobile-${item.name}` && (
-                          <div className="mt-1 ml-4 space-y-1">
-                            {item.dropdownItems.map((dropdownItem, i) => (
-                              <a
-                                key={i}
-                                href={dropdownItem.href}
-                                className={`block px-3 py-2 text-sm transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
-                              >
-                                {dropdownItem.name}
-                              </a>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <a
-                        href={item.href}
-                        className={`block px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
-                      >
-                        {item.name}
-                      </a>
-                    )}
-                  </div>
-                ))}
-
-                {currentUser ? (
-                  <div className="pt-4 border-t border-gray-200">
-                    <div className="px-3 py-2 mb-2">
-                      <p className="text-sm font-medium text-gray-900">
-                        {currentUser.name}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        {currentUser.email}
-                      </p>
-                    </div>
-                    <NavLink
-                      to={"/profile"}
-                      className={` flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
-                    >
-                      <User className="w-4 h-4" />
-                      <span className="">Profile</span>
-                    </NavLink>
-                    <NavLink
-                      to={"/subscription"}
-                      className={` flex items-center space-x-2 px-3 py-2 transition-colors duration-200 rounded-lg ${textColor} ${hoverTextColor} ${hoverBg}`}
-                    >
-                      <BanknoteIcon className="w-4 h-4" />
-                      <span className="">Subscription</span>
-                    </NavLink>
-                    <button
-                      onClick={handleLogout}
-                      disabled={logoutMutation.isPending}
-                      className="w-full flex items-center space-x-2 px-3 py-2 text-red-600 hover:text-red-700 hover:bg-red-50 transition-all duration-200 rounded-lg disabled:opacity-50"
-                    >
-                      {logoutMutation.isPending ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                          <span>Signing Out...</span>
-                        </>
-                      ) : (
-                        <>
-                          <LogOut className="w-4 h-4" />
-                          <span>Sign Out</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="pt-4 border-t border-gray-200 space-y-2">
-                    <button
-                      onClick={() => handleAuthRedirect("login")}
-                      className={`w-full px-4 py-3 text-sm font-medium rounded-full transition-all duration-200 border ${borderColor} ${textColor} ${hoverTextColor} ${hoverBg}`}
-                    >
-                      Log In
-                    </button>
-                    <button
-                      onClick={() => handleAuthRedirect("signup")}
-                      className="w-full px-4 py-3 text-white font-semibold rounded-full hover:scale-105 transition-all duration-200"
-                      style={{
-                        background: `linear-gradient(to right, ${brandColor}, ${brandColorLight})`,
-                      }}
-                    >
-                      Sign Up
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-        </nav>
-      </div>
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </header>
   );
 };
 

@@ -1,181 +1,82 @@
-// File: project-manara-AI/client/src/components/Layout/CompactFooter.jsx
 import {
-  ArrowRight,
-  Instagram,
-  Linkedin,
-  Mail,
-  MapPin,
-  Phone,
-  Sparkles,
-  Twitter,
+    ArrowRight,
+    Instagram,
+    Linkedin,
+    Mail,
+    MapPin,
+    Sparkles,
+    Twitter,
 } from 'lucide-react'
 import React from 'react'
 
 const CompactFooter = () => {
   const brandColor = '#937c60'
-  const brandColorLight = '#a68970'
 
   return (
-    <footer className='relative bg-gradient-to-br from-stone-900 via-stone-800 to-stone-900'>
-      {/* Subtle Pattern Overlay */}
-      <div
-        className='absolute inset-0 opacity-5'
-        style={{
-          backgroundImage: `
-            linear-gradient(45deg, ${brandColor} 1px, transparent 1px),
-            linear-gradient(-45deg, ${brandColor} 1px, transparent 1px)
-          `,
-          backgroundSize: '60px 60px',
-        }}
-      />
+    <footer className='relative bg-white border-t border-gray-100 py-20 overflow-hidden'>
+      {/* Subtle Background Pattern */}
+      <div className='absolute inset-0 overflow-hidden pointer-events-none'>
+        <div className='absolute top-0 right-0 w-64 h-64 bg-[#937c60]/5 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full' />
+      </div>
 
-      <div className='relative z-10 max-w-7xl mx-auto px-6 py-16'>
-        {/* Main Footer Content */}
-        <div className='grid md:grid-cols-4 gap-8 mb-12'>
-          {/* Brand Column */}
-          <div className='md:col-span-1'>
-            <div className='flex items-center gap-3 mb-6'>
-              <div
-                className='w-10 h-10 rounded-xl flex items-center justify-center'
-                style={{
-                  background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
-                }}
-              >
-                <Sparkles className='w-5 h-5 text-white' />
-              </div>
-              <div className='text-2xl font-bold text-white'>Manāra</div>
-            </div>
-            <p className='text-stone-400 text-sm leading-relaxed mb-6'>
-              AI-powered interior design copilot transforming spaces across the
-              UAE with intelligent design solutions.
-            </p>
-            <div className='flex items-center gap-4'>
-              {[
-                { icon: Instagram, href: '#' },
-                { icon: Linkedin, href: '#' },
-                { icon: Twitter, href: '#' },
-              ].map((social, index) => (
-                <a
-                  key={index}
-                  href={social.href}
-                  className='w-9 h-9 rounded-lg bg-stone-800 hover:bg-stone-700 flex items-center justify-center transition-all duration-200 hover:scale-110 group'
-                  style={{
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                  }}
-                >
-                  <social.icon className='w-4 h-4 text-stone-400 group-hover:text-white transition-colors' />
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Services */}
-          <div>
-            <h3 className='text-white font-semibold mb-4'>Services</h3>
-            <div className='space-y-3'>
-              {[
-                'AI Design Copilot',
-                '3D Visualization',
-                'AutoCAD Plans',
-                'UAE Marketplace',
-                'Design Presentations',
-              ].map((service, index) => (
-                <a
-                  key={index}
-                  href='#'
-                  className='block text-stone-400 hover:text-white text-sm transition-colors duration-200 hover:translate-x-1'
-                >
-                  {service}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Company */}
-          <div>
-            <h3 className='text-white font-semibold mb-4'>Company</h3>
-            <div className='space-y-3'>
-              {[
-                'About Us',
-                'How It Works',
-                'UAE Partners',
-                'Pricing',
-                'Support',
-              ].map((item, index) => (
-                <a
-                  key={index}
-                  href='#'
-                  className='block text-stone-400 hover:text-white text-sm transition-colors duration-200 hover:translate-x-1'
-                >
-                  {item}
-                </a>
-              ))}
-            </div>
-          </div>
-
-          {/* Contact & Location */}
-          <div>
-            <h3 className='text-white font-semibold mb-4'>Get Started</h3>
-            <div className='space-y-4 mb-6'>
-              <div className='flex items-start gap-3'>
-                <MapPin className='w-4 h-4 text-stone-400 mt-0.5 flex-shrink-0' />
-                <div className='text-stone-400 text-sm'>
-                  Serving UAE
-                  <br />
-                  Dubai • Abu Dhabi • Sharjah
+      <div className='relative z-10 max-w-[1500px] mx-auto px-10 md:px-20'>
+        <div className='grid lg:grid-cols-12 gap-16 mb-20'>
+          {/* Brand Identity */}
+          <div className='lg:col-span-5 space-y-8'>
+             <div className='flex items-center gap-4'>
+                <div className='w-12 h-12 rounded-2xl bg-[#937c60] flex items-center justify-center text-white shadow-[0_10px_20px_rgba(147,124,96,0.3)]'>
+                   <Sparkles size={24} />
                 </div>
-              </div>
-              <div className='flex items-center gap-3'>
-                <Mail className='w-4 h-4 text-stone-400' />
-                <a
-                  href='mailto:hello@manaradesign.ai'
-                  className='text-stone-400 hover:text-white text-sm transition-colors'
-                >
-                  hello@manaradesign.ai
-                </a>
-              </div>
-            </div>
+                <h2 className='text-3xl font-bold text-gray-900 tracking-tighter'>Manāra</h2>
+             </div>
+             <p className='text-gray-400 font-medium text-lg leading-relaxed max-w-md'>
+               The professional design engine for modern spaces. Synthesizing imagination intoexecutable architecture.
+             </p>
+             <div className='flex gap-4'>
+                {[Instagram, Linkedin, Twitter].map((Icon, i) => (
+                  <a key={i} href="#" className='w-12 h-12 rounded-2xl border border-gray-100 flex items-center justify-center text-gray-400 hover:text-[#937c60] hover:border-[#937c60]/20 transition-all'>
+                     <Icon size={20} />
+                  </a>
+                ))}
+             </div>
+          </div>
 
-            <button
-              className='w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-white font-medium text-sm transition-all duration-200 hover:scale-105 hover:shadow-lg group'
-              style={{
-                background: `linear-gradient(135deg, ${brandColor}, ${brandColorLight})`,
-              }}
-            >
-              <span>Start Designing</span>
-              <ArrowRight className='w-4 h-4 group-hover:translate-x-0.5 transition-transform' />
-            </button>
+          {/* Navigation Links */}
+          <div className='lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-12'>
+             <div className='space-y-6'>
+                <h4 className='text-[10px] font-bold text-[#937c60] uppercase tracking-widest'>Engine</h4>
+                <ul className='space-y-4'>
+                   {['3D Visualization', 'Moodboarding', 'Neural Mapping'].map(link => (
+                     <li key={link}><a href="#" className='text-gray-400 font-semibold hover:text-gray-900 transition-colors'>{link}</a></li>
+                   ))}
+                </ul>
+             </div>
+             <div className='space-y-6'>
+                <h4 className='text-[10px] font-bold text-[#937c60] uppercase tracking-widest'>Architecture</h4>
+                <ul className='space-y-4'>
+                   {['UAE Marketplace', 'Installer Mesh', 'Material Logs'].map(link => (
+                     <li key={link}><a href="#" className='text-gray-400 font-semibold hover:text-gray-900 transition-colors'>{link}</a></li>
+                   ))}
+                </ul>
+             </div>
+             <div className='space-y-6'>
+                <h4 className='text-[10px] font-bold text-[#937c60] uppercase tracking-widest'>Network</h4>
+                <ul className='space-y-4 text-gray-400 font-semibold'>
+                   <li className='flex items-center gap-3'><MapPin size={16} className='text-[#937c60]' /> Dubai HQ</li>
+                   <li className='flex items-center gap-3'><Mail size={16} className='text-[#937c60]' /> hello@manara.ai</li>
+                </ul>
+             </div>
           </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className='pt-8 border-t border-stone-700 flex flex-col md:flex-row justify-between items-center gap-4'>
-          <div className='text-stone-500 text-sm'>
-            © 2025 Manāra AI. All rights reserved.
-          </div>
-
-          <div className='flex items-center gap-6 text-sm'>
-            <a
-              href='#'
-              className='text-stone-500 hover:text-stone-300 transition-colors'
-            >
-              Privacy Policy
-            </a>
-            <a
-              href='#'
-              className='text-stone-500 hover:text-stone-300 transition-colors'
-            >
-              Terms of Service
-            </a>
-            <div className='flex items-center gap-2 text-stone-500'>
-              <div
-                className='w-2 h-2 rounded-full animate-pulse'
-                style={{ background: brandColor }}
-              />
-              <span className='text-xs'>AI-Powered Platform</span>
-            </div>
-          </div>
+        {/* Footer Bottom */}
+        <div className='pt-12 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-8'>
+           <p className='text-gray-400 text-xs font-bold uppercase tracking-widest'>© 2025 Manāra Design Engine</p>
+           <div className='flex gap-10'>
+              <a href="#" className='text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-gray-900'>Privacy</a>
+              <a href="#" className='text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-gray-900'>Terms</a>
+              <a href="#" className='text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-gray-900'>Security</a>
+           </div>
         </div>
       </div>
     </footer>

@@ -54,6 +54,39 @@ const UserSchema = new mongoose.Schema(
     deletedAt: {
       type: Date,
     },
+    isOnboarded: {
+      type: Boolean,
+      default: false,
+    },
+    onboardingData: {
+      type: mongoose.Schema.Types.Mixed,
+    },
+    // Stripe & Subscription fields
+    stripeCustomerId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    stripeSubscriptionId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    stripePriceId: {
+      type: String,
+    },
+    subscriptionStatus: {
+      type: String,
+      enum: ["none", "trialing", "active", "past_due", "canceled", "unpaid"],
+      default: "none",
+    },
+    subscriptionCurrentPeriodEnd: {
+      type: Date,
+    },
+    cancelAtPeriodEnd: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,

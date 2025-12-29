@@ -10,6 +10,7 @@ import path from 'path'
 import authRoute from './routes/auth.js'
 import floorPlanRoutes from './routes/floorPlan.js'
 import moodboardRoute from './routes/moodboard.js'
+import stripeRoutes from './routes/stripe.js'
 import threeDRoutes from './routes/threeD.js'
 
 const app = express()
@@ -73,17 +74,20 @@ app.use(cors(corsOptions))
 // ============================================================================
 
 app.use(cookieParser())
+
+// ✅ Special handling for Stripe Webhooks - MUST be before express.json()
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
-// ============================================================================
-// Routes
-// ============================================================================
+
 
 app.use('/api/auth/', authRoute)
 app.use('/api/moodboards/', moodboardRoute)
 app.use('/api/floorplans', floorPlanRoutes)
 app.use('/api/3d', threeDRoutes)
+app.use('/api/stripe', stripeRoutes)
 
 const uploadsDir = path.join(process.cwd(), 'uploads/furniture')
 if (!fs.existsSync(uploadsDir)) {

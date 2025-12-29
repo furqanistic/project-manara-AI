@@ -4,11 +4,11 @@ import React from 'react'
 import { Toaster } from 'react-hot-toast'
 import { Provider, useSelector } from 'react-redux'
 import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
+    BrowserRouter,
+    Navigate,
+    Route,
+    Routes,
+    useLocation,
 } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
 import { MoodboardHistroyDeatils } from './components/Moodboard/MoodboardHistroyDeatils'
@@ -20,6 +20,7 @@ import AuthPage from './pages/Auth/AuthPage'
 import HomePage from './pages/Home/HomePage'
 import PricingPage from './pages/Pricing/PricingPage'
 import Profile from './pages/Profile/Profile'
+import SubscriptionPage from './pages/Profile/SubscriptionPage'
 import { persistor, store } from './redux/store'
 
 // Create React Query client
@@ -99,6 +100,14 @@ const AppRoutes = () => {
           element={
             <RequireAuth>
               <MoodboardHistroyDeatils />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/subscription"
+          element={
+            <RequireAuth>
+              <SubscriptionPage />
             </RequireAuth>
           }
         />

@@ -1,4 +1,3 @@
-// File: project-manara-AI/client/src/components/Home/ModernBeforeAfterSection.jsx
 import {
   AnimatePresence,
   motion,
@@ -9,33 +8,28 @@ import {
 } from 'framer-motion'
 import {
   ArrowRight,
-  Eye,
-  Layers,
+  ChevronRight,
   MousePointer,
-  Sparkles,
-  Zap,
 } from 'lucide-react'
 import React, { useRef, useState } from 'react'
+import { Button } from '../../components/ui/button'
 
 const ModernBeforeAfterSection = () => {
   const [isHovered, setIsHovered] = useState(false)
-  const containerRef = useRef(null)
   const sliderRef = useRef(null)
   const { scrollY } = useScroll()
 
-  // Parallax transforms
-  const y1 = useTransform(scrollY, [0, 1000], [0, -100])
-  const y2 = useTransform(scrollY, [0, 1000], [0, 50])
+  // Parallax transforms 
+  const yParallax = useTransform(scrollY, [1000, 2000], [0, -80])
 
   // Motion values for the slider
   const sliderPosition = useMotionValue(50)
   const springSliderPosition = useSpring(sliderPosition, {
-    damping: 20,
-    stiffness: 300,
+    damping: 25,
+    stiffness: 250,
   })
 
   const brandColor = '#937c60'
-  const brandColorLight = '#a68970'
 
   const handleMouseMove = (e) => {
     if (!sliderRef.current) return
@@ -56,486 +50,154 @@ const ModernBeforeAfterSection = () => {
 
   const processSteps = [
     {
-      icon: Eye,
-      title: 'Upload & Analyze',
-      description: 'AI scans your space instantly',
-      delay: 0.1,
+      title: 'Analyze',
+      description: 'AI identifies spatial geometry and lighting.',
     },
     {
-      icon: Sparkles,
-      title: 'Generate Concepts',
-      description: 'Multiple design options created',
-      delay: 0.2,
-    },
-    {
-      icon: Layers,
-      title: '3D Visualization',
-      description: 'Photorealistic renders produced',
-      delay: 0.3,
-    },
-    {
-      icon: Zap,
-      title: 'Connect & Install',
-      description: 'UAE partners ready to execute',
-      delay: 0.4,
+      title: 'Synthesis',
+      description: 'High-fidelity 3D visualization within seconds.',
     },
   ]
-
-  const stats = [
-    { value: '2.4s', label: 'Generation Time' },
-    { value: '500+', label: 'UAE Partners' },
-  ]
-
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-        delayChildren: 0.1,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { y: 60, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.8,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
-  }
-
-  const stepVariants = {
-    hidden: { x: -40, opacity: 0 },
-    visible: {
-      x: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.6,
-        ease: [0.22, 1, 0.36, 1],
-      },
-    },
-  }
 
   return (
     <section
-      ref={containerRef}
-      className='relative min-h-screen bg-black overflow-hidden flex items-center py-20'
+      className='relative py-40 bg-[#faf8f6] overflow-hidden px-10 md:px-20'
     >
-      {/* Animated Grid Background */}
-      <motion.div className='absolute inset-0 opacity-10' style={{ y: y2 }}>
-        <div
-          className='absolute inset-0'
-          style={{
-            backgroundImage: `
-              linear-gradient(rgba(147, 124, 96, 0.1) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(147, 124, 96, 0.1) 1px, transparent 1px)
-            `,
-            backgroundSize: '80px 80px',
-          }}
-        />
-      </motion.div>
-
-      {/* Floating Background Elements */}
-      <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <motion.div
-          className='absolute top-20 right-20 w-40 h-40 rounded-full opacity-5'
-          style={{
-            background: `radial-gradient(circle, ${brandColor} 0%, transparent 70%)`,
-            y: y1,
-          }}
-          animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 180, 360],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: 'linear',
-          }}
-        />
-        <motion.div
-          className='absolute bottom-40 left-20 w-32 h-32 rounded-full opacity-5'
-          style={{
-            background: `radial-gradient(circle, ${brandColorLight} 0%, transparent 70%)`,
-            y: y2,
-          }}
-          animate={{
-            scale: [1, 1.1, 1],
-            rotate: [360, 180, 0],
-          }}
-          transition={{
-            duration: 15,
-            repeat: Infinity,
-            ease: 'linear',
-          }}
-        />
-      </div>
-
-      <motion.div
-        className='relative z-10 max-w-7xl mx-auto px-4 sm:px-6'
-        variants={containerVariants}
-        initial='hidden'
-        whileInView='visible'
-        viewport={{ once: true, margin: '-100px' }}
-      >
-        {/* Header */}
-        <motion.div
-          className='text-center space-y-6 mb-20'
-          variants={itemVariants}
-        >
-          <motion.h2
-            className='text-5xl md:text-7xl font-black leading-none tracking-tight'
-            initial={{ scale: 0.8, opacity: 0 }}
-            whileInView={{ scale: 1, opacity: 1 }}
+      <div className='relative z-10 max-w-[1500px] mx-auto w-full'>
+        {/* Interaction Layout */}
+        <div className='grid xl:grid-cols-12 gap-20 items-center'>
+          {/* Slider Container */}
+          <motion.div 
+            className='xl:col-span-8'
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
-            <motion.span
-              className='block text-white'
-              initial={{ x: -50 }}
-              whileInView={{ x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-            >
-              See the
-            </motion.span>
-            <motion.span
-              className='block'
-              style={{ color: brandColor }}
-              initial={{ x: 50 }}
-              whileInView={{ x: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-            >
-              Magic Happen
-            </motion.span>
-          </motion.h2>
-
-          <motion.p
-            className='text-xl text-gray-400 max-w-2xl mx-auto'
-            variants={itemVariants}
-          >
-            Watch how our AI transforms ordinary spaces into extraordinary
-            environments.
-            <motion.span
-              className='text-white font-medium block mt-2'
-              animate={{ opacity: [0.7, 1, 0.7] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              Move your cursor to reveal the transformation.
-            </motion.span>
-          </motion.p>
-        </motion.div>
-
-        {/* Main Grid */}
-        <div className='grid lg:grid-cols-3 gap-12 items-center'>
-          {/* Before/After Slider - 2 columns */}
-          <motion.div className='lg:col-span-2' variants={itemVariants}>
-            <motion.div
+            <div
               ref={sliderRef}
-              className='relative rounded-3xl overflow-hidden cursor-crosshair group shadow-2xl'
+              className='relative rounded-[60px] overflow-hidden cursor-none group shadow-[0_50px_100px_rgba(147,124,96,0.05)] border border-[#937c60]/5'
               onMouseMove={handleMouseMove}
               onMouseEnter={handleMouseEnter}
               onMouseLeave={handleMouseLeave}
-              whileHover={{ scale: 1.01 }}
-              transition={{ duration: 0.3 }}
             >
-              {/* Before Image */}
-              <div className='relative w-full h-[500px] md:h-[600px]'>
-                <motion.img
+              <div className='relative w-full aspect-[16/10] md:aspect-[16/9]'>
+                {/* Before Image */}
+                <img
                   src='/Home/after.webp'
-                  alt='Before transformation'
-                  className='w-full h-full object-cover'
-                  initial={{ scale: 1.1 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 1 }}
+                  alt='Original Space'
+                  className='absolute inset-0 w-full h-full object-cover grayscale brightness-110'
                 />
 
-                {/* Before Label */}
+                {/* After Image Clipping */}
                 <motion.div
-                  className='absolute top-6 left-6 bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-full border border-white/20'
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.5 }}
-                >
-                  <span className='text-sm font-medium'>Before</span>
-                </motion.div>
-              </div>
-
-              {/* After Image Overlay */}
-              <motion.div
-                className='absolute inset-0'
-                style={{
-                  clipPath: useTransform(
-                    springSliderPosition,
-                    (pos) => `polygon(0 0, ${pos}% 0, ${pos}% 100%, 0 100%)`
-                  ),
-                }}
-              >
-                <motion.img
-                  src='/Home/before.webp'
-                  alt='After transformation'
-                  className='w-full h-full object-cover'
-                  initial={{ scale: 1.1 }}
-                  animate={{ scale: 1 }}
-                  transition={{ duration: 1, delay: 0.2 }}
-                />
-
-                {/* After Label */}
-                <motion.div
-                  className='absolute top-6 left-6 backdrop-blur-sm text-white px-4 py-2 rounded-full border'
+                  className='absolute inset-0'
                   style={{
-                    background: `${brandColor}90`,
-                    borderColor: `${brandColorLight}50`,
-                  }}
-                  initial={{ opacity: 0, y: -20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.7 }}
-                >
-                  <span className='text-sm font-medium'>After</span>
-                </motion.div>
-              </motion.div>
-
-              {/* Reveal Line */}
-              <motion.div
-                className='absolute top-0 bottom-0 w-0.5 shadow-lg z-10'
-                style={{
-                  left: useTransform(springSliderPosition, (pos) => `${pos}%`),
-                  background: `linear-gradient(to bottom, ${brandColorLight}, #ffffff, ${brandColorLight})`,
-                }}
-              >
-                {/* Animated Handle */}
-                <motion.div
-                  className='absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full shadow-xl border-2 flex items-center justify-center'
-                  style={{ borderColor: brandColor }}
-                  whileHover={{ scale: 1.2 }}
-                  animate={{
-                    boxShadow: [
-                      `0 0 20px ${brandColor}40`,
-                      `0 0 30px ${brandColor}60`,
-                      `0 0 20px ${brandColor}40`,
-                    ],
-                  }}
-                  transition={{
-                    boxShadow: { duration: 2, repeat: Infinity },
-                    scale: { duration: 0.2 },
+                    clipPath: useTransform(
+                      springSliderPosition,
+                      (pos) => `inset(0 ${100 - pos}% 0 0)`
+                    ),
                   }}
                 >
-                  <motion.div
-                    className='w-3 h-3 rounded-full'
-                    style={{ background: brandColor }}
-                    animate={{ scale: [1, 1.2, 1] }}
-                    transition={{ duration: 1, repeat: Infinity }}
+                  <img
+                    src='/Home/before.webp'
+                    alt='AI Transformed Space'
+                    className='absolute inset-0 w-full h-full object-cover'
                   />
                 </motion.div>
-              </motion.div>
 
-              {/* Instructions Overlay */}
-              <AnimatePresence>
-                {!isHovered && (
-                  <motion.div
-                    className='absolute inset-0 bg-black/20 flex items-center justify-center'
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <motion.div
-                      className='text-center text-white bg-black/60 backdrop-blur-sm rounded-2xl p-6 border border-white/20'
-                      initial={{ scale: 0.8, y: 20 }}
-                      animate={{ scale: 1, y: 0 }}
-                      exit={{ scale: 0.8, y: 20 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <motion.div
-                        className='w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center border'
-                        style={{
-                          background: `${brandColor}20`,
-                          borderColor: `${brandColor}50`,
-                        }}
-                        animate={{ rotate: [0, -10, 10, 0] }}
-                        transition={{ duration: 2, repeat: Infinity }}
+                {/* Minimalist Split Line */}
+                <motion.div
+                  className='absolute top-0 bottom-0 w-[1px] bg-[#937c60]/30 backdrop-blur-sm z-10 pointer-events-none'
+                  style={{
+                    left: useTransform(springSliderPosition, (pos) => `${pos}%`),
+                  }}
+                >
+                  <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full border border-[#937c60]/20 bg-white/40 backdrop-blur-md flex items-center justify-center shadow-xl'>
+                     <motion.div 
+                        animate={{ x: [-2, 2, -2] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                        className='flex gap-1'
                       >
-                        <MousePointer
-                          className='w-8 h-8'
-                          style={{ color: brandColorLight }}
-                        />
-                      </motion.div>
-                      <p className='text-lg font-semibold mb-2'>
-                        Move to Transform
-                      </p>
-                      <p className='text-sm' style={{ color: brandColorLight }}>
-                        Hover and move cursor left to right
-                      </p>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </motion.div>
+                        <ChevronRight className='w-4 h-4 text-[#937c60]/40 rotate-180' />
+                        <ChevronRight className='w-4 h-4 text-[#937c60]' />
+                     </motion.div>
+                  </div>
+                </motion.div>
 
-          {/* How It Works - 1 column */}
-          <motion.div className='space-y-8' variants={itemVariants}>
-            {/* Process Steps */}
-            <div className='space-y-6'>
-              <motion.h3
-                className='text-2xl font-bold text-white'
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-              >
-                How It Works
-              </motion.h3>
+                {/* Floating Labels */}
+                <div className='absolute top-10 left-10 pointer-events-none z-20 flex gap-4'>
+                  <div className='bg-white/40 backdrop-blur-md px-6 py-2 rounded-full border border-gray-200'>
+                     <span className='text-[10px] font-bold tracking-widest text-gray-400 uppercase'>Photometric Raw</span>
+                  </div>
+                  <div className='bg-[#937c60]/10 backdrop-blur-md px-6 py-2 rounded-full border border-[#937c60]/20'>
+                     <span className='text-[10px] font-bold tracking-widest text-[#937c60] uppercase'>Neural Gen</span>
+                  </div>
+                </div>
 
-              <div className='space-y-4'>
-                {processSteps.map((step, index) => {
-                  const IconComponent = step.icon
-                  return (
-                    <motion.div
-                      key={index}
-                      variants={stepVariants}
-                      initial='hidden'
-                      whileInView='visible'
-                      viewport={{ once: true }}
-                      transition={{ delay: step.delay }}
+                {/* Custom Cursor Instructions */}
+                <AnimatePresence>
+                  {!isHovered && (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className='absolute inset-0 bg-[#faf8f6]/20 backdrop-blur-[2px] flex items-center justify-center z-30 pointer-events-none'
                     >
-                      <motion.div
-                        className='flex items-start gap-4 p-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 cursor-pointer'
-                        whileHover={{
-                          backgroundColor: 'rgba(255,255,255,0.1)',
-                          scale: 1.02,
-                          borderColor: `${brandColor}30`,
-                        }}
-                        transition={{ duration: 0.2 }}
-                      >
-                        <motion.div
-                          className='w-12 h-12 rounded-xl flex items-center justify-center border'
-                          style={{
-                            background: `${brandColor}20`,
-                            borderColor: `${brandColor}30`,
-                          }}
-                          whileHover={{
-                            background: `${brandColor}30`,
-                            scale: 1.1,
-                          }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <IconComponent
-                            className='w-6 h-6'
-                            style={{ color: brandColorLight }}
-                          />
-                        </motion.div>
-                        <div>
-                          <motion.div className='text-white font-semibold mb-1'>
-                            {step.title}
+                       <div className='text-center space-y-4'>
+                          <motion.div 
+                            animate={{ x: [-20, 20, -20] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                            className='w-12 h-12 rounded-full border border-[#937c60]/40 flex items-center justify-center mx-auto'
+                          >
+                             <MousePointer className='text-[#937c60] w-5 h-5' />
                           </motion.div>
-                          <motion.div className='text-gray-400 text-sm'>
-                            {step.description}
-                          </motion.div>
-                        </div>
-                      </motion.div>
+                          <p className='text-[#937c60] font-bold tracking-widest uppercase text-xs opacity-60'>Slide to transform</p>
+                       </div>
                     </motion.div>
-                  )
-                })}
+                  )}
+                </AnimatePresence>
               </div>
             </div>
+          </motion.div>
 
-            {/* Stats */}
-            <motion.div
-              className='grid grid-cols-2 gap-4'
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-            >
-              {stats.map((stat, index) => (
-                <motion.div
-                  key={index}
-                  className='text-center p-4 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10'
-                  whileHover={{
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    scale: 1.05,
-                  }}
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: 0.7 + index * 0.1 }}
+          {/* Process Narrative */}
+          <div className='xl:col-span-4 space-y-12'>
+            <div className='space-y-4'>
+               <h4 className='text-[10px] font-bold text-[#937c60] uppercase tracking-[0.4em]'>The Logic</h4>
+               <h3 className='text-5xl font-bold text-gray-900 tracking-tight leading-tight'>Evolve your <br /> environment.</h3>
+            </div>
+
+            <div className='space-y-8'>
+              {processSteps.map((step, i) => (
+                <motion.div 
+                  key={i}
+                  initial={{ opacity: 0, x: 20 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className='group space-y-2'
                 >
-                  <motion.div
-                    className='text-2xl font-bold mb-1'
-                    style={{ color: brandColorLight }}
-                    animate={{
-                      textShadow: [
-                        `0 0 10px ${brandColor}40`,
-                        `0 0 20px ${brandColor}60`,
-                        `0 0 10px ${brandColor}40`,
-                      ],
-                    }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                  >
-                    {stat.value}
-                  </motion.div>
-                  <div className='text-gray-400 text-sm'>{stat.label}</div>
+                   <div className='flex items-center gap-3'>
+                      <div className='w-8 h-[1px] bg-[#937c60] opacity-40' />
+                      <h5 className='text-xl font-bold text-gray-900'>{step.title}</h5>
+                   </div>
+                   <p className='text-gray-400 font-medium leading-relaxed pl-11'>{step.description}</p>
                 </motion.div>
               ))}
-            </motion.div>
+            </div>
 
-            {/* CTA Button */}
-            <motion.button
-              className='group w-full px-6 py-4 text-white font-bold rounded-2xl relative overflow-hidden'
-              style={{
-                background: `linear-gradient(135deg, ${brandColor} 0%, ${brandColorLight} 100%)`,
-              }}
-              whileHover={{
-                scale: 1.05,
-                boxShadow: `0 20px 40px -10px ${brandColor}40`,
-              }}
-              whileTap={{ scale: 0.98 }}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.8, delay: 0.8 }}
-            >
-              {/* Animated gradient overlay */}
-              <motion.div
-                className='absolute inset-0'
-                style={{
-                  background: `linear-gradient(135deg, ${brandColorLight} 0%, ${brandColor} 100%)`,
-                }}
-                initial={{ opacity: 0 }}
-                whileHover={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              />
-
-              {/* Button content */}
-              <div className='relative flex items-center justify-center gap-2'>
-                <span>Start Your Transformation</span>
-                <motion.div
-                  whileHover={{ x: 4 }}
-                  transition={{ type: 'spring', stiffness: 400 }}
-                >
-                  <ArrowRight className='w-5 h-5' />
-                </motion.div>
-              </div>
-
-              {/* Shine effect */}
-              <motion.div
-                className='absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12'
-                initial={{ x: '-100%' }}
-                whileHover={{ x: '100%' }}
-                transition={{ duration: 0.6 }}
-              />
-            </motion.button>
-          </motion.div>
+            <div className='pt-8'>
+              <Button 
+                 onClick={() => window.location.href = '/moodboard'}
+                 className='w-full bg-gray-900 hover:bg-black text-white px-8 py-8 rounded-[32px] font-bold text-lg flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95'
+              >
+                 Start Transformation
+                 <ArrowRight size={18} />
+              </Button>
+            </div>
+          </div>
         </div>
-      </motion.div>
+      </div>
     </section>
   )
 }
