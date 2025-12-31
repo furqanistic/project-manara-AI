@@ -1,11 +1,11 @@
 import {
-    ArrowRight,
-    Instagram,
-    Linkedin,
-    Mail,
-    MapPin,
-    Sparkles,
-    Twitter,
+   ArrowRight,
+   Instagram,
+   Linkedin,
+   Mail,
+   MapPin,
+   Sparkles,
+   Twitter,
 } from 'lucide-react'
 import React from 'react'
 

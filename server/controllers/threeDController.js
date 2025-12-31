@@ -1,7 +1,7 @@
 import { createError } from '../error.js'
 import ThreeDModel from '../models/ThreeDModel.js'
-import { generateThreeDScene, generateThreeDVisualization } from '../services/geminiService.js'
-import { generateTrellisModel } from '../services/trellisService.js'
+import { generateThreeDVisualization } from '../services/geminiService.js'
+import { generateHunyuan3DModel } from '../services/huggingFaceService.js'
 
 export const generate3D = async (req, res, next) => {
   try {
@@ -9,7 +9,7 @@ export const generate3D = async (req, res, next) => {
       return next(createError(400, 'Image is required'))
     }
 
-    const { mode, name } = req.body
+    const { name } = req.body
     let imageBuffer
     let mimeType
 
@@ -23,17 +23,9 @@ export const generate3D = async (req, res, next) => {
       mimeType = req.body.mimeType || 'image/png'
     }
 
-    console.log(`Starting 3D generation (${mode || 'trellis'}) for user ${req.user.id}...`)
+    console.log(`Starting Hunyuan3D-2.1 generation for user ${req.user.id}...`)
 
-    let result = { url: '', path: '' }
-    let sceneJson = null
-
-    if (mode === 'gemini') {
-      sceneJson = await generateThreeDScene(imageBuffer, mimeType)
-    } else {
-      // Default to TRELLIS.2 (Gradio)
-      result = await generateTrellisModel(imageBuffer, mimeType)
-    }
+    const result = await generateHunyuan3DModel(imageBuffer, mimeType, req.body)
 
     const newThreeD = new ThreeDModel({
         userId: req.user.id,
@@ -41,7 +33,6 @@ export const generate3D = async (req, res, next) => {
         sourceImage: req.body.image || 'uploaded_image',
         glbUrl: result.url,
         glbPath: result.path,
-        sceneJson: sceneJson,
         status: 'completed',
     })
 

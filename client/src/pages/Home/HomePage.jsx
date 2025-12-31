@@ -7,14 +7,27 @@ import ModernBeforeAfterSection from '@/components/Home/ModernBeforeAfterSection
 import CompactFooter from '@/components/Layout/CompactFooter'
 import TopBar from '@/components/Layout/Topbar'
 import Lenis from '@studio-freight/lenis'
-import { motion } from 'framer-motion'
+import { motion, useScroll, useSpring } from 'framer-motion'
 import React, { useEffect, useRef } from 'react'
 
 const HomePage = () => {
   const lenisRef = useRef(null)
+  const { scrollYProgress } = useScroll()
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  })
 
   useEffect(() => {
-    // Initialize Lenis smooth scroll
+    // Check if it's a mobile device
+    const isMobile = window.innerWidth < 1024
+
+    if (isMobile) {
+      return
+    }
+
+    // Initialize Lenis smooth scroll only for desktop
     const lenis = new Lenis({
       duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -29,15 +42,21 @@ const HomePage = () => {
     lenisRef.current = lenis
 
     // Animation frame loop for Lenis
+    let rafId
     function raf(time) {
       lenis.raf(time)
-      requestAnimationFrame(raf)
+      rafId = requestAnimationFrame(raf)
     }
-    requestAnimationFrame(raf)
+    rafId = requestAnimationFrame(raf)
 
     // Cleanup
     return () => {
-      lenis.destroy()
+      if (lenis) {
+        lenis.destroy()
+      }
+      if (rafId) {
+        cancelAnimationFrame(rafId)
+      }
     }
   }, [])
 
@@ -145,11 +164,8 @@ const HomePage = () => {
       <motion.div
         className='fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#937c60] via-[#a68970] to-[#937c60] origin-left z-50'
         style={{
-          scaleX: 0,
+          scaleX,
         }}
-        initial={{ scaleX: 0 }}
-        whileInView={{ scaleX: 1 }}
-        transition={{ duration: 0.3 }}
       />
 
       {/* Background Gradient Overlay */}

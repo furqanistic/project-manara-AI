@@ -1,12 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    Banknote,
-    ChevronDown,
-    LogOut,
-    Menu,
-    Sparkles,
-    User,
-    X,
+  Banknote,
+  ChevronDown,
+  LogOut,
+  Menu,
+  User,
+  X,
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
@@ -87,7 +86,7 @@ const TopBar = () => {
       className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
         isScrolled
           ? "bg-white/80 backdrop-blur-md border-b border-gray-100 py-3 shadow-sm"
-          : "bg-transparent py-6"
+          : "bg-white/90 backdrop-blur-md md:bg-transparent py-4 md:py-6"
       }`}
     >
       <div className="max-w-[1600px] mx-auto px-6 md:px-12">
@@ -95,12 +94,11 @@ const TopBar = () => {
           
           {/* Logo Section */}
           <NavLink to="/" className="flex items-center gap-2 group z-50">
-            <div className="w-9 h-9 bg-[#937c60] rounded-xl flex items-center justify-center text-white shadow-lg shadow-[#937c60]/20 group-hover:scale-105 transition-transform duration-300">
-               <Sparkles size={18} fill="currentColor" className="text-white/90" />
-            </div>
-            <span className={`text-xl font-bold tracking-tight transition-colors duration-300 ${isScrolled || isMenuOpen ? 'text-gray-900' : 'text-gray-900'}`}>
-              Manāra
-            </span>
+            <img 
+              src="/logoicon.png" 
+              alt="Manara Logo" 
+              className="h-12 w-auto object-contain group-hover:scale-105 transition-transform duration-300"
+            />
           </NavLink>
 
           {/* Desktop Navigation */}

@@ -13,6 +13,7 @@
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
     "@gradio/client": "^2.0.1",
+    "@huggingface/inference": "^4.13.5",
     "@techstark/opencv-js": "^4.11.0-release.1",
     "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
@@ -20,6 +21,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
+    "eventsource-parser": "^3.0.6",
     "express": "^5.1.0",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^8.0.1",
