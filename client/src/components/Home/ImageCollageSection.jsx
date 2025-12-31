@@ -147,21 +147,6 @@ const ImageCollageSection = () => {
           })}
         </div>
 
-        {/* Structured Bottom CTA */}
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          className='mt-32 flex flex-col items-center gap-10'
-        >
-          <div className='h-[1px] w-48 bg-gray-100' />
-          <button className='group relative overflow-hidden px-12 py-5 bg-white border border-gray-100 rounded-full shadow-lg hover:shadow-xl transition-all duration-500'>
-             <div className='absolute inset-0 bg-gray-900 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[0.22, 1, 0.36, 1]' />
-             <span className='relative flex items-center gap-4 text-gray-900 font-bold text-lg group-hover:text-white transition-colors duration-500'>
-                Discover Full Anthology
-                <ArrowRight size={20} className='group-hover:translate-x-1 transition-transform' />
-             </span>
-          </button>
-        </motion.div>
       </div>
     </section>
   )

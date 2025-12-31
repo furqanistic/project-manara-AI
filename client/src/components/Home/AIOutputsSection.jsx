@@ -1,16 +1,16 @@
 import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion'
 import {
-    Activity,
-    ArrowRight,
-    Box,
-    Camera,
-    CheckCircle,
-    Cpu,
-    FileText,
-    Layers,
-    MapPin,
-    Sparkles,
-    Zap
+  Activity,
+  ArrowRight,
+  Box,
+  Camera,
+  CheckCircle,
+  Cpu,
+  FileText,
+  Layers,
+  MapPin,
+  Sparkles,
+  Zap
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/button'
@@ -84,9 +84,9 @@ const AIOutputsSection = () => {
           >
             <div className='flex items-center gap-4'>
               <div className='w-12 h-[1px] bg-[#937c60]'></div>
-              <span className='text-[10px] font-bold tracking-[0.5em] text-[#937c60] uppercase'>The Synthesis Engine</span>
+              <span className='text-[10px] font-medium tracking-[0.5em] text-[#937c60] uppercase'>The Synthesis Engine</span>
             </div>
-            <h2 className='text-6xl md:text-8xl font-bold text-gray-900 tracking-tightest leading-[0.85]'>
+            <h2 className='text-6xl md:text-8xl font-light text-gray-900 tracking-tightest leading-[0.85]'>
               Input Raw. <br />
               <span className='text-[#937c60] font-serif italic'>Output Pure.</span>
             </h2>
@@ -102,38 +102,44 @@ const AIOutputsSection = () => {
         </div>
 
         {/* Sophisticated Pipeline Tracker */}
-        <div className='mb-24 relative px-4'>
-           {/* Connecting Line */}
-           <div className='absolute top-10 left-0 right-0 h-[1.5px] bg-gray-100 hidden lg:block z-0'>
+        <div className='mb-24 relative'>
+           {/* Connecting Line - Now visible on mobile too */}
+           <div className='absolute top-6 lg:top-10 left-[10%] right-[10%] h-[1px] bg-gray-100 z-0'>
               <motion.div 
-                className='absolute h-full bg-[#937c60] shadow-[0_0_15px_rgba(147,124,96,0.5)]'
+                className='absolute h-full bg-[#937c60] shadow-[0_0_15px_rgba(147,124,96,0.3)]'
                 initial={{ width: '0%' }}
-                animate={{ width: `${(currentStep / steps.length) * 100}%` }}
+                animate={{ width: `${((currentStep - 0.5) / (steps.length - 1)) * 100}%` }}
                 transition={{ duration: 1, ease: 'easeInOut' }}
               />
            </div>
 
-           <div className='relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-0'>
+           <div className='relative z-10 flex items-start justify-between'>
               {steps.map((step, i) => (
-                <div key={i} className='flex flex-col items-center lg:items-start text-center lg:text-left group'>
-                  <div className='relative mb-6'>
+                <div key={i} className='flex-1 flex flex-col items-center group px-1'>
+                  <div className='relative mb-4 lg:mb-6'>
                     <motion.div 
-                      className={`w-20 h-20 rounded-[28px] flex items-center justify-center font-bold text-2xl transition-all duration-700 ${currentStep > i ? 'bg-[#937c60] text-white shadow-[0_20px_40px_rgba(147,124,96,0.25)]' : 'bg-white border border-gray-100 text-gray-200 shadow-sm'}`}
-                      animate={currentStep === i + 1 ? { scale: 1.15, rotate: [0, 5, -5, 0] } : { scale: 1 }}
+                      className={`w-12 h-12 lg:w-20 lg:h-20 rounded-2xl lg:rounded-[28px] flex items-center justify-center font-light text-sm lg:text-2xl transition-all duration-700 ${currentStep > i ? 'bg-[#937c60] text-white' : 'bg-white border border-gray-100 text-gray-200 shadow-sm'}`}
+                      animate={currentStep === i + 1 ? { scale: 1.1, y: -5 } : { scale: 1, y: 0 }}
                     >
-                      {currentStep > i ? <CheckCircle size={28} /> : <span>{step.number}</span>}
+                      {currentStep > i ? <CheckCircle size={isMobile ? 18 : 28} /> : <span>{step.number}</span>}
                     </motion.div>
+                    
                     {currentStep === i + 1 && (
                       <motion.div 
-                        className='absolute -inset-2 border-2 border-[#937c60]/20 rounded-[32px] border-dashed'
+                        className='absolute -inset-1.5 border border-[#937c60]/30 rounded-[18px] lg:rounded-[32px] border-dashed'
                         animate={{ rotate: 360 }}
                         transition={{ duration: 8, repeat: Infinity, ease: 'linear' }}
                       />
                     )}
                   </div>
-                  <div className='space-y-1 lg:pr-8'>
-                     <p className={`text-lg font-bold transition-colors duration-500 ${currentStep > i ? 'text-gray-900' : 'text-gray-300'}`}>{step.title}</p>
-                     <p className='text-[10px] uppercase tracking-widest text-[#937c60]/60 font-bold'>{step.desc}</p>
+                  
+                  <div className='text-center space-y-0.5 lg:space-y-1 w-full max-w-[80px] lg:max-w-none'>
+                     <p className={`text-[9px] lg:text-lg font-light leading-tight transition-colors duration-500 ${currentStep > i ? 'text-gray-900' : 'text-gray-300'}`}>
+                        {step.title}
+                     </p>
+                     <p className='text-[7px] lg:text-[10px] uppercase tracking-wider lg:tracking-widest text-[#937c60]/60 font-medium'>
+                        {step.desc}
+                     </p>
                   </div>
                 </div>
               ))}
@@ -151,9 +157,8 @@ const AIOutputsSection = () => {
            >
               <div className='h-full bg-white rounded-[48px] p-10 md:p-14 border border-gray-100 shadow-[0_30px_60px_rgba(0,0,0,0.02)] flex flex-col justify-between group overflow-hidden relative'>
                  <div className='absolute top-0 right-0 w-32 h-32 bg-[#937c60]/5 blur-3xl rounded-full' />
-                 
-                 <div className='space-y-4 mb-20'>
-                    <h3 className='text-3xl font-bold text-gray-900 tracking-tight'>Neural Input</h3>
+                                  <div className='space-y-4 mb-20'>
+                    <h3 className='text-3xl font-light text-gray-900 tracking-tight'>Neural Input</h3>
                     <p className='text-gray-400 font-medium'>Capture. Map. Synthesize.</p>
                  </div>
                  
@@ -168,8 +173,8 @@ const AIOutputsSection = () => {
                             <item.icon size={22} />
                          </div>
                          <div className='space-y-1'>
-                            <p className='font-bold text-gray-900'>{item.title}</p>
-                            <p className='text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none'>{item.detail}</p>
+                            <p className='font-medium text-gray-900'>{item.title}</p>
+                            <p className='text-[10px] text-gray-400 font-medium uppercase tracking-widest leading-none'>{item.detail}</p>
                          </div>
                       </motion.div>
                     ))}
@@ -206,7 +211,7 @@ const AIOutputsSection = () => {
               <div className='text-center space-y-2'>
                  <div className='flex items-center gap-2 justify-center'>
                     <Cpu size={14} className='text-[#937c60]' />
-                    <p className='text-[10px] font-bold text-[#937c60] uppercase tracking-[0.4em]'>Active Core</p>
+                    <p className='text-[10px] font-medium text-[#937c60] uppercase tracking-[0.4em]'>Active Core</p>
                  </div>
                  <p className='text-gray-300 font-mono text-[10px] tracking-widest'>Lat: 2.4ms / Gen: v4.8</p>
               </div>
@@ -234,10 +239,10 @@ const AIOutputsSection = () => {
                          <div className='relative z-10 flex flex-col h-full'>
                             <div className='flex justify-between items-center mb-10'>
                                <div className='space-y-1'>
-                                  <h3 className='text-3xl font-bold text-white tracking-tight'>Neural Output</h3>
+                                  <h3 className='text-3xl font-light text-white tracking-tight'>Neural Output</h3>
                                   <p className='text-gray-400 font-medium text-sm'>Cinematic HD Generation</p>
                                </div>
-                               <div className='px-4 py-2 bg-[#937c60]/20 text-[#a68970] rounded-full text-[10px] font-bold uppercase tracking-widest border border-[#937c60]/30 shadow-sm'>
+                               <div className='px-4 py-2 bg-[#937c60]/20 text-[#a68970] rounded-full text-[10px] font-medium uppercase tracking-widest border border-[#937c60]/30 shadow-sm'>
                                   Verified
                                </div>
                             </div>
@@ -252,7 +257,7 @@ const AIOutputsSection = () => {
                                <div className='absolute bottom-6 left-6 right-6 p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/10 flex items-center justify-between'>
                                    <div className='flex items-center gap-3'>
                                       <Box size={16} className='text-[#937c60]' />
-                                      <span className='text-[10px] font-bold text-white uppercase tracking-widest'>Render v2.4</span>
+                                      <span className='text-[10px] font-medium text-white uppercase tracking-widest'>Render v2.4</span>
                                    </div>
                                    <span className='text-[8px] font-mono text-white/40'>4096 x 2730 px</span>
                                </div>
@@ -260,10 +265,10 @@ const AIOutputsSection = () => {
                             
                             <div className='flex flex-wrap items-center justify-between gap-6'>
                                <div className='space-y-1'>
-                                  <p className='text-sm font-bold text-white'>Neural Moodboard Arch_12</p>
+                                  <p className='text-sm font-medium text-white'>Neural Moodboard Arch_12</p>
                                   <p className='text-[10px] text-gray-500 font-medium'>Optimized for UAE High-Tier Residential</p>
                                </div>
-                               <Button className='bg-white text-gray-900 hover:bg-white/90 rounded-2xl px-8 h-12 font-bold transition-all active:scale-95'>
+                               <Button className='bg-white text-gray-900 hover:bg-white/90 rounded-2xl px-8 h-12 font-medium transition-all active:scale-95'>
                                   Explore Deck
                                </Button>
                             </div>
@@ -278,7 +283,7 @@ const AIOutputsSection = () => {
                          <div className='w-20 h-20 rounded-full bg-stone-50 flex items-center justify-center text-gray-300 mb-6'>
                             <Activity size={32} className='animate-pulse' />
                          </div>
-                         <h4 className='text-xl font-bold text-gray-400 mb-2'>Synthesis in Progress</h4>
+                         <h4 className='text-xl font-light text-gray-400 mb-2'>Synthesis in Progress</h4>
                          <p className='text-sm text-gray-300'>Awaiting neural map completion...</p>
                       </motion.div>
                     )}
@@ -295,22 +300,22 @@ const AIOutputsSection = () => {
              className='text-center mb-16 space-y-4'
            >
               <div className='h-[1px] w-24 bg-gray-200 mx-auto mb-6' />
-              <h4 className='text-[11px] font-bold text-[#937c60] uppercase tracking-[0.6em]'>Included Deliverables</h4>
+              <h4 className='text-[11px] font-light text-[#937c60] uppercase tracking-[0.6em]'>Included Deliverables</h4>
            </motion.div>
            
-           <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6'>
+           <div className='flex flex-row lg:grid lg:grid-cols-4 gap-2 lg:gap-6'>
               {deliverables.map((item, i) => (
                 <motion.div 
                   key={i}
-                  whileHover={{ y: -10, backgroundColor: 'white', borderColor: '#937c60/20' }}
-                  className='p-10 rounded-[40px] border border-gray-100/50 bg-[#faf8f6] transition-all duration-500 group text-center flex flex-col items-center'
+                  whileHover={!isMobile ? { y: -10, backgroundColor: 'white', borderColor: '#937c60/20' } : {}}
+                  className='flex-1 p-4 lg:p-10 rounded-[24px] lg:rounded-[40px] border border-gray-100/50 bg-white/50 lg:bg-[#faf8f6] transition-all duration-500 group text-center flex flex-col items-center'
                 >
-                   <div className='w-20 h-20 rounded-[30px] bg-white border border-gray-100 flex items-center justify-center mb-8 group-hover:bg-gray-900 group-hover:text-white group-hover:scale-110 transition-all duration-500 shadow-sm'>
-                      <item.icon size={26} />
+                   <div className='w-10 h-10 lg:w-20 lg:h-20 rounded-xl lg:rounded-[30px] bg-white border border-gray-100 flex items-center justify-center mb-3 lg:mb-8 group-hover:bg-gray-900 group-hover:text-white group-hover:scale-110 transition-all duration-500 shadow-sm'>
+                      <item.icon size={isMobile ? 16 : 26} />
                    </div>
-                   <div className='space-y-3'>
-                      <p className='text-lg font-bold text-gray-900 leading-tight'>{item.title}</p>
-                      <p className='text-[10px] font-bold text-gray-400 uppercase tracking-widest leading-relaxed px-4'>{item.meta}</p>
+                   <div className='space-y-1 lg:space-y-3'>
+                      <p className='text-[10px] lg:text-lg font-light text-gray-900 leading-tight'>{item.title}</p>
+                      <p className='text-[7px] lg:text-[10px] font-medium text-gray-400 uppercase tracking-wider lg:tracking-widest leading-relaxed lg:px-4'>{item.meta}</p>
                    </div>
                 </motion.div>
               ))}

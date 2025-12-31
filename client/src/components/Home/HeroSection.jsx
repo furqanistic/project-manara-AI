@@ -50,7 +50,7 @@ const HeroSection = () => {
   return (
     <section 
       onMouseMove={handleMouseMove}
-      className='relative min-h-screen bg-[#faf8f6] font-["Poppins"] selection:bg-[#937c60]/10 overflow-hidden flex items-center pt-32 md:pt-40'
+      className='relative min-h-screen bg-[#faf8f6] font-["Poppins"] selection:bg-[#937c60]/10 overflow-hidden flex items-center md:pt-40'
     >
       {/* Cinematic Background Ambience */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>

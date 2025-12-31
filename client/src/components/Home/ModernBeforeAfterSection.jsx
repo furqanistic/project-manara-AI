@@ -1,18 +1,18 @@
 import {
-    AnimatePresence,
-    motion,
-    useMotionValue,
-    useScroll,
-    useSpring,
-    useTransform,
+  AnimatePresence,
+  motion,
+  useMotionValue,
+  useScroll,
+  useSpring,
+  useTransform,
 } from 'framer-motion'
 import {
-    ArrowRight,
-    ChevronRight,
-    MapPin,
-    MousePointer2,
-    Sparkles,
-    Zap
+  ArrowRight,
+  ChevronRight,
+  MapPin,
+  MousePointer2,
+  Sparkles,
+  Zap
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/button'
@@ -217,7 +217,7 @@ const ModernBeforeAfterSection = () => {
                   className='group'
                 >
                    <div className='flex items-start gap-5'>
-                      <div className='w-12 h-12 rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-[#937c60] group-hover:bg-[#937c60] group-hover:text-white transition-all duration-500'>
+                      <div className='w-12 h-12 rounded-2xl  flex items-center justify-center text-[#937c60] transition-all duration-500'>
                          <step.icon size={20} />
                       </div>
                       <div className='space-y-1'>

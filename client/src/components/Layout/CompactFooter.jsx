@@ -1,81 +1,70 @@
 import {
-   ArrowRight,
-   Instagram,
-   Linkedin,
-   Mail,
-   MapPin,
-   Sparkles,
-   Twitter,
+    ArrowRight,
+    Instagram,
+    Linkedin,
+    Mail,
+    MapPin,
+    Sparkles,
+    Twitter,
 } from 'lucide-react'
 import React from 'react'
 
 const CompactFooter = () => {
-  const brandColor = '#937c60'
-
   return (
-    <footer className='relative bg-white border-t border-gray-100 py-20 overflow-hidden'>
+    <footer className='relative bg-[#faf8f6] border-t border-gray-100 py-10 overflow-hidden'>
       {/* Subtle Background Pattern */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
         <div className='absolute top-0 right-0 w-64 h-64 bg-[#937c60]/5 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full' />
       </div>
 
-      <div className='relative z-10 max-w-[1500px] mx-auto px-10 md:px-20'>
-        <div className='grid lg:grid-cols-12 gap-16 mb-20'>
+      <div className='relative z-10 max-w-[1500px] mx-auto px-6 md:px-12'>
+        <div className='flex flex-col md:flex-row justify-between items-center gap-8 mb-10'>
           {/* Brand Identity */}
-          <div className='lg:col-span-5 space-y-8'>
-             <div className='flex items-center gap-4'>
-                <div className='w-12 h-12 rounded-2xl bg-[#937c60] flex items-center justify-center text-white shadow-[0_10px_20px_rgba(147,124,96,0.3)]'>
-                   <Sparkles size={24} />
-                </div>
-                <h2 className='text-3xl font-bold text-gray-900 tracking-tighter'>Manāra</h2>
+          <div className='space-y-4 max-w-sm text-center md:text-left'>
+             <div className='flex items-center justify-center md:justify-start gap-3'>
+                <img 
+                  src="/logoicon.png" 
+                  alt="Manara Logo" 
+                  className="h-8 w-auto object-contain"
+                />
              </div>
-             <p className='text-gray-400 font-medium text-lg leading-relaxed max-w-md'>
-               The professional design engine for modern spaces. Synthesizing imagination intoexecutable architecture.
+             <p className='text-gray-400 font-medium text-[13px] leading-relaxed'>
+               The professional design engine for modern spaces. Synthesizing imagination into architecture.
              </p>
-             <div className='flex gap-4'>
-                {[Instagram, Linkedin, Twitter].map((Icon, i) => (
-                  <a key={i} href="#" className='w-12 h-12 rounded-2xl border border-gray-100 flex items-center justify-center text-gray-400 hover:text-[#937c60] hover:border-[#937c60]/20 transition-all'>
-                     <Icon size={20} />
-                  </a>
-                ))}
-             </div>
           </div>
 
-          {/* Navigation Links */}
-          <div className='lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-12'>
-             <div className='space-y-6'>
-                <h4 className='text-[10px] font-bold text-[#937c60] uppercase tracking-widest'>Engine</h4>
-                <ul className='space-y-4'>
-                   {['3D Visualization', 'Moodboarding', 'Neural Mapping'].map(link => (
-                     <li key={link}><a href="#" className='text-gray-400 font-semibold hover:text-gray-900 transition-colors'>{link}</a></li>
-                   ))}
-                </ul>
+          {/* Navigation Links - Condensed Row - Matching Topbar */}
+          <div className='flex items-center gap-8 md:gap-12'>
+             <div className='flex items-center gap-6'>
+                {[
+                  { name: 'Home', href: '/' },
+                  { name: 'Studio', href: '/visualizer' },
+                  { name: 'Pricing', href: '/pricing' },
+                  { name: 'About', href: '/about' }
+                ].map(link => (
+                  <a key={link.name} href={link.href} className='text-gray-500 font-light text-[12px] hover:text-gray-900 transition-colors whitespace-nowrap'>{link.name}</a>
+                ))}
              </div>
-             <div className='space-y-6'>
-                <h4 className='text-[10px] font-bold text-[#937c60] uppercase tracking-widest'>Architecture</h4>
-                <ul className='space-y-4'>
-                   {['UAE Marketplace', 'Installer Mesh', 'Material Logs'].map(link => (
-                     <li key={link}><a href="#" className='text-gray-400 font-semibold hover:text-gray-900 transition-colors'>{link}</a></li>
-                   ))}
-                </ul>
-             </div>
-             <div className='space-y-6'>
-                <h4 className='text-[10px] font-bold text-[#937c60] uppercase tracking-widest'>Network</h4>
-                <ul className='space-y-4 text-gray-400 font-semibold'>
-                   <li className='flex items-center gap-3'><MapPin size={16} className='text-[#937c60]' /> Dubai HQ</li>
-                   <li className='flex items-center gap-3'><Mail size={16} className='text-[#937c60]' /> hello@manara.ai</li>
-                </ul>
+             <div className='h-4 w-px bg-gray-200 hidden md:block' />
+             <div className='flex gap-3'>
+                {[Instagram, Linkedin, Twitter].map((Icon, i) => (
+                  <a key={i} href="#" className='text-gray-400 hover:text-[#937c60] transition-colors'>
+                     <Icon size={16} />
+                  </a>
+                ))}
              </div>
           </div>
         </div>
 
         {/* Footer Bottom */}
-        <div className='pt-12 border-t border-gray-50 flex flex-col md:flex-row justify-between items-center gap-8'>
-           <p className='text-gray-400 text-xs font-bold uppercase tracking-widest'>© 2025 Manāra Design Engine</p>
-           <div className='flex gap-10'>
-              <a href="#" className='text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-gray-900'>Privacy</a>
-              <a href="#" className='text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-gray-900'>Terms</a>
-              <a href="#" className='text-gray-400 text-xs font-bold uppercase tracking-widest hover:text-gray-900'>Security</a>
+        <div className='pt-6 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4'>
+           <p className='text-gray-400 text-[9px] font-medium uppercase tracking-widest'>© 2025 Manāra Design Engine</p>
+           <div className='flex gap-6 uppercase tracking-widest text-[9px] font-medium'>
+              {['Privacy', 'Terms', 'Security'].map(item => (
+                <a key={item} href="#" className='text-gray-400 hover:text-gray-900 transition-colors'>
+                  {item}
+                </a>
+              ))}
            </div>
         </div>
       </div>
