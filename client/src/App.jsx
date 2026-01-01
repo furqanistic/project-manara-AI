@@ -1,17 +1,18 @@
 // File: project-manara-AI/client/src/App.jsx
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import React from 'react'
-import { Toaster } from 'react-hot-toast'
+import React, { useEffect } from 'react'
+import { Toaster, toast } from 'react-hot-toast'
 import { Provider, useSelector } from 'react-redux'
 import {
-    BrowserRouter,
-    Navigate,
-    Route,
-    Routes,
-    useLocation,
+  BrowserRouter,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
 } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
-import { MoodboardHistroyDeatils } from './components/Moodboard/MoodboardHistroyDeatils'
+import ScrollToTop from './components/Layout/ScrollToTop'
+import { MoodboardHistoryDetails } from './components/Moodboard/MoodboardHistoryDetails'
 import AboutPage from './pages/About/AboutPage'
 import FloorPlanGenerator from './pages/AIBuilders/FloorPlanGenerator'
 import MoodboardGenerator from './pages/AIBuilders/MoodboardGenerator'
@@ -41,6 +42,16 @@ const queryClient = new QueryClient({
 const RequireAuth = ({ children, requireAdmin = false }) => {
   const { currentUser } = useSelector((state) => state.user)
   const location = useLocation()
+
+  useEffect(() => {
+    if (!currentUser) {
+      toast.dismiss('auth-error'); // Dismiss any existing auth errors
+      toast.error('Please create an account or log in to access this feature.', {
+        id: 'auth-error',
+        duration: 4000,
+      });
+    }
+  }, [currentUser]);
 
   if (!currentUser) {
     return <Navigate to='/auth?type=login' state={{ from: location }} replace />
@@ -99,7 +110,7 @@ const AppRoutes = () => {
           path="/moodboards/:id"
           element={
             <RequireAuth>
-              <MoodboardHistroyDeatils />
+              <MoodboardHistoryDetails />
             </RequireAuth>
           }
         />
@@ -132,7 +143,42 @@ const App = () => {
       <PersistGate loading={null} persistor={persistor}>
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
-            <Toaster position='top-center' />
+            <ScrollToTop />
+            <Toaster
+              position="top-center"
+              toastOptions={{
+                className: '',
+                style: {
+                  border: '1px solid rgba(141, 119, 94, 0.1)',
+                  padding: '12px 20px',
+                  color: '#1f2937',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(8px)',
+                  borderRadius: '100px',
+                  boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.1)',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  letterSpacing: '-0.01em',
+                },
+                success: {
+                  iconTheme: {
+                    primary: '#8d775e',
+                    secondary: 'white',
+                  },
+                },
+                error: {
+                  iconTheme: {
+                    primary: '#ef4444',
+                    secondary: 'white',
+                  },
+                  style: {
+                    border: '1px solid rgba(239, 68, 68, 0.1)',
+                    background: 'rgba(254, 242, 242, 0.95)',
+                    color: '#991b1b',
+                  },
+                },
+              }}
+            />
             <AppRoutes />
           </BrowserRouter>
         </QueryClientProvider>

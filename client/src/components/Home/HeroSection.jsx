@@ -50,24 +50,24 @@ const HeroSection = () => {
   return (
     <section 
       onMouseMove={handleMouseMove}
-      className='relative min-h-screen bg-[#faf8f6] font-["Poppins"] selection:bg-[#937c60]/10 overflow-hidden flex items-center md:pt-40'
+      className='relative min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] font-["Poppins"] selection:bg-[#937c60]/10 overflow-hidden flex items-center md:pt-40 transition-colors duration-500'
     >
       {/* Cinematic Background Ambience */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
         <div 
-          className='absolute top-[-10%] right-[-5%] w-[70%] h-[70%] rounded-full bg-[#937c60]/5 blur-[140px] transition-transform duration-1000'
+          className='absolute top-[-10%] right-[-5%] w-[70%] h-[70%] rounded-full bg-[#937c60]/5 dark:bg-[#937c60]/10 blur-[140px] transition-transform duration-1000'
           style={{ transform: `translate(${mousePos.x}px, ${mousePos.y}px)` }}
         />
         <div 
-          className='absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#b8a58c]/3 blur-[120px] transition-transform duration-1000'
+          className='absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#b8a58c]/3 dark:bg-[#b8a58c]/5 blur-[120px] transition-transform duration-1000'
           style={{ transform: `translate(${-mousePos.x}px, ${-mousePos.y}px)` }}
         />
         {/* Grain Overlay */}
-        <div className='absolute inset-0 opacity-[0.03] pointer-events-none' 
+        <div className='absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none' 
              style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }} />
       </div>
 
-      <main className='relative z-10 max-w-[1500px] mx-auto px-6 md:px-20 w-full'>
+      <main className='relative z-10 max-w-[1600px] mx-auto px-6 md:px-20 w-full'>
         <div className='grid xl:grid-cols-12 gap-16 items-center'>
           
           {/* Left Content Column */}
@@ -89,17 +89,17 @@ const HeroSection = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className='text-5xl md:text-8xl lg:text-9xl font-bold text-gray-900 tracking-tightest leading-[0.95] md:leading-[0.85]'
+                className='text-5xl md:text-8xl lg:text-9xl font-bold text-gray-900 dark:text-white tracking-tightest leading-[0.95] md:leading-[0.85]'
               >
                 Synthesize <br />
-                <span className='text-[#937c60] font-serif italic italic'>Your Vision.</span>
+                <span className='text-[#937c60] font-serif italic'>Your Vision.</span>
               </motion.h1>
               
               <motion.p 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.4 }}
-                className='text-gray-400 font-medium text-base md:text-2xl max-w-xl leading-relaxed'
+                className='text-gray-400 dark:text-gray-500 font-medium text-base md:text-2xl max-w-xl leading-relaxed'
               >
                 Architectural intelligence that translates raw imagination into photorealistic, executable spaces in seconds.
               </motion.p>
@@ -113,14 +113,14 @@ const HeroSection = () => {
             >
                <Button 
                  onClick={() => window.location.href = '/moodboard'}
-                 className='w-full sm:w-auto bg-gray-900 hover:bg-black text-white px-8 sm:px-10 py-6 sm:py-7 rounded-full font-bold text-lg flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 group'
+                 className='w-full sm:w-auto bg-gray-900 dark:bg-white dark:text-black hover:bg-black dark:hover:bg-gray-200 text-white px-8 sm:px-10 py-6 sm:py-7 rounded-full font-bold text-lg flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 group'
                >
-                 Begin Synthesis
+                 Start Creating
                  <ArrowRight size={20} className='group-hover:translate-x-1 transition-transform' />
                </Button>
                
-               <a href="/pricing" className='w-full sm:w-auto justify-center group flex items-center gap-3 text-gray-500 font-bold hover:text-gray-900 transition-colors py-4 px-6 rounded-full hover:bg-gray-100/50'>
-                  Enterprise Solutions
+               <a href="/pricing" className='w-full sm:w-auto justify-center group flex items-center gap-3 text-gray-500 dark:text-gray-400 font-bold hover:text-gray-900 dark:hover:text-white transition-colors py-4 px-6 rounded-full hover:bg-gray-100/50 dark:hover:bg-white/5'>
+                  See Pricing
                   <ChevronRight size={18} className='group-hover:translate-x-1 transition-transform text-[#937c60]' />
                </a>
             </motion.div>
@@ -130,7 +130,7 @@ const HeroSection = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 1 }}
-              className='flex flex-nowrap justify-between md:justify-start gap-2 md:gap-12 pt-10 md:pt-16 border-t border-gray-100 max-w-2xl w-full md:w-auto overflow-x-auto'
+              className='flex flex-nowrap justify-between md:justify-start gap-2 md:gap-12 pt-10 md:pt-16 border-t border-gray-100 dark:border-white/10 max-w-2xl w-full md:w-auto overflow-x-auto'
             >
                {[
                  { label: 'Latency', value: '2.4ms', icon: Zap },
@@ -138,12 +138,12 @@ const HeroSection = () => {
                  { label: 'Uptime', value: '99.9%', icon: Globe }
                ].map((stat, i) => (
                  <div key={i} className='flex items-center gap-2 md:gap-4 group min-w-max'>
-                    <div className='w-8 h-8 md:w-10 md:h-10 rounded-xl bg-white border border-gray-100 flex items-center justify-center text-[#937c60] shadow-sm transform group-hover:scale-110 transition-transform'>
+                    <div className='w-8 h-8 md:w-10 md:h-10 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center text-[#937c60] shadow-sm transform group-hover:scale-110 transition-transform'>
                        <stat.icon size={16} className='md:w-[18px] md:h-[18px]' />
                     </div>
                     <div>
-                        <p className='text-sm md:text-xl font-bold text-gray-900 tracking-tight'>{stat.value}</p>
-                        <p className='text-[8px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest'>{stat.label}</p>
+                        <p className='text-sm md:text-xl font-bold text-gray-900 dark:text-white tracking-tight'>{stat.value}</p>
+                        <p className='text-[8px] md:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest'>{stat.label}</p>
                     </div>
                  </div>
                ))}
@@ -159,12 +159,12 @@ const HeroSection = () => {
           >
             {/* Main Image Frame with Layered Elements */}
             <div className='relative'>
-                <div className='absolute -inset-4 border border-gray-900/5 rounded-[60px] pointer-events-none' />
-                <div className='absolute -inset-8 border border-gray-900/[0.02] rounded-[70px] pointer-events-none' />
+                <div className='absolute -inset-4 border border-gray-900/5 dark:border-white/5 rounded-[60px] pointer-events-none' />
+                <div className='absolute -inset-8 border border-gray-900/[0.02] dark:border-white/[0.02] rounded-[70px] pointer-events-none' />
                 
-                <div className='bg-white rounded-[56px] p-4 shadow-[0_50px_100px_rgba(147,124,96,0.12)] border border-[#937c60]/10 overflow-hidden relative group'>
+                <div className='bg-white dark:bg-[#111] rounded-[56px] p-4 shadow-[0_50px_100px_rgba(147,124,96,0.12)] border border-[#937c60]/10 dark:border-white/5 overflow-hidden relative group'>
                     {/* Editorial Image container */}
-                    <div className='aspect-[4/5] rounded-[44px] overflow-hidden relative bg-stone-100'>
+                    <div className='aspect-[4/5] rounded-[44px] overflow-hidden relative bg-stone-100 dark:bg-stone-900'>
                         <img 
                             src='https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1000&auto=format' 
                             alt='Neural Synthesis' 
@@ -230,15 +230,15 @@ const HeroSection = () => {
                 <motion.div 
                     animate={{ y: [0, -15, 0] }}
                     transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                    className='absolute -top-12 -right-8 bg-white p-6 rounded-3xl shadow-xl border border-gray-100 z-30'
+                    className='absolute -top-12 -right-8 bg-white dark:bg-[#1a1a1a] p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-white/10 z-30'
                 >
                     <div className='flex items-center gap-4'>
                         <div className='w-12 h-12 rounded-2xl bg-[#937c60]/10 flex items-center justify-center text-[#937c60]'>
                             <MousePointer2 size={24} />
                         </div>
                         <div>
-                            <p className='text-xs font-bold text-gray-900'>Neural Drag</p>
-                            <p className='text-[9px] text-gray-400 font-bold uppercase tracking-widest'>Active Control</p>
+                            <p className='text-xs font-bold text-gray-900 dark:text-white'>Neural Drag</p>
+                            <p className='text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest'>Active Control</p>
                         </div>
                     </div>
                 </motion.div>
@@ -250,13 +250,13 @@ const HeroSection = () => {
       {/* Aesthetic Accents */}
       {!isMobile && (
         <React.Fragment>
-          <div className='absolute left-10 top-1/2 -translate-y-1/2 h-64 flex flex-col items-center justify-between opacity-20 pointer-events-none'>
+          <div className='absolute left-10 top-1/2 -translate-y-1/2 h-64 flex flex-col items-center justify-between opacity-20 dark:opacity-40 pointer-events-none'>
             <div className='w-[1px] h-24 bg-[#937c60]' />
             <span className='[writing-mode:vertical-lr] text-[10px] font-bold tracking-[0.8em] uppercase text-[#937c60]'>Architectural Essence</span>
             <div className='w-[1px] h-24 bg-[#937c60]' />
           </div>
-          <div className='absolute right-10 bottom-10 opacity-10 pointer-events-none'>
-            <span className='text-[12vw] font-black italic font-serif text-gray-900 leading-none'>2025</span>
+          <div className='absolute right-10 bottom-10 opacity-10 dark:opacity-20 pointer-events-none'>
+            <span className='text-[12vw] font-black italic font-serif text-gray-900 dark:text-white leading-none'>2025</span>
           </div>
         </React.Fragment>
       )}

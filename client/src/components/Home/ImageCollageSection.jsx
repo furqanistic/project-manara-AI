@@ -65,14 +65,14 @@ const ImageCollageSection = () => {
   ]
 
   return (
-    <section ref={containerRef} className='relative py-24 bg-[#faf8f6] overflow-hidden'>
+    <section ref={containerRef} className='relative py-24 bg-[#faf8f6] dark:bg-[#0a0a0a] overflow-hidden transition-colors duration-500'>
       <div className='max-w-[1400px] mx-auto px-6 md:px-12'>
         {/* Modern Header - Centered & Organized */}
         <div className='flex flex-col items-center text-center mb-24 max-w-3xl mx-auto'>
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             whileInView={{ opacity: 1, scale: 1 }}
-            className='flex items-center gap-3 mb-6 bg-white px-6 py-2 rounded-full border border-gray-100 shadow-sm'
+            className='flex items-center gap-3 mb-6 bg-white dark:bg-white/5 px-6 py-2 rounded-full border border-gray-100 dark:border-white/10 shadow-sm'
           >
             <span className='text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase'>Curated Collection</span>
           </motion.div>
@@ -80,7 +80,7 @@ const ImageCollageSection = () => {
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
-            className='text-5xl md:text-7xl font-bold tracking-tight text-gray-900 mb-8 leading-[1.1]'
+            className='text-5xl md:text-7xl font-bold tracking-tight text-gray-900 dark:text-white mb-8 leading-[1.1]'
           >
             Visions of <span className='text-[#937c60] font-serif italic'>Modernity.</span>
           </motion.h2>
@@ -88,7 +88,7 @@ const ImageCollageSection = () => {
           <motion.p 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            className='text-gray-400 text-lg md:text-xl font-medium leading-relaxed'
+            className='text-gray-400 dark:text-gray-500 text-lg md:text-xl font-medium leading-relaxed'
           >
             Explore a structured anthology of AI-synthesized environments, 
             where precision meets imagination.
@@ -117,7 +117,7 @@ const ImageCollageSection = () => {
                     className='group relative'
                   >
                     {/* Image Container */}
-                    <div className={`relative w-full ${img.aspect} overflow-hidden rounded-[32px] md:rounded-[48px] bg-gray-100 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] group-hover:shadow-[0_40px_80px_-20px_rgba(147,124,96,0.15)] transition-all duration-700`}>
+                    <div className={`relative w-full ${img.aspect} overflow-hidden rounded-[32px] md:rounded-[48px] bg-gray-100 dark:bg-gray-800 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] group-hover:shadow-[0_40px_80px_-20px_rgba(147,124,96,0.15)] transition-all duration-700`}>
                       <img 
                         src={img.url} 
                         alt={img.title}
@@ -132,11 +132,11 @@ const ImageCollageSection = () => {
                     <div className='mt-6 px-2 flex justify-between items-center'>
                       <div className='space-y-1'>
                         <p className='text-[10px] font-bold text-[#937c60] tracking-widest uppercase'>{img.tag}</p>
-                        <h3 className='text-xl lg:text-2xl font-bold text-gray-900 tracking-tight transition-colors group-hover:text-[#937c60]'>
+                        <h3 className='text-xl lg:text-2xl font-bold text-gray-900 dark:text-white tracking-tight transition-colors group-hover:text-[#937c60]'>
                           {img.title}
                         </h3>
                       </div>
-                      <div className='w-10 h-10 rounded-full border border-gray-100 flex items-center justify-center text-gray-900 opacity-0 group-hover:opacity-100 transition-all duration-500 -translate-x-4 group-hover:translate-x-0'>
+                      <div className='w-10 h-10 rounded-full border border-gray-100 dark:border-white/10 flex items-center justify-center text-gray-900 dark:text-white opacity-0 group-hover:opacity-100 transition-all duration-500 -translate-x-4 group-hover:translate-x-0 bg-white dark:bg-white/5'>
                         <ArrowRight size={18} />
                       </div>
                     </div>

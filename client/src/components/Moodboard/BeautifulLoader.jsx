@@ -1,8 +1,8 @@
 // File: project-manara-AI/client/src/components/Moodboard/BeautifulLoader.jsx
 
 import { motion } from "framer-motion";
-import { BRAND_COLOR, BRAND_COLOR_LIGHT } from "./Moodboardconfig";
 import { CheckCircle2, Sparkles } from "lucide-react";
+import { BRAND_COLOR, BRAND_COLOR_LIGHT } from "./Moodboardconfig";
 const BeautifulLoader = ({ progressSteps = [], phase = "image" }) => {
   const imagePhaseSteps = [
     "Creating moodboard draft",
@@ -32,27 +32,23 @@ const BeautifulLoader = ({ progressSteps = [], phase = "image" }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-gradient-to-br from-gray-900/95 via-black/95 to-gray-900/95 backdrop-blur-sm"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-[#faf8f6]/95 dark:bg-[#0a0a0a]/95 backdrop-blur-xl"
     >
       <div className="text-center max-w-md">
         <motion.div
-          className="relative w-32 h-32 mx-auto mb-8"
+          className="relative w-32 h-32 mx-auto mb-12"
           animate={{
-            scale: [1, 1.1, 1],
+            scale: [1, 1.05, 1],
           }}
           transition={{
-            duration: 2,
+            duration: 4,
             repeat: Infinity,
             ease: "easeInOut",
           }}
         >
           {/* Outer rotating ring */}
           <motion.div
-            className="absolute inset-0 rounded-full border-4 border-transparent"
-            style={{
-              borderTopColor: BRAND_COLOR,
-              borderRightColor: BRAND_COLOR_LIGHT,
-            }}
+            className="absolute inset-0 rounded-full border-[1px] border-transparent border-t-[#8d775e]"
             animate={{ rotate: 360 }}
             transition={{
               duration: 3,
@@ -63,59 +59,50 @@ const BeautifulLoader = ({ progressSteps = [], phase = "image" }) => {
 
           {/* Middle rotating ring */}
           <motion.div
-            className="absolute inset-3 rounded-full border-4 border-transparent"
-            style={{
-              borderBottomColor: BRAND_COLOR_LIGHT,
-              borderLeftColor: BRAND_COLOR,
-            }}
+            className="absolute inset-4 rounded-full border-[1px] border-transparent border-b-[#8d775e]/30"
             animate={{ rotate: -360 }}
             transition={{
-              duration: 2,
+              duration: 5,
               repeat: Infinity,
               ease: "linear",
             }}
           />
 
-          {/* Inner pulsing circle */}
+          {/* Inner brand emblem */}
           <motion.div
             className="absolute inset-6 rounded-full flex items-center justify-center"
-            style={{
-              background: `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR_LIGHT})`,
-            }}
             animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.8, 1, 0.8],
+              opacity: [0.5, 1, 0.5],
             }}
             transition={{
-              duration: 1.5,
+              duration: 2,
               repeat: Infinity,
               ease: "easeInOut",
             }}
           >
-            <Sparkles className="w-8 h-8 text-white" />
+            <img src="/min-logo.png" alt="Manara" className="w-12 h-12 object-contain" />
           </motion.div>
 
-          {/* Orbiting dots */}
+          {/* Orbiting particles */}
           {[0, 120, 240].map((angle, i) => (
             <motion.div
               key={i}
-              className="absolute w-3 h-3 rounded-full"
+              className="absolute w-1 h-1 rounded-full bg-[#8d775e]"
               style={{
-                backgroundColor: BRAND_COLOR,
                 top: "50%",
                 left: "50%",
                 transformOrigin: "0 0",
               }}
               animate={{
                 rotate: [angle, angle + 360],
-                x: [40, 40],
-                y: [-1.5, -1.5],
+                x: [48, 48],
+                y: [-0.5, -0.5],
               }}
               transition={{
-                duration: 3,
+                duration: 4,
                 repeat: Infinity,
                 ease: "linear",
-                delay: i * 0.3,
+                delay: i * 0.5,
               }}
             />
           ))}
@@ -126,19 +113,19 @@ const BeautifulLoader = ({ progressSteps = [], phase = "image" }) => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <h2 className="text-3xl font-bold text-white mb-3">
+          <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
             {phase === "image"
               ? "Generating Your Moodboard"
               : "Enriching Design Details"}
           </h2>
-          <p className="text-gray-300 text-lg mb-8">
+          <p className="text-gray-500 dark:text-gray-400 text-lg mb-8">
             {phase === "image"
               ? "Creating your perfect design image..."
               : "Adding materials, furniture, lighting details..."}
           </p>
 
           {/* Backend progress steps - vertical list with status */}
-          <div className="mb-8 max-h-64 overflow-y-auto px-4 py-2 bg-black/30 rounded-lg">
+          <div className="mb-8 max-h-64 overflow-y-auto px-4 py-2 bg-gray-100/50 dark:bg-black/30 rounded-2xl border border-gray-100 dark:border-white/5">
             <div className="space-y-3">
               {displaySteps.map((step, i) => {
                 const isCompleted =
@@ -176,30 +163,23 @@ const BeautifulLoader = ({ progressSteps = [], phase = "image" }) => {
                           />
                         </motion.div>
                       ) : isActive ? (
-                        <motion.div
-                          animate={{ rotate: 360 }}
-                          transition={{
-                            duration: 1,
-                            repeat: Infinity,
-                            ease: "linear",
-                          }}
-                          className="flex items-center justify-center"
-                        >
+                        <div className="relative">
                           <div
-                            className="w-4 h-4 rounded-full border-2 border-transparent"
-                            style={{
-                              borderTopColor: BRAND_COLOR,
-                              borderRightColor: BRAND_COLOR,
-                            }}
+                            className="w-5 h-5 rounded-full border-2 border-transparent animate-spin"
+                            style={{ borderTopColor: BRAND_COLOR }}
                           />
-                        </motion.div>
+                          <Sparkles
+                            className="absolute inset-x-0 inset-y-0 m-auto w-3 h-3"
+                            style={{ color: BRAND_COLOR }}
+                          />
+                        </div>
                       ) : (
-                        <div className="w-4 h-4 rounded-full border-2 border-gray-600" />
+                        <div className="w-4 h-4 rounded-full border-2 border-gray-200 dark:border-white/10" />
                       )}
                     </div>
                     <span
-                      className={`text-sm font-medium flex-1 text-left transition-colors ${
-                        isCompleted || isActive ? "text-white" : "text-gray-500"
+                      className={`text-sm font-semibold flex-1 text-left transition-colors ${
+                        isCompleted || isActive ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-600"
                       }`}
                     >
                       {step}
@@ -208,7 +188,7 @@ const BeautifulLoader = ({ progressSteps = [], phase = "image" }) => {
                       <motion.span
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="text-xs px-2 py-1 bg-green-500/20 text-green-300 rounded"
+                        className="text-[8px] font-bold uppercase tracking-widest px-2 py-0.5 bg-green-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20 rounded-md"
                       >
                         Done
                       </motion.span>

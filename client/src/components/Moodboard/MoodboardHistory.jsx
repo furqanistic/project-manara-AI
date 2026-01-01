@@ -1,8 +1,6 @@
 // File: project-manara-AI/client/src/components/Moodboard/MoodboardHistory.jsx
-import {
-  deleteMoodboard,
-  getUserMoodboards,
-} from "@/services/moodboardService";
+import { useDeleteMoodboard, useUserMoodboards } from "@/hooks/useMoodboard";
+import { deleteMoodboard } from "@/services/moodboardService";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertCircle,
@@ -28,11 +26,11 @@ import { useNavigate } from "react-router-dom";
 import { BRAND_COLOR } from "./Moodboardconfig";
 
 const STATUS_COLORS = {
-  completed: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  image_generated: "bg-amber-50 text-amber-700 border-amber-100",
-  generating: "bg-blue-50 text-blue-700 border-blue-100",
-  draft: "bg-slate-50 text-slate-700 border-slate-100",
-  failed: "bg-rose-50 text-rose-700 border-rose-100",
+  completed: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  image_generated: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  generating: "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  draft: "bg-gray-500/10 text-gray-500 border-gray-500/20",
+  failed: "bg-rose-500/10 text-rose-500 border-rose-500/20",
 };
 
 const SORT_OPTIONS = [
@@ -86,13 +84,13 @@ const CustomDropdown = ({
             setIsOpen(true);
           }
         }}
-        className="flex items-center justify-between w-full px-4 py-2.5 bg-white border border-gray-200 rounded-xl hover:border-gray-300 transition-all duration-200 focus:ring-2 focus:ring-[#937c60]/20 outline-none"
+        className="flex items-center justify-between w-full px-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl hover:border-[#8d775e]/30 transition-all focus:ring-2 focus:ring-[#8d775e]/20 outline-none"
       >
         <div className="flex items-center gap-2.5">
           {TriggerIcon && (
-            <TriggerIcon className="w-4 h-4" style={{ color: BRAND_COLOR }} />
+            <TriggerIcon className="w-4 h-4 text-[#8d775e]" />
           )}
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
             {options.find((opt) => opt.value === value)?.label}
           </span>
         </div>
@@ -109,7 +107,7 @@ const CustomDropdown = ({
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl  z-[120] py-1.5 overflow-hidden"
+            className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#1a1a1a] border border-gray-100 dark:border-white/10 rounded-xl shadow-2xl shadow-black/20 z-[120] py-1.5 overflow-hidden"
           >
             {options.map((option) => (
               <button
@@ -120,12 +118,12 @@ const CustomDropdown = ({
                 }}
                 className={`w-full px-4 py-2.5 flex items-center gap-3 transition-colors text-left ${
                   value === option.value
-                    ? "bg-[#937c60]/5 text-[#937c60]"
-                    : "hover:bg-gray-50 text-gray-600"
+                    ? "bg-[#8d775e]/10 text-[#8d775e]"
+                    : "hover:bg-gray-50 dark:hover:bg-white/5 text-gray-600 dark:text-gray-400"
                 }`}
               >
                 {option.icon && (
-                  <option.icon className={`w-4 h-4 ${value === option.value ? "text-[#937c60]" : "text-gray-400"}`} />
+                  <option.icon className={`w-4 h-4 ${value === option.value ? "text-[#8d775e]" : "text-gray-400"}`} />
                 )}
                 <span className="text-sm font-medium">{option.label}</span>
               </button>
@@ -161,40 +159,40 @@ const DeleteConfirmationDialog = ({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl  z-[140] w-[90%] max-w-sm p-6 overflow-hidden"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-[#111] rounded-[32px] z-[140] w-[90%] max-w-sm p-8 overflow-hidden border border-gray-100 dark:border-white/5 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="absolute top-0 left-0 w-full h-1 bg-rose-500" />
             
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 rounded-full bg-rose-50">
-                <AlertCircle className="w-6 h-6 text-rose-500" />
+            <div className="flex items-center gap-4 mb-6">
+              <div className="p-4 rounded-2xl bg-rose-500/10 text-rose-500">
+                <AlertCircle className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-900">Delete Moodboard</h3>
-                <p className="text-sm text-gray-500">This action is permanent</p>
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white">Delete Library Item</h3>
+                <p className="text-sm text-rose-500/60 font-bold uppercase tracking-wider">Permanent Action</p>
               </div>
             </div>
 
-            <p className="text-gray-600 mb-8 text-sm leading-relaxed">
-              Are you sure you want to delete <span className="font-semibold text-gray-900">"{title}"</span>? All related data and generations will be removed.
+            <p className="text-gray-500 dark:text-gray-400 mb-8 text-sm leading-relaxed">
+              Are you sure you want to delete <span className="font-bold text-gray-900 dark:text-white">"{title}"</span>? This will purge all associated architectural data.
             </p>
 
-            <div className="flex gap-3 mt-4">
+            <div className="flex gap-4">
               <button
                 onClick={onCancel}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors disabled:opacity-50 border border-gray-200"
+                className="flex-1 px-6 py-3 rounded-2xl font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white bg-gray-50 dark:bg-white/5 transition-all disabled:opacity-50"
               >
-                Keep it
+                Cancel
               </button>
               <button
                 onClick={onConfirm}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-white bg-rose-500 hover:bg-rose-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-6 py-3 rounded-2xl font-bold text-white bg-rose-500 hover:bg-rose-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-rose-500/20"
               >
                 {isDeleting ? <Loader className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                {isDeleting ? "Deleting..." : "Delete"}
+                {isDeleting ? "Deleting..." : "Confirm"}
               </button>
             </div>
           </motion.div>
@@ -206,17 +204,20 @@ const DeleteConfirmationDialog = ({
 
 export const MoodboardHistory = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
-  const [moodboards, setMoodboards] = useState([]);
-  const [filteredMoodboards, setFilteredMoodboards] = useState([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasLoaded, setHasLoaded] = useState(false);
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("recent");
   const [filterStatus, setFilterStatus] = useState("all");
   const [sortOpen, setSortOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+
+  // Use React Query for fetching
+  const { data, isLoading } = useUserMoodboards(page, 12);
+  const deleteMutation = useDeleteMoodboard();
+
+  const moodboards = data?.data?.moodboards || [];
+  const totalPages = data?.totalPages || 1;
+  const totalItems = data?.totalResults || 0;
 
   useEffect(() => {
     if (!isOpen) {
@@ -225,71 +226,39 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
       setFilterStatus("all");
       setSortOpen(false);
       setFilterOpen(false);
+      setPage(1);
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (isOpen) {
-      fetchMoodboards();
-    }
-  }, [page, isOpen]);
-
-  const fetchMoodboards = async () => {
-    try {
-      setIsLoading(true);
-      const response = await getUserMoodboards({ page, limit: 20 });
-      setMoodboards((prev) =>
-        page === 1
-          ? response.data.moodboards
-          : [...prev, ...response.data.moodboards]
-      );
-      const receivedCount = response.data.moodboards.length;
-      const isLastPage = receivedCount < 20;
-      setHasMore(!isLastPage && page < response.totalPages);
-    } catch (error) {
-      console.error("Error fetching moodboards:", error);
-      toast.error("Failed to load moodboard history");
-    } finally {
-      setIsLoading(false);
-      setHasLoaded(true);
-    }
-  };
-
-  const handleDeleteMoodboard = (moodboardId) => {
-    setMoodboards((prev) => prev.filter((m) => m._id !== moodboardId));
-  };
-
-  useEffect(() => {
-    let filtered = moodboards;
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (m) =>
-          m.title.toLowerCase().includes(query) ||
-          m.style?.toLowerCase().includes(query) ||
-          m.roomType?.toLowerCase().includes(query)
-      );
-    }
-
-    if (filterStatus !== "all") {
-      filtered = filtered.filter((m) => m.status === filterStatus);
-    }
-
-    filtered.sort((a, b) => {
+  const filteredMoodboards = moodboards
+    .filter((m) => {
+      const matchesSearch = !searchQuery.trim() || 
+        m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.style?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        m.roomType?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesFilter = filterStatus === "all" || m.status === filterStatus;
+      
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => {
       const dateA = new Date(a.createdAt);
       const dateB = new Date(b.createdAt);
       return sortBy === "recent" ? dateB - dateA : dateA - dateB;
     });
 
-    setFilteredMoodboards(filtered);
-  }, [moodboards, searchQuery, sortBy, filterStatus]);
-
-  const handleLoadMore = () => setPage((p) => p + 1);
-
   const handleCardClick = (moodboardId) => {
     onClose();
     navigate(`/moodboards/${moodboardId}`);
+  };
+
+  const handleDeleteMoodboard = async (moodboardId) => {
+    try {
+      await deleteMutation.mutateAsync(moodboardId);
+      toast.success("Moodboard purged from vault");
+    } catch (error) {
+      toast.error("Failed to delete moodboard");
+    }
   };
 
   return (
@@ -308,53 +277,52 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
             initial={{ opacity: 0, scale: 0.95, y: "-48%", x: "-50%" }}
             animate={{ opacity: 1, scale: 1, y: "-50%", x: "-50%" }}
             exit={{ opacity: 0, scale: 0.95, y: "-48%", x: "-50%" }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed top-1/2 left-1/2 w-[95%] max-w-5xl h-[90vh] bg-stone-50 rounded-3xl  z-[110] flex flex-col overflow-hidden border border-stone-200"
+            transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+            className="fixed top-1/2 left-1/2 w-[95%] max-w-6xl h-[85vh] bg-[#faf8f6] dark:bg-[#0a0a0a] rounded-[48px] z-[110] flex flex-col overflow-hidden border border-gray-200 dark:border-white/10 shadow-[0_50px_100px_rgba(0,0,0,0.3)]"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Header section with solid background */}
-            <div className="bg-white px-6 py-6 border-b border-stone-200 relative overflow-hidden">
-               <div className="absolute top-0 right-0 w-64 h-64 bg-[#937c60]/5 rounded-full blur-3xl -mr-32 -mt-32" />
-               <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#937c60]/5 rounded-full blur-3xl -ml-24 -mb-24" />
+            {/* Header section */}
+            <div className="px-8 py-6 border-b border-gray-100 dark:border-white/5 relative overflow-hidden flex-shrink-0">
+               <div className="absolute top-0 right-0 w-80 h-80 bg-[#8d775e]/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
                
                <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-2xl bg-[#937c60]">
+                <div className="flex items-center gap-5">
+                  <div className="w-12 h-12 rounded-[18px] bg-[#8d775e] flex items-center justify-center shadow-lg shadow-[#8d775e]/20">
                     <Clock className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-stone-900 tracking-tight">
-                      Moodboard Library
+                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+                      Synthesis <span className="text-[#8d775e] font-serif italic">Vault.</span>
                     </h2>
-                    <p className="text-sm font-medium text-stone-500">
-                      Explore and manage your {moodboards.length} creative visions
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">
+                      Repository of {totalItems} neural architectural visions.
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2.5 bg-stone-100 hover:bg-stone-200 text-stone-500 rounded-full transition-all duration-200 hover:rotate-90 group"
+                  className="w-10 h-10 flex items-center justify-center bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 rounded-full transition-all group"
                 >
-                  <X className="w-5 h-5 group-hover:text-stone-900" />
+                  <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
                 </button>
               </div>
             </div>
 
             {/* Controls Bar */}
-            <div className="p-6 bg-white border-b border-stone-100">
+            <div className="px-8 py-4 bg-white/50 dark:bg-black/20 backdrop-blur-md border-b border-gray-100 dark:border-white/5 relative z-20">
               <div className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1 relative group">
-                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-stone-400 group-focus-within:text-[#937c60] transition-colors" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-[#8d775e] transition-colors" />
                   <input
                     type="text"
-                    placeholder="Search by title, style, or room..."
+                    placeholder="Query by title, style, or room type..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-11 pr-4 py-2.5 bg-stone-50 border border-stone-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#937c60]/20 focus:border-[#937c60] transition-all text-sm group-hover:border-stone-300"
+                    className="w-full pl-12 pr-6 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#8d775e]/20 focus:border-[#8d775e] transition-all text-sm group-hover:border-gray-300 dark:group-hover:border-white/20 text-gray-900 dark:text-white placeholder-gray-400"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 md:w-[400px]">
+                <div className="grid grid-cols-2 gap-4 md:w-[450px]">
                   <CustomDropdown
                     value={sortBy}
                     onChange={setSortBy}
@@ -378,14 +346,12 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
             </div>
 
             {/* Content Area */}
-            <div className="flex-1 overflow-y-auto bg-stone-50/50 relative">
-              {!hasLoaded ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center p-8">
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-[#937c60]/20 blur-xl rounded-full" />
-                    <Loader className="w-12 h-12 text-[#937c60] animate-spin relative" />
-                  </div>
-                  <p className="mt-4 text-stone-500 font-medium">Curating your library...</p>
+            <div className="flex-1 overflow-y-auto bg-gray-50/50 dark:bg-black/40 relative no-scrollbar">
+              {isLoading ? (
+                <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                    <div key={i} className="aspect-square rounded-[24px] bg-white dark:bg-[#111] animate-pulse border border-gray-100 dark:border-white/5" />
+                  ))}
                 </div>
               ) : filteredMoodboards.length === 0 ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
@@ -402,7 +368,7 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
                   </p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-6 p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 p-6">
                   {filteredMoodboards.map((moodboard, index) => (
                     <MoodboardCard
                       key={moodboard._id}
@@ -416,23 +382,57 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
               )}
             </div>
 
-            {/* Footer / Load More */}
-            {hasMore && hasLoaded && (
-              <div className="p-4 bg-white border-t border-stone-200 flex justify-center  ">
+            {/* Pagination UI */}
+            <div className="px-10 py-6 bg-white dark:bg-[#0a0a0a] border-t border-gray-100 dark:border-white/5 flex items-center justify-between flex-shrink-0">
+              <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                Manifesting {filteredMoodboards.length} of {totalItems} concepts
+              </div>
+              
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={handleLoadMore}
-                  disabled={isLoading}
-                  className="px-8 py-2.5 bg-stone-900 text-white font-bold rounded-xl hover:bg-[#937c60] transition-all duration-300 disabled:opacity-50 flex items-center gap-2 group  "
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1 || isLoading}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-white/5 text-gray-500 hover:text-[#8d775e] border border-gray-200 dark:border-white/10 transition-all disabled:opacity-30"
                 >
-                  {isLoading ? (
-                    <Loader className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <RotateCcw className="w-4 h-4 group-hover:rotate-180 transition-transform duration-500" />
-                  )}
-                  {isLoading ? "Fetching more..." : "Load More Designs"}
+                  <ChevronDown className="w-5 h-5 rotate-90" />
+                </button>
+                
+                {[...Array(totalPages)].map((_, i) => {
+                  const pageNum = i + 1;
+                  if (
+                    pageNum === 1 || 
+                    pageNum === totalPages || 
+                    (pageNum >= page - 1 && pageNum <= page + 1)
+                  ) {
+                    return (
+                      <button
+                        key={pageNum}
+                        onClick={() => setPage(pageNum)}
+                        className={`w-10 h-10 rounded-xl text-xs font-bold transition-all border ${
+                          page === pageNum 
+                            ? "bg-[#8d775e] text-white border-[#8d775e] shadow-lg shadow-[#8d775e]/20" 
+                            : "bg-white dark:bg-white/5 text-gray-500 border-gray-200 dark:border-white/10 hover:border-[#8d775e]/30"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  }
+                  if (pageNum === page - 2 || pageNum === page + 2) {
+                    return <span key={pageNum} className="text-gray-400">...</span>;
+                  }
+                  return null;
+                })}
+
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages || isLoading}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-50 dark:bg-white/5 text-gray-500 hover:text-[#8d775e] border border-gray-200 dark:border-white/10 transition-all disabled:opacity-30"
+                >
+                  <ChevronDown className="w-5 h-5 -rotate-90" />
                 </button>
               </div>
-            )}
+            </div>
           </motion.div>
         </>
       )}
@@ -467,58 +467,50 @@ const MoodboardCard = ({ moodboard, index, onClick, onDelete }) => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: Math.min(index * 0.05, 0.3) }}
         onClick={onClick}
-        className="group relative bg-white rounded-2xl border border-stone-200 overflow-hidden hover: hover:border-[#937c60]/40 transition-all duration-500 cursor-pointer flex flex-col h-full"
+        className="group relative bg-white dark:bg-[#111] rounded-[24px] border border-gray-100 dark:border-white/5 overflow-hidden hover:border-[#8d775e]/40 transition-all duration-500 cursor-pointer flex flex-col h-full shadow-sm hover:shadow-2xl hover:shadow-[#8d775e]/10"
       >
-        {/* Image Container with Fixed Aspect Ratio and Blurred Background Fix */}
-        <div className="relative aspect-video bg-stone-100 overflow-hidden">
+        {/* Image Container */}
+        <div className="relative aspect-square bg-gray-100 dark:bg-white/5 overflow-hidden">
           {moodboard.compositeMoodboard?.url ? (
-            <>
-              {/* Blurred background for padding (fixes square image in 16:9 issue) */}
-              <img
-                src={moodboard.compositeMoodboard.url}
-                className="absolute inset-0 w-full h-full object-cover blur-xl opacity-40 scale-125"
-                alt=""
-              />
-              <img
-                src={moodboard.compositeMoodboard.url}
-                alt={moodboard.title}
-                className="relative w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 ease-out"
-              />
-            </>
+            <img
+              src={moodboard.compositeMoodboard.url}
+              alt={moodboard.title}
+              className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
+            />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 bg-stone-50">
+            <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 dark:text-gray-600">
               <ImageIcon className="w-12 h-12 mb-2 opacity-20" />
-              <p className="text-xs font-medium uppercase tracking-widest">No Preview</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest">No Visualization</p>
             </div>
           )}
 
           {/* Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-500" />
           
-          <div className="absolute top-3 right-3 flex gap-2">
+          <div className="absolute top-4 right-4 flex gap-2">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setDeleteDialogOpen(true);
               }}
-              className="p-2 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-rose-500 hover:text-white transition-all duration-300 opacity-0 group-hover:opacity-100 "
+              className="w-10 h-10 rounded-2xl bg-black/40 backdrop-blur-md text-white hover:bg-rose-500 transition-all duration-300 opacity-0 group-hover:opacity-100 flex items-center justify-center overflow-hidden"
             >
               <Trash2 className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
-             <div className="flex-1">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border backdrop-blur-md mb-2 ${
-                  STATUS_COLORS[moodboard.status]?.replace('bg-', 'bg-') || "bg-white/20 text-white border-white/20"
+          <div className="absolute bottom-6 left-6 right-6 flex items-end justify-between">
+             <div className="flex-1 min-w-0">
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[8px] font-bold border backdrop-blur-md mb-3 ${
+                  STATUS_COLORS[moodboard.status] || "bg-white/20 text-white border-white/20"
                 }`}>
                   {moodboard.status.replace("_", " ").toUpperCase()}
                 </span>
-                <h3 className="text-white font-bold text-lg leading-tight line-clamp-1 group-hover:text-[#e5d5c5] transition-colors">
+                <h3 className="text-white font-bold text-lg leading-tight truncate group-hover:text-[#8d775e] transition-colors">
                   {moodboard.title}
                 </h3>
              </div>
-             <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform duration-300">
+             <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-md flex items-center justify-center text-white scale-0 group-hover:scale-100 transition-transform duration-500 translate-x-4 group-hover:translate-x-0">
                 <ArrowRight className="w-5 h-5" />
              </div>
           </div>
@@ -528,31 +520,31 @@ const MoodboardCard = ({ moodboard, index, onClick, onDelete }) => {
         <div className="p-5 flex-1 flex flex-col justify-between">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-stone-500">
-                  <Layout className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Space</span>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Layout className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Spatial Use</span>
                 </div>
-                <p className="text-sm font-semibold text-stone-800 capitalize truncate">
-                  {moodboard.roomType?.replace("_", " ") || "Not Specified"}
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 capitalize truncate">
+                  {moodboard.roomType?.replace("_", " ") || "Undefined"}
                 </p>
               </div>
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-1.5 text-stone-500">
-                  <Palette className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Style</span>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2 text-gray-400">
+                  <Palette className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider">Design Style</span>
                 </div>
-                <p className="text-sm font-semibold text-stone-800 capitalize truncate">
-                  {moodboard.style || "Custom Style"}
+                <p className="text-sm font-bold text-gray-900 dark:text-gray-100 capitalize truncate">
+                  {moodboard.style || "Custom"}
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="mt-5 pt-4 border-t border-stone-100 flex items-center justify-between text-stone-400">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5" />
-              <span className="text-xs font-medium">
+          <div className="mt-5 pt-4 border-t border-gray-100 dark:border-white/5 flex items-center justify-between text-gray-400">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">
                 {new Date(moodboard.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
               </span>
             </div>

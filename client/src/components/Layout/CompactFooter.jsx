@@ -1,20 +1,20 @@
 import {
-    ArrowRight,
-    Instagram,
-    Linkedin,
-    Mail,
-    MapPin,
-    Sparkles,
-    Twitter,
+  ArrowRight,
+  Instagram,
+  Linkedin,
+  Mail,
+  MapPin,
+  Sparkles,
+  Twitter,
 } from 'lucide-react'
 import React from 'react'
 
 const CompactFooter = () => {
   return (
-    <footer className='relative bg-[#faf8f6] border-t border-gray-100 py-10 overflow-hidden'>
+    <footer className='relative bg-[#faf8f6] dark:bg-[#0a0a0a] border-t border-gray-100 dark:border-white/10 py-10 overflow-hidden transition-colors duration-500'>
       {/* Subtle Background Pattern */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-0 right-0 w-64 h-64 bg-[#937c60]/5 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full' />
+        <div className='absolute top-0 right-0 w-64 h-64 bg-[#937c60]/5 dark:bg-[#937c60]/10 blur-[80px] -translate-y-1/2 translate-x-1/2 rounded-full' />
       </div>
 
       <div className='relative z-10 max-w-[1500px] mx-auto px-6 md:px-12'>
@@ -25,10 +25,10 @@ const CompactFooter = () => {
                 <img 
                   src="/logoicon.png" 
                   alt="Manara Logo" 
-                  className="h-8 w-auto object-contain"
+                  className="h-8 w-auto object-contain dark:brightness-110"
                 />
              </div>
-             <p className='text-gray-400 font-medium text-[13px] leading-relaxed'>
+             <p className='text-gray-400 dark:text-gray-500 font-medium text-[13px] leading-relaxed'>
                The professional design engine for modern spaces. Synthesizing imagination into architecture.
              </p>
           </div>
@@ -42,13 +42,13 @@ const CompactFooter = () => {
                   { name: 'Pricing', href: '/pricing' },
                   { name: 'About', href: '/about' }
                 ].map(link => (
-                  <a key={link.name} href={link.href} className='text-gray-500 font-light text-[12px] hover:text-gray-900 transition-colors whitespace-nowrap'>{link.name}</a>
+                  <a key={link.name} href={link.href} className='text-gray-500 dark:text-gray-400 font-light text-[12px] hover:text-gray-900 dark:hover:text-white transition-colors whitespace-nowrap'>{link.name}</a>
                 ))}
              </div>
-             <div className='h-4 w-px bg-gray-200 hidden md:block' />
+             <div className='h-4 w-px bg-gray-200 dark:bg-white/10 hidden md:block' />
              <div className='flex gap-3'>
                 {[Instagram, Linkedin, Twitter].map((Icon, i) => (
-                  <a key={i} href="#" className='text-gray-400 hover:text-[#937c60] transition-colors'>
+                  <a key={i} href="#" className='text-gray-400 dark:text-gray-500 hover:text-[#937c60] dark:hover:text-[#937c60] transition-colors'>
                      <Icon size={16} />
                   </a>
                 ))}
@@ -57,11 +57,11 @@ const CompactFooter = () => {
         </div>
 
         {/* Footer Bottom */}
-        <div className='pt-6 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4'>
-           <p className='text-gray-400 text-[9px] font-medium uppercase tracking-widest'>© 2025 Manāra Design Engine</p>
+        <div className='pt-6 border-t border-gray-100 dark:border-white/10 flex flex-col md:flex-row justify-between items-center gap-4'>
+           <p className='text-gray-400 dark:text-gray-600 text-[9px] font-medium uppercase tracking-widest'>© 2025 Manāra Design Engine</p>
            <div className='flex gap-6 uppercase tracking-widest text-[9px] font-medium'>
               {['Privacy', 'Terms', 'Security'].map(item => (
-                <a key={item} href="#" className='text-gray-400 hover:text-gray-900 transition-colors'>
+                <a key={item} href="#" className='text-gray-400 dark:text-gray-600 hover:text-gray-900 dark:hover:text-gray-400 transition-colors'>
                   {item}
                 </a>
               ))}

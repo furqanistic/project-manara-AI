@@ -11,7 +11,7 @@ import {
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 
-// Confirmation Dialog Component (simplified from MoodboardHistory)
+// Confirmation Dialog Component
 const DeleteConfirmationDialog = ({
   isOpen,
   title,
@@ -27,31 +27,31 @@ const DeleteConfirmationDialog = ({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onCancel}
-            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[130]"
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200]"
           />
 
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-xl z-[140] w-[90%] max-w-sm p-6 overflow-hidden"
+            className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-[#111] rounded-[32px] shadow-2xl z-[210] w-[90%] max-w-sm p-8 overflow-hidden border border-gray-100 dark:border-white/5"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-lg font-bold text-gray-900 mb-2">Delete Floor Plan?</h3>
-            <p className="text-gray-600 mb-6 text-sm">
-              Are you sure you want to delete this floor plan? This action cannot be undone.
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Discard Record?</h3>
+            <p className="text-gray-500 dark:text-gray-400 mb-8 text-sm leading-relaxed">
+              This will permanently remove the snapshot from your architectural vault. This action is irreversible.
             </p>
 
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <button
                 onClick={onCancel}
-                className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-gray-600 bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-200"
+                className="flex-1 px-4 py-3 rounded-2xl font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-all border border-gray-100 dark:border-white/5 text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={onConfirm}
-                className="flex-1 px-4 py-2.5 rounded-xl font-semibold text-white bg-rose-500 hover:bg-rose-600 transition-colors"
+                className="flex-1 px-4 py-3 rounded-2xl font-bold text-white bg-red-500 hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 text-sm"
               >
                 Delete
               </button>
@@ -78,7 +78,7 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
     try {
       const saved = localStorage.getItem('fp_history_gallery');
       if (saved) {
-        setHistoryItems(JSON.parse(saved).reverse()); // Newest first
+        setHistoryItems(JSON.parse(saved)); // Assumed newest first in storage
       } else {
         setHistoryItems([]);
       }
@@ -91,15 +91,8 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
   const handleDelete = (id) => {
     const updated = historyItems.filter(item => item.id !== id);
     setHistoryItems(updated);
-    localStorage.setItem('fp_history_gallery', JSON.stringify(updated.reverse())); // Save back in chronological order? Or just save updated list?
-    // Actually, let's keep the internal state as reverse (display order) and save it correctly. 
-    // Ideally, we should just read/write the same structure. 
-    // Let's assume list is stored newest-first or oldest-first. 
-    // Let's store newest-first in state, and when saving, save it as is.
-    localStorage.setItem('fp_history_gallery', JSON.stringify(updated.reverse())); // Re-reverse to keep original order if needed, or just save 'updated' if we consistently use newest-first.
-    // Simpler: Just save 'updated'.
     localStorage.setItem('fp_history_gallery', JSON.stringify(updated));
-    toast.success("Floor plan deleted");
+    toast.success("Record discarded from vault");
   };
 
   useEffect(() => {
@@ -123,63 +116,74 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-stone-900/60 backdrop-blur-md z-[100]"
+            className="fixed inset-0 bg-black/40 dark:bg-black/80 backdrop-blur-md z-[150]"
           />
 
           <motion.div
             initial={{ opacity: 0, x: "100%" }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="fixed top-0 right-0 w-full sm:w-[450px] h-full bg-white shadow-2xl z-[110] flex flex-col border-l border-stone-200"
+            transition={{ type: "spring", stiffness: 300, damping: 35 }}
+            className="fixed top-0 right-0 w-full sm:w-[500px] h-full bg-[#faf8f6] dark:bg-[#0a0a0a] shadow-[-20px_0_50px_rgba(0,0,0,0.1)] z-[160] flex flex-col border-l border-gray-100 dark:border-white/5"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-[#fbf9f7]">
+            <div className="p-8 pt-12 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-bold text-stone-800">History</h2>
-                <p className="text-sm text-stone-500">Your generated floor plans</p>
+                <div className='flex items-center gap-2 mb-1'>
+                    <div className='w-8 h-[1px] bg-[#8d775e]'></div>
+                    <span className='text-[9px] font-bold tracking-[0.4em] text-[#8d775e] uppercase'>Synthesis Vault</span>
+                </div>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Project History</h2>
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-stone-200 rounded-full transition-colors text-stone-500"
+                className="p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 rounded-2xl transition-all text-gray-400 group"
               >
-                <X className="w-5 h-5" />
+                <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
               </button>
             </div>
 
             {/* Search */}
-            <div className="p-4 border-b border-stone-100">
-               <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+            <div className="p-6">
+               <div className="relative group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#8d775e] transition-colors" />
                   <input 
                     type="text" 
-                    placeholder="Search prompts..." 
+                    placeholder="Search your vault..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 bg-stone-50 border border-stone-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#937c60]/20"
+                    className="w-full pl-12 pr-6 py-4 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-[20px] text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#8d775e]/20 transition-all font-medium"
                   />
                </div>
             </div>
 
             {/* List */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-stone-50/30">
+            <div className="flex-1 overflow-y-auto px-6 pb-8 space-y-4 scrollbar-hide">
               {filteredItems.length === 0 ? (
-                <div className="text-center py-10 text-stone-400">
-                  <ImageIcon className="w-12 h-12 mx-auto mb-2 opacity-20" />
-                  <p>No history found</p>
+                <div className="h-full flex flex-col items-center justify-center text-center p-12 space-y-4 opacity-30">
+                  <div className='p-6 bg-white dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/10'>
+                    <ImageIcon className="w-10 h-10 text-[#8d775e]" />
+                  </div>
+                  <p className='text-sm font-medium'>Vault is currently empty</p>
                 </div>
               ) : (
-                filteredItems.map((item) => (
-                  <HistoryCard 
-                    key={item.id} 
-                    item={item} 
-                    onLoad={() => {
-                      onLoadItem(item);
-                      onClose();
-                    }}
-                    onDelete={() => handleDelete(item.id)}
-                  />
+                filteredItems.map((item, idx) => (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                    key={item.id}
+                  >
+                    <HistoryCard 
+                        item={item} 
+                        onLoad={() => {
+                            onLoadItem(item);
+                            onClose();
+                        }}
+                        onDelete={() => handleDelete(item.id)}
+                    />
+                  </motion.div>
                 ))
               )}
             </div>
@@ -197,51 +201,56 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
     e.stopPropagation();
     const link = document.createElement('a');
     link.href = `data:${item.image.mimeType};base64,${item.image.data}`;
-    link.download = `floor-plan-${item.timestamp}.png`;
-    document.body.appendChild(link);
+    link.download = `manara-snapshot-${Date.now()}.png`;
     link.click();
-    document.body.removeChild(link);
   };
 
   return (
     <>
       <div 
         onClick={onLoad}
-        className="group bg-white rounded-xl border border-stone-200 overflow-hidden hover:shadow-md transition-all cursor-pointer flex gap-3 p-3"
+        className="group bg-white dark:bg-white/5 rounded-[28px] border border-gray-100 dark:border-white/5 overflow-hidden hover:border-[#8d775e]/30 dark:hover:border-[#8d775e]/30 hover:shadow-2xl hover:shadow-[#8d775e]/5 transition-all cursor-pointer flex gap-5 p-4"
       >
         {/* Thumbnail */}
-        <div className="w-24 h-24 bg-stone-100 rounded-lg shrink-0 overflow-hidden border border-stone-100">
+        <div className="w-28 h-28 bg-stone-100 dark:bg-stone-900 rounded-[20px] shrink-0 overflow-hidden border border-gray-100 dark:border-white/5 relative">
           <img 
             src={`data:${item.image.mimeType};base64,${item.image.data}`} 
-            alt="Thumbnail" 
-            className="w-full h-full object-cover"
+            alt="Synthesis Thumbnail" 
+            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
           />
+          <div className='absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all' />
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
-          <div>
-            <p className="text-sm font-medium text-stone-800 line-clamp-2 leading-snug mb-1">
+        <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
+          <div className='space-y-2'>
+            <p className="text-sm font-bold text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug">
               {item.prompt}
             </p>
-            <div className="flex items-center gap-1 text-xs text-stone-400">
-              <Clock className="w-3 h-3" />
-              <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#8d775e] uppercase tracking-widest">
+                <Calendar className="w-3 h-3" />
+                <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                <Clock className="w-3 h-3" />
+                <span>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
             </div>
           </div>
           
           <div className="flex justify-end gap-2 mt-2">
              <button 
                onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
-               className="p-1.5 text-stone-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-               title="Delete"
+               className="p-2.5 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
+               title="Discard Snapshot"
              >
                <Trash2 className="w-4 h-4" />
              </button>
              <button 
                onClick={handleDownload}
-               className="p-1.5 text-stone-400 hover:text-[#937c60] hover:bg-[#937c60]/10 rounded-lg transition-colors"
-               title="Download"
+               className="p-2.5 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-[#8d775e] hover:bg-[#8d775e]/10 rounded-xl transition-all"
+               title="Download Assets"
              >
                <Download className="w-4 h-4" />
              </button>

@@ -1,16 +1,16 @@
 import { AnimatePresence, motion, useScroll, useTransform } from 'framer-motion'
 import {
-  Activity,
-  ArrowRight,
-  Box,
-  Camera,
-  CheckCircle,
-  Cpu,
-  FileText,
-  Layers,
-  MapPin,
-  Sparkles,
-  Zap
+    Activity,
+    ArrowRight,
+    Box,
+    Camera,
+    CheckCircle,
+    Cpu,
+    FileText,
+    Layers,
+    MapPin,
+    Sparkles,
+    Zap
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/button'
@@ -62,11 +62,11 @@ const AIOutputsSection = () => {
   }
 
   return (
-    <section ref={containerRef} className='relative py-24 bg-[#faf8f6] overflow-hidden px-6 md:px-12'>
+    <section ref={containerRef} className='relative py-24 bg-[#faf8f6] dark:bg-[#0a0a0a] overflow-hidden px-6 md:px-12 transition-colors duration-500'>
       {/* Dynamic Background elements */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-[-10%] right-[-5%] w-[60%] h-[60%] rounded-full bg-[#937c60]/5 blur-[120px]' />
-        <div className='absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] rounded-full bg-[#b8a58c]/3 blur-[100px]' />
+        <div className='absolute top-[-10%] right-[-5%] w-[60%] h-[60%] rounded-full bg-[#937c60]/5 dark:bg-[#937c60]/10 blur-[120px]' />
+        <div className='absolute bottom-[-10%] left-[-5%] w-[40%] h-[40%] rounded-full bg-[#b8a58c]/3 dark:bg-[#b8a58c]/5 blur-[100px]' />
       </div>
 
       <div className='relative z-10 max-w-[1400px] mx-auto w-full'>
@@ -86,7 +86,7 @@ const AIOutputsSection = () => {
               <div className='w-12 h-[1px] bg-[#937c60]'></div>
               <span className='text-[10px] font-medium tracking-[0.5em] text-[#937c60] uppercase'>The Synthesis Engine</span>
             </div>
-            <h2 className='text-6xl md:text-8xl font-light text-gray-900 tracking-tightest leading-[0.85]'>
+            <h2 className='text-6xl md:text-8xl font-light text-gray-900 dark:text-white tracking-tightest leading-[0.85]'>
               Input Raw. <br />
               <span className='text-[#937c60] font-serif italic'>Output Pure.</span>
             </h2>
@@ -95,7 +95,7 @@ const AIOutputsSection = () => {
           <motion.p 
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
-            className='text-gray-400 font-medium text-xl max-w-sm leading-relaxed'
+            className='text-gray-400 dark:text-gray-500 font-medium text-xl max-w-sm leading-relaxed'
           >
             Our core engine distills raw environmental data into cinematic, structurally verified architecture.
           </motion.p>
@@ -104,7 +104,7 @@ const AIOutputsSection = () => {
         {/* Sophisticated Pipeline Tracker */}
         <div className='mb-24 relative'>
            {/* Connecting Line - Now visible on mobile too */}
-           <div className='absolute top-6 lg:top-10 left-[10%] right-[10%] h-[1px] bg-gray-100 z-0'>
+           <div className='absolute top-6 lg:top-10 left-[10%] right-[10%] h-[1px] bg-gray-100 dark:bg-white/10 z-0'>
               <motion.div 
                 className='absolute h-full bg-[#937c60] shadow-[0_0_15px_rgba(147,124,96,0.3)]'
                 initial={{ width: '0%' }}
@@ -118,7 +118,7 @@ const AIOutputsSection = () => {
                 <div key={i} className='flex-1 flex flex-col items-center group px-1'>
                   <div className='relative mb-4 lg:mb-6'>
                     <motion.div 
-                      className={`w-12 h-12 lg:w-20 lg:h-20 rounded-2xl lg:rounded-[28px] flex items-center justify-center font-light text-sm lg:text-2xl transition-all duration-700 ${currentStep > i ? 'bg-[#937c60] text-white' : 'bg-white border border-gray-100 text-gray-200 shadow-sm'}`}
+                      className={`w-12 h-12 lg:w-20 lg:h-20 rounded-2xl lg:rounded-[28px] flex items-center justify-center font-light text-sm lg:text-2xl transition-all duration-700 ${currentStep > i ? 'bg-[#937c60] text-white' : 'bg-white dark:bg-[#111] border border-gray-100 dark:border-white/10 text-gray-200 dark:text-gray-700 shadow-sm'}`}
                       animate={currentStep === i + 1 ? { scale: 1.1, y: -5 } : { scale: 1, y: 0 }}
                     >
                       {currentStep > i ? <CheckCircle size={isMobile ? 18 : 28} /> : <span>{step.number}</span>}
@@ -134,7 +134,7 @@ const AIOutputsSection = () => {
                   </div>
                   
                   <div className='text-center space-y-0.5 lg:space-y-1 w-full max-w-[80px] lg:max-w-none'>
-                     <p className={`text-[9px] lg:text-lg font-light leading-tight transition-colors duration-500 ${currentStep > i ? 'text-gray-900' : 'text-gray-300'}`}>
+                     <p className={`text-[9px] lg:text-lg font-light leading-tight transition-colors duration-500 ${currentStep > i ? 'text-gray-900 dark:text-white' : 'text-gray-300 dark:text-gray-600'}`}>
                         {step.title}
                      </p>
                      <p className='text-[7px] lg:text-[10px] uppercase tracking-wider lg:tracking-widest text-[#937c60]/60 font-medium'>
@@ -155,26 +155,27 @@ const AIOutputsSection = () => {
              whileInView={{ opacity: 1, x: 0 }}
              viewport={{ once: true }}
            >
-              <div className='h-full bg-white rounded-[48px] p-10 md:p-14 border border-gray-100 shadow-[0_30px_60px_rgba(0,0,0,0.02)] flex flex-col justify-between group overflow-hidden relative'>
+              <div className='h-full bg-white dark:bg-[#111] rounded-[48px] p-10 md:p-14 border border-gray-100 dark:border-white/5 shadow-[0_30px_60px_rgba(0,0,0,0.02)] flex flex-col justify-between group overflow-hidden relative'>
                  <div className='absolute top-0 right-0 w-32 h-32 bg-[#937c60]/5 blur-3xl rounded-full' />
                                   <div className='space-y-4 mb-20'>
-                    <h3 className='text-3xl font-light text-gray-900 tracking-tight'>Neural Input</h3>
-                    <p className='text-gray-400 font-medium'>Capture. Map. Synthesize.</p>
+                    <h3 className='text-3xl font-light text-gray-900 dark:text-white tracking-tight'>Neural Input</h3>
+                    <p className='text-gray-400 dark:text-gray-500 font-medium'>Capture. Map. Synthesize.</p>
                  </div>
                  
                  <div className='space-y-6'>
                     {inputItems.map((item, i) => (
                       <motion.div 
                         key={i} 
-                        className={`flex items-center gap-6 p-6 rounded-[28px] border transition-all duration-700 ${currentStep > 0 ? 'border-[#937c60]/20 bg-stone-50' : 'border-gray-50 bg-gray-50/50 grayscale'}`}
-                        whileHover={currentStep > 0 ? { x: 10, backgroundColor: 'white' } : {}}
+                        className={`flex items-center gap-6 p-6 rounded-[28px] border transition-all duration-700 ${currentStep > 0 ? 'border-[#937c60]/20 bg-stone-50 dark:bg-white/5' : 'border-gray-50 dark:border-white/5 bg-gray-50/50 dark:bg-white/5 grayscale'}`}
+                        whileHover={currentStep > 0 ? { x: 10, backgroundColor: 'var(--hover-bg, white)' } : {}}
+                        style={{ '--hover-bg': 'rgba(255,255,255,0.05)' }}
                       >
-                         <div className='w-14 h-14 rounded-2xl bg-white border border-gray-100 flex items-center justify-center text-[#937c60] shadow-sm'>
+                         <div className='w-14 h-14 rounded-2xl bg-white dark:bg-black/40 border border-gray-100 dark:border-white/10 flex items-center justify-center text-[#937c60] shadow-sm'>
                             <item.icon size={22} />
                          </div>
                          <div className='space-y-1'>
-                            <p className='font-medium text-gray-900'>{item.title}</p>
-                            <p className='text-[10px] text-gray-400 font-medium uppercase tracking-widest leading-none'>{item.detail}</p>
+                            <p className='font-medium text-gray-900 dark:text-white'>{item.title}</p>
+                            <p className='text-[10px] text-gray-400 dark:text-gray-500 font-medium uppercase tracking-widest leading-none'>{item.detail}</p>
                          </div>
                       </motion.div>
                     ))}
@@ -213,7 +214,7 @@ const AIOutputsSection = () => {
                     <Cpu size={14} className='text-[#937c60]' />
                     <p className='text-[10px] font-medium text-[#937c60] uppercase tracking-[0.4em]'>Active Core</p>
                  </div>
-                 <p className='text-gray-300 font-mono text-[10px] tracking-widest'>Lat: 2.4ms / Gen: v4.8</p>
+                 <p className='text-gray-300 dark:text-gray-600 font-mono text-[10px] tracking-widest'>Lat: 2.4ms / Gen: v4.8</p>
               </div>
            </div>
 
@@ -231,7 +232,7 @@ const AIOutputsSection = () => {
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        className='h-full bg-gray-900 rounded-[48px] p-10 md:p-12 border border-white/5 shadow-2xl relative overflow-hidden group'
+                        className='h-full bg-gray-900 dark:bg-black rounded-[48px] p-10 md:p-12 border border-white/5 shadow-2xl relative overflow-hidden group'
                       >
                          <div className='absolute top-0 left-0 w-full h-full opacity-30 mix-blend-overlay' 
                               style={{ backgroundImage: 'linear-gradient(45deg, #937c60 0%, transparent 100%)' }} />
@@ -278,13 +279,13 @@ const AIOutputsSection = () => {
                       <motion.div 
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className='h-full bg-white rounded-[48px] border border-dashed border-gray-200 flex flex-col items-center justify-center p-12 text-center'
+                        className='h-full bg-white dark:bg-[#111] rounded-[48px] border border-dashed border-gray-200 dark:border-white/10 flex flex-col items-center justify-center p-12 text-center'
                       >
-                         <div className='w-20 h-20 rounded-full bg-stone-50 flex items-center justify-center text-gray-300 mb-6'>
+                         <div className='w-20 h-20 rounded-full bg-stone-50 dark:bg-white/5 flex items-center justify-center text-gray-300 dark:text-gray-600 mb-6'>
                             <Activity size={32} className='animate-pulse' />
                          </div>
-                         <h4 className='text-xl font-light text-gray-400 mb-2'>Synthesis in Progress</h4>
-                         <p className='text-sm text-gray-300'>Awaiting neural map completion...</p>
+                         <h4 className='text-xl font-light text-gray-400 dark:text-gray-500 mb-2'>Synthesis in Progress</h4>
+                         <p className='text-sm text-gray-300 dark:text-gray-600'>Awaiting neural map completion...</p>
                       </motion.div>
                     )}
                  </AnimatePresence>
@@ -299,7 +300,7 @@ const AIOutputsSection = () => {
              whileInView={{ opacity: 1, y: 0 }}
              className='text-center mb-16 space-y-4'
            >
-              <div className='h-[1px] w-24 bg-gray-200 mx-auto mb-6' />
+              <div className='h-[1px] w-24 bg-gray-200 dark:bg-white/10 mx-auto mb-6' />
               <h4 className='text-[11px] font-light text-[#937c60] uppercase tracking-[0.6em]'>Included Deliverables</h4>
            </motion.div>
            
@@ -307,15 +308,15 @@ const AIOutputsSection = () => {
               {deliverables.map((item, i) => (
                 <motion.div 
                   key={i}
-                  whileHover={!isMobile ? { y: -10, backgroundColor: 'white', borderColor: '#937c60/20' } : {}}
-                  className='flex-1 p-4 lg:p-10 rounded-[24px] lg:rounded-[40px] border border-gray-100/50 bg-white/50 lg:bg-[#faf8f6] transition-all duration-500 group text-center flex flex-col items-center'
+                  whileHover={!isMobile ? { y: -10 } : {}}
+                  className='flex-1 p-4 lg:p-10 rounded-[24px] lg:rounded-[40px] border border-gray-100/50 dark:border-white/5 bg-white/50 dark:bg-[#111] lg:bg-[#faf8f6] lg:dark:bg-[#111] hover:bg-white dark:hover:bg-white/5 hover:border-[#937c60]/20 dark:hover:border-white/10 transition-all duration-500 group text-center flex flex-col items-center'
                 >
-                   <div className='w-10 h-10 lg:w-20 lg:h-20 rounded-xl lg:rounded-[30px] bg-white border border-gray-100 flex items-center justify-center mb-3 lg:mb-8 group-hover:bg-gray-900 group-hover:text-white group-hover:scale-110 transition-all duration-500 shadow-sm'>
-                      <item.icon size={isMobile ? 16 : 26} />
+                   <div className='w-10 h-10 lg:w-20 lg:h-20 rounded-xl lg:rounded-[30px] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 flex items-center justify-center mb-3 lg:mb-8 group-hover:bg-gray-900 group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black group-hover:scale-110 transition-all duration-500 shadow-sm'>
+                      <item.icon size={isMobile ? 16 : 26} className="text-gray-900 dark:text-white group-hover:text-white dark:group-hover:text-black" />
                    </div>
                    <div className='space-y-1 lg:space-y-3'>
-                      <p className='text-[10px] lg:text-lg font-light text-gray-900 leading-tight'>{item.title}</p>
-                      <p className='text-[7px] lg:text-[10px] font-medium text-gray-400 uppercase tracking-wider lg:tracking-widest leading-relaxed lg:px-4'>{item.meta}</p>
+                      <p className='text-[10px] lg:text-lg font-light text-gray-900 dark:text-white leading-tight'>{item.title}</p>
+                      <p className='text-[7px] lg:text-[10px] font-medium text-gray-400 dark:text-gray-500 uppercase tracking-wider lg:tracking-widest leading-relaxed lg:px-4'>{item.meta}</p>
                    </div>
                 </motion.div>
               ))}

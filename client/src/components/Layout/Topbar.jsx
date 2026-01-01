@@ -4,30 +4,51 @@ import {
   ChevronDown,
   LogOut,
   Menu,
+  Moon,
+  Sun,
   User,
-  X,
+  X
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useLogout } from "../../hooks/useAuth";
 
 const TopBar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      const savedTheme = localStorage.getItem("theme");
+      return savedTheme === "dark" || (!savedTheme && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    }
+    return false;
+  });
 
   const { currentUser } = useSelector((state) => state.user);
   const logoutMutation = useLogout();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const dropdownRefs = useRef({});
   const mobileMenuRef = useRef(null);
 
+  // Apply theme
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [isDarkMode]);
+
   // Scroll detection for styling changes
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
+      setIsScrolled(window.scrollY > 20);
     };
     window.addEventListener("scroll", handleScroll);
     handleScroll();
@@ -54,6 +75,7 @@ const TopBar = () => {
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const toggleDropdown = (dropdown) =>
     setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
+  const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const handleAuthRedirect = (type) => navigate(`/auth?type=${type}`);
   const handleLogout = async () => {
@@ -72,32 +94,34 @@ const TopBar = () => {
       href: "#",
       hasDropdown: true,
       dropdownItems: [
-        { name: "3D Visualization", href: "/visualizer" },
-        { name: "Floor Plans (2D)", href: "/floorplans" },
-        { name: "Mood Boards", href: "/moodboard" },
+        { name: "3D Renders", href: "/visualizer" },
+        { name: "Floor Plans", href: "/floorplans" },
+        { name: "AI Designs", href: "/moodboard" },
       ],
     },
     { name: "Pricing", href: "/pricing" },
     { name: "About", href: "/about" },
   ];
 
+  const primaryColor = "#8d775e";
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-300 ${
         isScrolled
-          ? "bg-white/80 backdrop-blur-md border-b border-gray-100 py-3 shadow-sm"
-          : "bg-white/90 backdrop-blur-md md:bg-transparent py-4 md:py-6"
+          ? "bg-white/90 dark:bg-black/95 backdrop-blur-md border-b border-gray-100 dark:border-white/10 py-2 shadow-lg dark:shadow-2xl"
+          : "bg-transparent py-4"
       }`}
     >
-      <div className="max-w-[1600px] mx-auto px-6 md:px-12">
+      <div className="max-w-[1600px] mx-auto px-5 lg:px-8">
         <div className="flex items-center justify-between">
           
           {/* Logo Section */}
-          <NavLink to="/" className="flex items-center gap-2 group z-50">
+          <NavLink to="/" className="flex items-center z-50">
             <img 
               src="/logoicon.png" 
               alt="Manara Logo" 
-              className="h-12 w-auto object-contain group-hover:scale-105 transition-transform duration-300"
+              className="h-9 w-auto object-contain transition-all hover:opacity-80 dark:brightness-110"
             />
           </NavLink>
 
@@ -109,12 +133,16 @@ const TopBar = () => {
                   <div ref={(el) => (dropdownRefs.current[item.name] = el)}>
                     <button
                       onClick={() => toggleDropdown(item.name)}
-                      className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors rounded-full hover:bg-black/5"
+                      className={`flex items-center gap-1.5 px-4 py-2 text-[15px] font-medium transition-all duration-200 rounded-full ${
+                        activeDropdown === item.name 
+                        ? "bg-[#8d775e]/5 dark:bg-white/10 text-[#8d775e] dark:text-white ring-1 ring-[#8d775e]/20 dark:ring-white/5" 
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5"
+                      }`}
                     >
                       {item.name}
                       <ChevronDown
                         size={14}
-                        className={`transition-transform duration-200 ${
+                        className={`transition-transform duration-300 ${
                           activeDropdown === item.name ? "rotate-180" : ""
                         }`}
                       />
@@ -122,18 +150,17 @@ const TopBar = () => {
                     <AnimatePresence>
                       {activeDropdown === item.name && (
                         <motion.div
-                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                          transition={{ duration: 0.2 }}
-                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-56 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 p-1.5 overflow-hidden"
+                          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                          className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-52 bg-white dark:bg-[#0f0f0f] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-gray-100 dark:border-white/10 p-1.5 overflow-hidden"
                         >
                           {item.dropdownItems.map((subItem, i) => (
                             <NavLink
                               key={i}
                               to={subItem.href}
                               onClick={() => setActiveDropdown(null)}
-                              className="block px-4 py-2.5 rounded-xl text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-colors"
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
                             >
                               {subItem.name}
                             </NavLink>
@@ -146,8 +173,10 @@ const TopBar = () => {
                   <NavLink
                     to={item.href}
                     className={({ isActive }) =>
-                      `px-4 py-2 text-sm font-medium transition-colors rounded-full hover:bg-black/5 ${
-                        isActive ? "text-gray-900 font-semibold" : "text-gray-600 hover:text-gray-900"
+                      `px-4 py-2 text-[15px] font-medium transition-all duration-200 rounded-full ${
+                        isActive 
+                        ? "text-[#8d775e] bg-[#8d775e]/5 ring-1 ring-[#8d775e]/20 dark:text-white dark:bg-white/10 dark:ring-white/5" 
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5"
                       }`
                     }
                   >
@@ -159,7 +188,16 @@ const TopBar = () => {
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-4 z-50">
+          <div className="flex items-center gap-3 z-50">
+            {/* Theme Toggle Button */}
+            <button
+              onClick={toggleTheme}
+              className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors order-first lg:order-none"
+              aria-label="Toggle theme"
+            >
+              {isDarkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
             {currentUser ? (
               <div
                 className="relative"
@@ -167,52 +205,51 @@ const TopBar = () => {
               >
                 <button
                   onClick={() => toggleDropdown("user")}
-                  className="flex items-center gap-3 pl-2 pr-4 py-1.5 bg-white border border-gray-200 rounded-full hover:border-gray-300 transition-all hover:shadow-sm"
+                  className="flex items-center gap-2 p-1 pr-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full hover:border-[#8d775e]/30 dark:hover:border-white/20 transition-all shadow-sm group"
                 >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center border border-white shadow-inner">
-                    <User size={16} className="text-gray-600" />
+                  <div className="w-8 h-8 rounded-full bg-[#8d775e] flex items-center justify-center border border-white dark:border-gray-800 shadow-sm text-white">
+                    <User size={16} />
                   </div>
-                  <span className="text-sm font-semibold text-gray-700 max-w-[100px] truncate hidden md:block">
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white hidden md:block">
                     {currentUser.name?.split(" ")[0]}
                   </span>
-                  <ChevronDown size={14} className="text-gray-400" />
+                  <ChevronDown size={14} className="text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />
                 </button>
 
                 <AnimatePresence>
                   {activeDropdown === "user" && (
                     <motion.div
-                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute top-full right-0 mt-3 w-64 bg-white rounded-2xl shadow-[0_20px_50px_-12px_rgba(0,0,0,0.15)] border border-gray-100 overflow-hidden p-2"
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-[#0f0f0f] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-gray-100 dark:border-white/10 overflow-hidden p-1.5"
                     >
-                      <div className="px-4 py-3 mb-2 bg-gray-50 rounded-xl">
-                        <p className="text-sm font-bold text-gray-900">
+                      <div className="px-3 py-3 mb-1 bg-gray-50 dark:bg-white/5 rounded-xl">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
                           {currentUser.name}
                         </p>
-                        <p className="text-xs text-gray-500 font-medium truncate">
-                          {currentUser.email}
+                        <p className="text-[11px] text-[#8d775e] font-bold uppercase tracking-wider mt-0.5">
+                          Pro Member
                         </p>
                       </div>
 
                       <div className="space-y-0.5">
                         <NavLink
                           to="/profile"
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 text-[14px] font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all"
                         >
                           <User size={16} className="text-gray-400" /> Profile
                         </NavLink>
                         <NavLink
                           to="/subscription"
-                          className="flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-gray-50 text-sm font-medium text-gray-700 transition-colors"
+                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 text-[14px] font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-all"
                         >
-                          <Banknote size={16} className="text-gray-400" /> Subscription
+                          <Banknote size={16} className="text-gray-400" /> Billing
                         </NavLink>
-                        <div className="h-px bg-gray-100 my-1 mx-2" />
+                        <div className="h-px bg-gray-100 dark:bg-white/10 my-1.5 mx-1" />
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-red-50 text-sm font-medium text-red-600 transition-colors text-left"
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-500/10 text-[14px] font-medium text-red-600 dark:text-red-400 transition-all"
                         >
                           <LogOut size={16} /> Sign Out
                         </button>
@@ -222,101 +259,95 @@ const TopBar = () => {
                 </AnimatePresence>
               </div>
             ) : (
-              <div className="hidden md:flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => handleAuthRedirect("login")}
-                  className="px-5 py-2.5 text-sm font-semibold text-gray-900 hover:text-black transition-colors"
+                  className="hidden sm:block px-4 py-2 text-sm font-bold text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
                 >
                   Log In
                 </button>
                 <button
                   onClick={() => handleAuthRedirect("signup")}
-                  className="px-6 py-2.5 bg-[#1a1a1a] hover:bg-black text-white rounded-full text-sm font-bold shadow-lg shadow-gray-200 transition-all hover:scale-105 active:scale-95"
+                  style={{ backgroundColor: primaryColor }}
+                  className="px-6 py-2.5 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg transition-all hover:brightness-110 active:scale-95"
                 >
                   Get Started
                 </button>
               </div>
             )}
 
-            {/* Mobile Menu Button - Keeping it simple */}
+            {/* Mobile Menu Button */}
             <button
               onClick={toggleMenu}
-              className="lg:hidden p-2.5 text-gray-900 bg-white/50 backdrop-blur-md rounded-full border border-gray-200"
+              className="lg:hidden p-2 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 rounded-xl transition-all"
             >
-              {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu Overlay - Full Screen */}
+      {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {isMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="lg:hidden absolute top-full left-0 right-0 bg-white border-b border-gray-100 shadow-xl overflow-hidden"
-          >
-            <div className="px-6 py-8 space-y-8 h-[80vh] overflow-y-auto">
-              <div className="space-y-6">
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMenuOpen(false)}
+              className="lg:hidden fixed inset-0 bg-black/20 dark:bg-black/80 backdrop-blur-sm z-[-1]"
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="lg:hidden absolute top-full left-0 right-0 bg-white dark:bg-[#0f0f0f] border-b border-gray-100 dark:border-white/10 shadow-2xl overflow-hidden"
+            >
+              <div className="p-4 space-y-1">
                 {navItems.map((item, i) => (
-                  <div key={i} className="space-y-4">
+                  <div key={i} className="flex flex-col">
                     {item.hasDropdown ? (
-                      <div className="space-y-3">
-                        <div className="text-2xl font-bold text-gray-900 tracking-tight">
+                      <div className="space-y-1">
+                        <div className="px-4 py-2 text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mt-2">
                           {item.name}
                         </div>
-                        <div className="pl-4 space-y-3 border-l-2 border-gray-100">
-                          {item.dropdownItems.map((sub, j) => (
-                            <NavLink
-                              key={j}
-                              to={sub.href}
-                              onClick={() => setIsMenuOpen(false)}
-                              className="block text-lg text-gray-500 font-medium py-1"
-                            >
-                              {sub.name}
-                            </NavLink>
-                          ))}
-                        </div>
+                        {item.dropdownItems.map((sub, j) => (
+                          <NavLink
+                            key={j}
+                            to={sub.href}
+                            onClick={() => setIsMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 text-[15px] font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"
+                          >
+                            {sub.name}
+                          </NavLink>
+                        ))}
                       </div>
                     ) : (
                       <NavLink
                         to={item.href}
                         onClick={() => setIsMenuOpen(false)}
-                        className="block text-2xl font-bold text-gray-900 tracking-tight"
+                        className="px-4 py-3.5 text-[16px] font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"
                       >
                         {item.name}
                       </NavLink>
                     )}
                   </div>
                 ))}
-              </div>
-
-              {!currentUser && (
-                <div className="pt-8 border-t border-gray-100 grid gap-4">
+                
+                {/* Mobile Dark Mode Toggle */}
+                <div className="pt-4 mt-2 border-t border-gray-100 dark:border-white/10">
                   <button
-                    onClick={() => {
-                      handleAuthRedirect("login");
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full py-4 rounded-xl border border-gray-200 font-bold text-lg text-gray-900"
+                    onClick={toggleTheme}
+                    className="flex items-center gap-3 w-full px-4 py-3.5 text-[16px] font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"
                   >
-                    Log In
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleAuthRedirect("signup");
-                      setIsMenuOpen(false);
-                    }}
-                    className="w-full py-4 rounded-xl bg-gray-900 text-white font-bold text-lg shadow-lg"
-                  >
-                    Sign Up
+                    {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+                    {isDarkMode ? "Light Mode" : "Dark Mode"}
                   </button>
                 </div>
-              )}
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </header>

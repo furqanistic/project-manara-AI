@@ -80,9 +80,9 @@ const PLANS = [
 
 const Decorations = () => (
   <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-    <div className='absolute -top-24 -left-24 w-96 h-96 bg-[#937c60]/8 rounded-full blur-[100px]' />
-    <div className='absolute top-1/2 -right-24 w-80 h-80 bg-[#b8a58c]/8 rounded-full blur-[80px]' />
-    <div className='absolute -bottom-24 left-1/3 w-64 h-64 bg-[#7a654f]/8 rounded-full blur-[120px]' />
+    <div className='absolute -top-24 -left-24 w-96 h-96 bg-[#937c60]/8 dark:bg-[#937c60]/10 rounded-full blur-[100px]' />
+    <div className='absolute top-1/2 -right-24 w-80 h-80 bg-[#b8a58c]/8 dark:bg-[#b8a58c]/10 rounded-full blur-[80px]' />
+    <div className='absolute -bottom-24 left-1/3 w-64 h-64 bg-[#7a654f]/8 dark:bg-[#7a654f]/10 rounded-full blur-[120px]' />
   </div>
 )
 
@@ -96,13 +96,13 @@ const PricingCard = ({ plan, onSelect }) => {
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
       whileHover={{ y: -8 }}
       className={`relative flex flex-col h-full rounded-3xl transition-all duration-300 ${
         isPopular 
-          ? 'bg-white shadow-[0_20px_50px_rgba(147,124,96,0.12)] ring-1 ring-[#937c60]/30' 
-          : 'bg-white shadow-xl border border-gray-100'
+          ? 'bg-white dark:bg-[#111] shadow-[0_20px_50px_rgba(147,124,96,0.12)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-[#937c60]/30 dark:ring-[#937c60]/50' 
+          : 'bg-white dark:bg-[#111] shadow-xl dark:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)] border border-gray-100 dark:border-white/5'
       }`}
     >
       {isPopular && (
@@ -116,29 +116,29 @@ const PricingCard = ({ plan, onSelect }) => {
       <div className='p-8 flex flex-col h-full'>
         {/* Header */}
         <div className='mb-8'>
-          <h3 className='text-2xl font-bold text-gray-900 mb-1'>{plan.name}</h3>
-          <p className='text-sm text-gray-500 font-medium'>{plan.tagline}</p>
+          <h3 className='text-2xl font-bold text-gray-900 dark:text-white mb-1'>{plan.name}</h3>
+          <p className='text-sm text-gray-500 dark:text-gray-400 font-medium'>{plan.tagline}</p>
         </div>
 
         {/* Pricing */}
         <div className='mb-8'>
           <div className='flex items-baseline gap-1'>
-            <span className='text-sm font-bold text-gray-400'>{plan.unit}</span>
-            <span className='text-5xl font-extrabold text-[#1a1a1a] tracking-tight'>
+            <span className='text-sm font-bold text-gray-400 dark:text-gray-500'>{plan.unit}</span>
+            <span className='text-5xl font-extrabold text-[#1a1a1a] dark:text-white tracking-tight'>
               {plan.price}
             </span>
           </div>
           {plan.originalPrice && (
             <div className='flex items-center gap-2 mt-2'>
-              <span className='text-sm text-gray-400 line-through'>{plan.unit} {plan.originalPrice}</span>
-              <span className='text-[10px] font-bold text-[#937c60] bg-[#937c60]/5 px-2 py-0.5 rounded'>
+              <span className='text-sm text-gray-400 dark:text-gray-600 line-through'>{plan.unit} {plan.originalPrice}</span>
+              <span className='text-[10px] font-bold text-[#937c60] bg-[#937c60]/5 dark:bg-[#937c60]/10 px-2 py-0.5 rounded'>
                 SAVE AED {parseInt(plan.originalPrice.replace(',','')) - parseInt(plan.price.replace(',',''))}
               </span>
             </div>
           )}
         </div>
 
-        <p className='text-sm text-gray-600 leading-relaxed mb-8'>
+        <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-8'>
           {plan.description}
         </p>
 
@@ -150,7 +150,7 @@ const PricingCard = ({ plan, onSelect }) => {
                 className='mt-2 shrink-0 w-1.5 h-1.5 rounded-full'
                 style={{ backgroundColor: plan.color }}
               />
-              <span className='text-sm text-gray-700 leading-snug group-hover:text-gray-900 transition-colors'>
+              <span className='text-sm text-gray-700 dark:text-gray-300 leading-snug group-hover:text-gray-900 dark:group-hover:text-white transition-colors'>
                 {feature}
               </span>
             </div>
@@ -160,13 +160,10 @@ const PricingCard = ({ plan, onSelect }) => {
         {/* Action Button */}
         <Button
           onClick={onSelect}
-          style={{ 
-            backgroundColor: isPopular ? '#937c60' : 'transparent',
-            borderColor: isPopular ? '#937c60' : '#e5e7eb',
-            color: isPopular ? 'white' : '#937c60'
-          }}
           className={`w-full py-7 rounded-2xl font-bold text-base transition-all duration-300 border-2 shadow-none ${
-            !isPopular && 'hover:bg-[#937c60] hover:text-white hover:border-[#937c60]'
+            isPopular 
+              ? 'bg-[#937c60] border-[#937c60] text-white hover:bg-[#867055] hover:border-[#867055]' 
+              : 'bg-transparent border-gray-200 dark:border-white/10 text-[#937c60] hover:bg-[#937c60] hover:text-white hover:border-[#937c60]'
           }`}
         >
           {plan.cta}
@@ -205,7 +202,7 @@ const PricingPage = () => {
   }
 
   return (
-    <div className='min-h-screen bg-[#faf8f6] font-["Poppins"]'>
+    <div className='min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] font-["Poppins"] transition-colors duration-500'>
       <TopBar />
       
       <main className='relative pt-32 pb-24 px-4 overflow-hidden'>
@@ -218,7 +215,7 @@ const PricingPage = () => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.5 }}
-              className='inline-flex items-center px-4 py-1 rounded-full bg-[#937c60]/10 text-[#937c60] text-[11px] font-bold mb-6 tracking-wider'
+              className='inline-flex items-center px-4 py-1 rounded-full bg-[#937c60]/10 dark:bg-[#937c60]/20 text-[#937c60] text-[11px] font-bold mb-6 tracking-wider'
             >
               LIMITED TIME LAUNCH OFFER
             </motion.div>
@@ -227,7 +224,7 @@ const PricingPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className='text-5xl md:text-7xl font-black text-gray-900 mb-6 tracking-tight leading-[1.05]'
+              className='text-5xl md:text-7xl font-black text-gray-900 dark:text-white mb-6 tracking-tight leading-[1.05]'
             >
               Premium Design, <br />
               <span className='text-[#937c60]'>Transparent</span> Pricing.
@@ -237,7 +234,7 @@ const PricingPage = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className='text-lg text-gray-500 leading-relaxed max-w-2xl mx-auto'
+              className='text-lg text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto'
             >
               Experience the future of interior design. Flexible plans tailored to the scale of your vision, from single rooms to luxury villas.
             </motion.p>
@@ -263,7 +260,7 @@ const PricingPage = () => {
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
-            className='flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-40 font-bold text-xs uppercase tracking-[0.2em] text-gray-600'
+            className='flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-40 font-bold text-xs uppercase tracking-[0.2em] text-gray-600 dark:text-gray-400'
           >
             <span>Secure Payments</span>
             <span>AI-Powered Accuracy</span>
@@ -277,7 +274,7 @@ const PricingPage = () => {
             viewport={{ once: true }}
             className='mt-32'
           >
-            <div className='bg-[#1a1a1a] rounded-[3rem] p-12 md:p-20 relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-12 shadow-2xl'>
+            <div className='bg-[#1a1a1a] dark:bg-[#111] rounded-[3rem] p-12 md:p-20 relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-12 shadow-2xl dark:border dark:border-white/5'>
               <div className='absolute top-0 right-0 w-1/2 h-full bg-[#937c60]/10 blur-[100px] pointer-events-none' />
               
               <div className='relative z-10 max-w-xl text-center lg:text-left'>

@@ -5,29 +5,29 @@ import { MoodboardHistory } from "@/components/Moodboard/MoodboardHistory";
 import { ResultView } from "@/components/Moodboard/ResultView.jsx";
 import { StepSpace } from "@/components/Moodboard/StepSpace.jsx";
 import {
-  useCreateMoodboard,
-  useGenerateMoodboard,
-  useGenerateMoodboardDescriptions,
+    useCreateMoodboard,
+    useGenerateMoodboard,
+    useGenerateMoodboardDescriptions,
 } from "@/hooks/useMoodboard";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  Sparkles,
+    ArrowLeft,
+    ArrowRight,
+    CheckCircle2,
+    Clock,
+    Sparkles,
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import {
-  BRAND_COLOR,
-  BRAND_COLOR_DARK,
-  BRAND_COLOR_LIGHT,
-  COLOR_PALETTES,
-  DESIGN_STYLES,
-  SPACE_TYPES,
-  getColorDescriptionForPalette,
+    BRAND_COLOR,
+    BRAND_COLOR_DARK,
+    BRAND_COLOR_LIGHT,
+    COLOR_PALETTES,
+    DESIGN_STYLES,
+    SPACE_TYPES,
+    getColorDescriptionForPalette,
 } from "../../components/Moodboard/Moodboardconfig.js";
 
 const MoodboardGenerator = () => {
@@ -392,10 +392,9 @@ const MoodboardGenerator = () => {
   };
 
   const steps = [
-    { number: 1, title: "Space" },
-    { number: 2, title: "Style" },
-    { number: 3, title: "Colors" },
-    { number: 4, title: "Vision" },
+    { number: 1, title: "Spatial Base", phase: "Baseline" },
+    { number: 2, title: "Aesthetic DNA", phase: "Styling" },
+    { number: 3, title: "Vision & Tone", phase: "Curation" },
   ];
 
   const useProgressTracking = (moodboardId, onProgress) => {
@@ -443,8 +442,17 @@ const MoodboardGenerator = () => {
           phase={generationPhase}
         />
       )}
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        {currentStep < 3 ? (
+      <div className="min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] relative overflow-hidden transition-colors duration-500">
+        {/* Cinematic Ambient Background */}
+        <div className='absolute inset-0 overflow-hidden pointer-events-none'>
+          <div className='absolute top-[-10%] right-[-5%] w-[70%] h-[70%] rounded-full bg-[#8d775e]/5 dark:bg-[#8d775e]/10 blur-[140px]' />
+          <div className='absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#b8a58c]/3 dark:bg-[#b8a58c]/5 blur-[120px]' />
+          <div className='absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none' 
+               style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }} />
+        </div>
+
+        <div className="relative z-10">
+          {currentStep < 3 ? (
           <WizardFlow
             currentStep={currentStep}
             setCurrentStep={setCurrentStep}
@@ -477,26 +485,28 @@ const MoodboardGenerator = () => {
           />
         )}
 
-        {/* NEW: Floating History Button */}
-        <motion.button
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => setShowHistory(true)}
-          className="fixed bottom-6 right-6 p-4 rounded-full shadow-lg hover:shadow-xl transition-shadow z-30"
-          style={{ backgroundColor: BRAND_COLOR }}
-          title="View moodboard history"
-        >
-          <Clock className="w-6 h-6 text-white" />
-        </motion.button>
 
-        {/* NEW: History Modal */}
-        <MoodboardHistory
-          isOpen={showHistory}
-          onClose={() => setShowHistory(false)}
-          onSelectMoodboard={handleSelectFromHistory}
-        />
+
+          {/* NEW: Floating History Button */}
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowHistory(true)}
+            className="fixed bottom-6 right-6 p-4 rounded-full shadow-2xl hover:shadow-brand transition-all z-30 bg-[#8d775e] text-white"
+            title="View moodboard history"
+          >
+            <Clock className="w-6 h-6" />
+          </motion.button>
+
+          {/* NEW: History Modal */}
+          <MoodboardHistory
+            isOpen={showHistory}
+            onClose={() => setShowHistory(false)}
+            onSelectMoodboard={handleSelectFromHistory}
+          />
+        </div>
       </div>
     </>
   );
@@ -531,46 +541,51 @@ const WizardFlow = ({
   };
 
   return (
-    <div className="h-screen flex flex-col pt-28">
-      <div className="max-w-6xl mx-auto px-6 w-full flex-shrink-0">
-        <div className="flex items-center justify-between mb-8">
+    <div className="min-h-screen flex flex-col pt-24">
+      <div className="max-w-5xl mx-auto px-6 w-full flex-shrink-0">
+        <div className="flex items-center justify-between mb-10">
           {steps.map((step, idx) => (
-            <div key={step.number} className="flex items-center flex-1">
+            <div key={step.number} className={`flex items-center ${idx < steps.length - 1 ? "flex-1" : ""}`}>
               <motion.div
-                className="flex items-center w-full"
+                className="flex items-center"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: idx * 0.1 }}
               >
                 <div
-                  className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all flex-shrink-0`}
-                  style={{
-                    backgroundColor:
-                      currentStep >= idx ? BRAND_COLOR : "#e5e7eb",
-                    color: currentStep >= idx ? "white" : "#9ca3af",
-                  }}
+                  className={`relative z-10 w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs transition-all flex-shrink-0 ${
+                    currentStep >= idx 
+                      ? "bg-[#8d775e] text-white shadow-lg shadow-[#8d775e]/20" 
+                      : "bg-white dark:bg-white/5 text-gray-400 border border-gray-100 dark:border-white/10"
+                  }`}
                 >
                   {currentStep > idx ? (
                     <CheckCircle2 className="w-5 h-5" />
                   ) : (
-                    step.number
+                    <span className="font-serif italic text-base">{step.number}</span>
                   )}
                 </div>
-                <span
-                  className="ml-3 text-sm font-semibold"
-                  style={{
-                    color: currentStep >= idx ? BRAND_COLOR : "#9ca3af",
-                  }}
-                >
-                  {step.title}
-                </span>
+                <div className="ml-3 flex flex-col">
+                  <span
+                    className={`text-[8px] font-bold tracking-[0.2em] uppercase transition-colors ${
+                      currentStep >= idx ? "text-[#8d775e]" : "text-gray-400 dark:text-gray-600"
+                    }`}
+                  >
+                    {step.phase}
+                  </span>
+                  <span
+                    className={`text-xs font-bold transition-colors whitespace-nowrap ${
+                      currentStep >= idx ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-600"
+                    }`}
+                  >
+                    {step.title}
+                  </span>
+                </div>
                 {idx < steps.length - 1 && (
                   <div
-                    className={`flex-1 h-0.5 mx-4 rounded transition-all`}
-                    style={{
-                      backgroundColor:
-                        currentStep > idx ? BRAND_COLOR : "#e5e7eb",
-                    }}
+                    className={`flex-1 h-[1px] min-w-[30px] mx-6 rounded transition-all ${
+                      currentStep > idx ? "bg-[#8d775e]/30" : "bg-gray-100 dark:bg-white/5"
+                    }`}
                   />
                 )}
               </motion.div>
@@ -588,8 +603,14 @@ const WizardFlow = ({
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
-              className="bg-white rounded-2xl shadow-xl p-10"
+              className="bg-white dark:bg-[#111] rounded-[40px] shadow-2xl shadow-[#8d775e]/5 border border-gray-100 dark:border-white/5 p-10 relative overflow-hidden"
             >
+              {/* Decorative side label */}
+              <div className="absolute top-1/2 -right-12 -translate-y-1/2 rotate-90 hidden lg:block">
+                <span className="text-[10px] font-bold tracking-[1em] text-gray-200 dark:text-white/5 uppercase whitespace-nowrap">
+                  Manara Design Studio
+                </span>
+              </div>
               {currentStep === 0 && (
                 <StepSpace
                   selectedSpace={selectedSpace}
@@ -615,13 +636,13 @@ const WizardFlow = ({
             </motion.div>
           </AnimatePresence>
 
-          <div className="flex gap-4 mt-6 justify-between">
+          <div className="flex gap-4 mt-12 justify-between max-w-6xl mx-auto px-6 pb-12 w-full">
             <button
               onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
               disabled={currentStep === 0 || isGenerating}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 transition-all"
+              className="flex items-center gap-3 px-8 py-4 rounded-2xl font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 disabled:opacity-30 transition-all group"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
               Back
             </button>
 
@@ -629,31 +650,25 @@ const WizardFlow = ({
               <button
                 onClick={() => setCurrentStep(currentStep + 1)}
                 disabled={!canProceed() || isGenerating}
-                className="flex items-center gap-2 px-8 py-3 rounded-lg font-semibold text-white hover:shadow-lg disabled:opacity-50 transition-all"
-                style={{ backgroundColor: BRAND_COLOR }}
-                onMouseEnter={(e) =>
-                  (e.target.style.backgroundColor = BRAND_COLOR_DARK)
-                }
-                onMouseLeave={(e) =>
-                  (e.target.style.backgroundColor = BRAND_COLOR)
-                }
+                className="flex items-center gap-3 px-10 py-4 rounded-2xl font-bold text-white bg-gray-900 dark:bg-white dark:text-black hover:bg-black dark:hover:bg-gray-200 disabled:opacity-30 transition-all shadow-xl shadow-black/10 group"
               >
-                Next
-                <ArrowRight className="w-5 h-5" />
+                Next Step
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </button>
             ) : (
               <button
                 onClick={onGenerate}
                 disabled={!canProceed() || isGenerating}
-                className="flex items-center gap-2 px-8 py-3 rounded-lg font-semibold text-white hover:shadow-lg disabled:opacity-50 transition-all"
+                className="flex items-center gap-3 px-10 py-4 rounded-2xl font-bold text-white shadow-2xl relative overflow-hidden group disabled:opacity-30"
                 style={{
-                  background: `linear-gradient(135deg, ${BRAND_COLOR}, ${BRAND_COLOR_LIGHT})`,
+                  background: `linear-gradient(135deg, #8d775e, #b8a58c)`,
                 }}
               >
+                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                 {isGenerating ? (
                   <>
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    Generating...
+                    Synthesizing...
                   </>
                 ) : (
                   <>
@@ -691,12 +706,17 @@ const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Design style?
+      <div className="text-center mb-6">
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <div className="w-8 h-[1px] bg-[#8d775e]"></div>
+          <span className="text-[9px] font-bold tracking-[0.5em] text-[#8d775e] uppercase">Aesthetic Curation</span>
+          <div className="w-8 h-[1px] bg-[#8d775e]"></div>
+        </div>
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
+          Design <span className="text-[#8d775e] font-serif italic">Styles.</span>
         </h2>
-        <p className="text-base text-gray-500">
-          Choose the aesthetic that resonates with you
+        <p className="text-gray-400 dark:text-gray-500 font-medium text-sm">
+          Choose the architectural DNA for your space.
         </p>
       </div>
 
@@ -707,36 +727,36 @@ const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
             onClick={() => setSelectedStyle(style.label)}
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
-            className={`relative p-4 rounded-xl transition-all duration-300 border text-center group`}
-            style={{
-              borderColor: selectedStyle === style.label ? BRAND_COLOR : "#f3f4f6",
-              backgroundColor: selectedStyle === style.label ? `${BRAND_COLOR}05` : "#ffffff",
-              boxShadow: selectedStyle === style.label 
-                ? `0 10px 20px ${BRAND_COLOR}10` 
-                : "0 1px 3px rgba(0,0,0,0.02)",
-            }}
+            className={`relative p-4 rounded-2xl transition-all duration-300 border text-center group ${
+              selectedStyle === style.label 
+                ? "bg-[#8d775e]/10 border-[#8d775e]" 
+                : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/5 hover:border-[#8d775e]/30"
+            }`}
           >
-            <div className="relative z-10 mb-2">
+            <div className="relative z-10 mb-3 bg-gray-50 dark:bg-black/20 w-14 h-14 rounded-xl flex items-center justify-center mx-auto transition-transform group-hover:scale-110">
               <div className="text-2xl">
                 {styleIcons[style.label] || "🎨"}
               </div>
             </div>
 
             <div className="relative z-10">
-              <h3 className={`font-bold text-sm mb-0.5 transition-colors ${
-                selectedStyle === style.label ? "text-gray-900" : "text-gray-600"
+              <h3 className={`font-bold text-sm mb-1 transition-colors ${
+                selectedStyle === style.label ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"
               }`}>
                 {style.label}
               </h3>
+              <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest opacity-60">
+                {style.description}
+              </p>
             </div>
 
             {selectedStyle === style.label && (
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute top-2 right-2 z-20"
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: 1, rotate: 0 }}
+                className="absolute top-4 right-4 z-20"
               >
-                <div className="w-4 h-4 rounded-full flex items-center justify-center shadow-sm" style={{ backgroundColor: BRAND_COLOR }}>
+                <div className="w-5 h-5 rounded-full flex items-center justify-center bg-[#8d775e] shadow-lg shadow-[#8d775e]/20">
                   <CheckCircle2 className="w-3 h-3 text-white" />
                 </div>
               </motion.div>
@@ -749,17 +769,14 @@ const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="mt-8 text-center text-sm text-gray-500"
+        className="mt-6 text-center"
       >
         {selectedStyle ? (
-          <span>
-            Selected:{" "}
-            <span style={{ color: BRAND_COLOR }} className="font-semibold">
-              {selectedStyle}
-            </span>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-[#8d775e]">
+            Trajectory set: {selectedStyle}
           </span>
         ) : (
-          <span>Select a style to continue →</span>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">Select a style to continue</span>
         )}
       </motion.div>
     </div>
@@ -786,18 +803,23 @@ const StepColorsAndVision = ({
 
   return (
     <div className="max-w-6xl mx-auto">
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-900 mb-2">
-          Colors & Your Vision
+      <div className="text-center mb-6">
+        <div className="flex items-center justify-center gap-4 mb-2">
+          <div className="w-8 h-[1px] bg-[#8d775e]"></div>
+          <span className="text-[9px] font-bold tracking-[0.5em] text-[#8d775e] uppercase">SENSORY MAPPING</span>
+          <div className="w-8 h-[1px] bg-[#8d775e]"></div>
+        </div>
+        <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
+          Colors & <span className="text-[#8d775e] font-serif italic">Vision.</span>
         </h2>
-        <p className="text-base text-gray-500">
-          Select your palette and describe your design goals
+        <p className="text-gray-400 dark:text-gray-500 font-medium text-sm">
+          Define the chromatic spectrum and conceptual requirements.
         </p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-8">
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-          <label className="block text-sm font-bold text-gray-900 mb-4">
+        <div className="bg-gray-50/50 dark:bg-black/20 rounded-3xl p-6 border border-gray-100 dark:border-white/5">
+          <label className="block text-[10px] font-bold tracking-[0.2em] uppercase text-[#8d775e] mb-6">
             Color Palette
           </label>
           <div className="grid grid-cols-2 gap-3 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">

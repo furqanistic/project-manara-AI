@@ -75,10 +75,10 @@ const ModernBeforeAfterSection = () => {
   ]
 
   return (
-    <section className='relative py-24 bg-[#faf8f6] overflow-hidden px-6 md:px-12'>
+    <section className='relative py-24 bg-[#faf8f6] dark:bg-[#0a0a0a] overflow-hidden px-6 md:px-12 transition-colors duration-500'>
       {/* Background Ambience */}
       <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-[20%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#937c60]/5 blur-[120px]' />
+        <div className='absolute top-[20%] right-[-10%] w-[40%] h-[40%] rounded-full bg-[#937c60]/5 dark:bg-[#937c60]/10 blur-[120px]' />
       </div>
 
       <div className='relative z-10 max-w-[1400px] mx-auto w-full'>
@@ -95,7 +95,7 @@ const ModernBeforeAfterSection = () => {
           >
             <div
               ref={sliderRef}
-              className='relative rounded-[48px] md:rounded-[64px] overflow-hidden cursor-none group shadow-[0_50px_100px_rgba(147,124,96,0.08)] border border-gray-100 bg-white'
+              className='relative rounded-[48px] md:rounded-[64px] overflow-hidden cursor-none group shadow-[0_50px_100px_rgba(147,124,96,0.08)] dark:shadow-[0_50px_100px_rgba(0,0,0,0.5)] border border-gray-100 dark:border-white/10 bg-white dark:bg-[#111]'
               onMouseMove={handleMouseMove}
               onTouchMove={handleTouchMove}
               onMouseEnter={handleMouseEnter}
@@ -106,7 +106,7 @@ const ModernBeforeAfterSection = () => {
                 <img
                   src='/Home/after.webp'
                   alt='Original Space'
-                  className='absolute inset-0 w-full h-full object-cover grayscale brightness-110 opacity-40'
+                  className='absolute inset-0 w-full h-full object-cover grayscale brightness-110 opacity-40 dark:opacity-60'
                 />
 
                 {/* Transformed Space (After) Clipping */}
@@ -127,7 +127,7 @@ const ModernBeforeAfterSection = () => {
                   
                   {/* Neural Overlay labels on "Transformed" side */}
                   <div className='absolute top-10 left-10 pointer-events-none z-20 flex flex-col gap-4'>
-                    <div className='bg-white/10 backdrop-blur-xl px-6 py-2 rounded-full border border-white/20 flex items-center gap-3'>
+                    <div className='bg-white/10 dark:bg-black/40 backdrop-blur-xl px-6 py-2 rounded-full border border-white/20 dark:border-white/10 flex items-center gap-3'>
                        <div className='w-1.5 h-1.5 rounded-full bg-[#937c60] animate-pulse' />
                        <span className='text-[10px] font-bold tracking-widest text-white uppercase'>Neural Synthesis Active</span>
                     </div>
@@ -136,12 +136,12 @@ const ModernBeforeAfterSection = () => {
 
                 {/* Vertical Splitter */}
                 <motion.div
-                  className='absolute top-0 bottom-0 w-[1.5px] bg-white/40 backdrop-blur-sm z-30 pointer-events-none'
+                  className='absolute top-0 bottom-0 w-[1.5px] bg-white/40 dark:bg-white/20 backdrop-blur-sm z-30 pointer-events-none'
                   style={{
                     left: useTransform(springSliderPosition, (pos) => `${pos}%`),
                   }}
                 >
-                  <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 md:w-20 md:h-20 rounded-full border border-white/30 bg-white/10 backdrop-blur-xl flex items-center justify-center shadow-2xl overflow-hidden group'>
+                  <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 md:w-20 md:h-20 rounded-full border border-white/30 dark:border-white/10 bg-white/10 dark:bg-black/30 backdrop-blur-xl flex items-center justify-center shadow-2xl overflow-hidden group'>
                      <div className='absolute inset-0 bg-[#937c60]/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500' />
                      <motion.div 
                         animate={{ x: [-2, 2, -2] }}
@@ -156,8 +156,8 @@ const ModernBeforeAfterSection = () => {
 
                 {/* Floating Photometric Raw Label */}
                 <div className='absolute top-10 right-10 pointer-events-none z-0'>
-                   <div className='bg-white/50 backdrop-blur-md px-6 py-2 rounded-full border border-white/20'>
-                      <span className='text-[10px] font-bold tracking-widest text-gray-500 uppercase'>Photometric Raw</span>
+                   <div className='bg-white/50 dark:bg-black/50 backdrop-blur-md px-6 py-2 rounded-full border border-white/20 dark:border-white/10'>
+                      <span className='text-[10px] font-bold tracking-widest text-gray-500 dark:text-gray-300 uppercase'>Photometric Raw</span>
                    </div>
                 </div>
 
@@ -168,17 +168,17 @@ const ModernBeforeAfterSection = () => {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
-                      className='absolute inset-0 bg-gray-900/5 backdrop-blur-[1px] flex items-center justify-center z-40 pointer-events-none'
+                      className='absolute inset-0 bg-gray-900/5 dark:bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-40 pointer-events-none'
                     >
                        <div className='text-center space-y-4'>
                           <motion.div 
                             animate={{ x: [-20, 20, -20] }}
                             transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                            className='w-16 h-16 rounded-full border border-[#937c60]/40 bg-white/40 backdrop-blur-md flex items-center justify-center mx-auto'
+                            className='w-16 h-16 rounded-full border border-[#937c60]/40 bg-white/40 dark:bg-black/40 backdrop-blur-md flex items-center justify-center mx-auto'
                           >
                              <MousePointer2 className='text-[#937c60] w-6 h-6' />
                           </motion.div>
-                          <p className='text-[#937c60] font-bold tracking-widest uppercase text-[10px] bg-white/80 px-4 py-1 rounded-full'>Slide to transform</p>
+                          <p className='text-[#937c60] font-bold tracking-widest uppercase text-[10px] bg-white/80 dark:bg-black/60 px-4 py-1 rounded-full'>Slide to transform</p>
                        </div>
                     </motion.div>
                   )}
@@ -198,11 +198,11 @@ const ModernBeforeAfterSection = () => {
                   <div className='w-10 h-[1px] bg-[#937c60]' />
                   <span className='text-[10px] font-bold tracking-[0.5em] text-[#937c60] uppercase'>The Logic</span>
                 </motion.div>
-               <h3 className='text-5xl md:text-6xl font-bold text-gray-900 tracking-tightest leading-[0.9]'>
+               <h3 className='text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tightest leading-[0.9]'>
                  Evolve your <br /> 
                  <span className='font-serif italic text-[#937c60]'>habitat.</span>
                </h3>
-               <p className='text-gray-400 font-medium text-lg leading-relaxed'>
+               <p className='text-gray-400 dark:text-gray-500 font-medium text-lg leading-relaxed'>
                   Our neural engine reinterprets existing spatial geometry into photorealistic, verified architectural visions.
                </p>
             </div>
@@ -221,8 +221,8 @@ const ModernBeforeAfterSection = () => {
                          <step.icon size={20} />
                       </div>
                       <div className='space-y-1'>
-                        <h5 className='text-xl font-bold text-gray-900 group-hover:text-[#937c60] transition-colors'>{step.title}</h5>
-                        <p className='text-gray-400 text-sm font-medium leading-relaxed'>{step.description}</p>
+                        <h5 className='text-xl font-bold text-gray-900 dark:text-white group-hover:text-[#937c60] transition-colors'>{step.title}</h5>
+                        <p className='text-gray-400 dark:text-gray-500 text-sm font-medium leading-relaxed'>{step.description}</p>
                       </div>
                    </div>
                 </motion.div>
@@ -232,7 +232,7 @@ const ModernBeforeAfterSection = () => {
             <div className='pt-8'>
               <Button 
                  onClick={() => window.location.href = '/moodboard'}
-                 className='w-full bg-gray-900 hover:bg-black text-white px-10 py-8 rounded-full font-bold text-lg flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 group'
+                 className='w-full bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-black dark:hover:bg-gray-200 px-10 py-8 rounded-full font-bold text-lg flex items-center justify-center gap-4 shadow-2xl transition-all active:scale-95 group'
               >
                  Start Transformation
                  <ArrowRight size={20} className='group-hover:translate-x-1 transition-transform' />
