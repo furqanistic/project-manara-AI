@@ -143,7 +143,7 @@ const ThreedGenerator = () => {
                    )}
                    <gradio-app 
                     ref={gradioRef}
-                    src="https://manarad-furnaraconnect.hf.space"
+                    src="https://manarad-furnara-connect.hf.space"
                     theme_mode={isDarkMode ? "dark" : "light"}
                    ></gradio-app>
                 </div>
