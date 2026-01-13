@@ -1,13 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  Banknote,
-  ChevronDown,
-  LogOut,
-  Menu,
-  Moon,
-  Sun,
-  User,
-  X
+    Banknote,
+    ChevronDown,
+    LogOut,
+    Menu,
+    Moon,
+    Sun,
+    User,
+    X
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
@@ -94,7 +94,7 @@ const TopBar = () => {
       href: "#",
       hasDropdown: true,
       dropdownItems: [
-        { name: "3D Renders", href: "/visualizer" },
+        { name: "3D Renders", href: "https://manarad-furnara-connect.hf.space" },
         { name: "Floor Plans", href: "/floorplans" },
         { name: "AI Designs", href: "/moodboard" },
       ],
@@ -156,14 +156,27 @@ const TopBar = () => {
                           className="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-52 bg-white dark:bg-[#0f0f0f] rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] border border-gray-100 dark:border-white/10 p-1.5 overflow-hidden"
                         >
                           {item.dropdownItems.map((subItem, i) => (
-                            <NavLink
-                              key={i}
-                              to={subItem.href}
-                              onClick={() => setActiveDropdown(null)}
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
-                            >
-                              {subItem.name}
-                            </NavLink>
+                            subItem.href.startsWith("http") ? (
+                              <a
+                                key={i}
+                                href={subItem.href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={() => setActiveDropdown(null)}
+                                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                              >
+                                {subItem.name}
+                              </a>
+                            ) : (
+                              <NavLink
+                                key={i}
+                                to={subItem.href}
+                                onClick={() => setActiveDropdown(null)}
+                                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                              >
+                                {subItem.name}
+                              </NavLink>
+                            )
                           ))}
                         </motion.div>
                       )}
@@ -313,14 +326,27 @@ const TopBar = () => {
                           {item.name}
                         </div>
                         {item.dropdownItems.map((sub, j) => (
-                          <NavLink
-                            key={j}
-                            to={sub.href}
-                            onClick={() => setIsMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-3 text-[15px] font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"
-                          >
-                            {sub.name}
-                          </NavLink>
+                          sub.href.startsWith("http") ? (
+                            <a
+                              key={j}
+                              href={sub.href}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={() => setIsMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-3 text-[15px] font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"
+                            >
+                              {sub.name}
+                            </a>
+                          ) : (
+                            <NavLink
+                              key={j}
+                              to={sub.href}
+                              onClick={() => setIsMenuOpen(false)}
+                              className="flex items-center gap-3 px-4 py-3 text-[15px] font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"
+                            >
+                              {sub.name}
+                            </NavLink>
+                          )
                         ))}
                       </div>
                     ) : (
