@@ -4,16 +4,16 @@
  * Provides React Query mutations and queries for auth operations
  */
 
-import React, { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import React, { useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import {
-  loginFailure,
-  loginStart,
-  loginSuccess,
-  logout as logoutAction,
-  updateProfile as updateProfileAction,
+    loginFailure,
+    loginStart,
+    loginSuccess,
+    logout as logoutAction,
+    updateProfile as updateProfileAction,
 } from "../redux/userSlice";
 import { authService } from "../services/authService";
 
@@ -247,6 +247,32 @@ export const useUpdateUserAsAdmin = () => {
 };
 
 /**
+ * useOnboarding - Complete user onboarding
+ * @returns {Object} Mutation object
+ */
+export const useOnboarding = () => {
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (onboardingData) => authService.completeOnboarding(onboardingData),
+    onSuccess: (data) => {
+      console.log("✅ Onboarding completed successfully");
+      const updatedUser = data?.data?.user;
+      dispatch(updateProfileAction(updatedUser));
+      queryClient.setQueryData(authQueryKeys.currentUser(), updatedUser);
+      queryClient.invalidateQueries({ queryKey: authQueryKeys.user() });
+    },
+    onError: (error) => {
+      console.error("❌ Onboarding error:", error);
+      const errorMessage =
+        error?.data?.message || error?.message || "Failed to complete onboarding";
+      throw new Error(errorMessage);
+    },
+  });
+};
+
+/**
  * useAuthGuard - Check authentication and redirect if needed
  * @param {Boolean} requireAdmin - Require admin role
  * @returns {Object} { currentUser, isAuthenticated }
@@ -277,5 +303,6 @@ export default {
   useGetAllUsers,
   useDeleteUser,
   useUpdateUserAsAdmin,
+  useOnboarding,
   useAuthGuard,
 };

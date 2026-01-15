@@ -4,13 +4,14 @@ import React, { useEffect } from 'react'
 import { Toaster, toast } from 'react-hot-toast'
 import { Provider, useSelector } from 'react-redux'
 import {
-  BrowserRouter,
-  Navigate,
-  Route,
-  Routes,
-  useLocation,
+    BrowserRouter,
+    Navigate,
+    Route,
+    Routes,
+    useLocation,
 } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
+import OnboardingModal from './components/Auth/OnboardingModal'
 import ScrollToTop from './components/Layout/ScrollToTop'
 import { MoodboardHistoryDetails } from './components/Moodboard/MoodboardHistoryDetails'
 import AboutPage from './pages/About/AboutPage'
@@ -22,6 +23,7 @@ import HomePage from './pages/Home/HomePage'
 import PricingPage from './pages/Pricing/PricingPage'
 import Profile from './pages/Profile/Profile'
 import SubscriptionPage from './pages/Profile/SubscriptionPage'
+import ProjectsPage from './pages/Projects/ProjectsPage'
 import { persistor, store } from './redux/store'
 
 // Create React Query client
@@ -64,6 +66,43 @@ const RequireAuth = ({ children, requireAdmin = false }) => {
   return children
 }
 
+const OnboardingWrapper = () => {
+    const { currentUser } = useSelector((state) => state.user);
+    const location = useLocation();
+    
+    // Check if the user has completed the NEW 10-step onboarding
+    // We check for the 'identity' field which is unique to the new form
+    const isNewOnboardingComplete = currentUser?.isOnboarded && currentUser?.onboardingData?.identity;
+    
+    // Debug logging for troubleshooting
+    useEffect(() => {
+        if (currentUser) {
+            console.log('Onboarding Check:', {
+                user: currentUser.email,
+                isOnboarded: currentUser.isOnboarded,
+                hasNewData: !!currentUser?.onboardingData?.identity,
+                path: location.pathname
+            });
+        }
+    }, [currentUser, location.pathname]);
+    
+    // Don't show if not logged in or already fully onboarded with the new data
+    if (!currentUser || isNewOnboardingComplete) {
+        return null;
+    }
+
+    // Don't show on auth page
+    if (location.pathname === '/auth') {
+        return null;
+    }
+    
+    return (
+        <React.Suspense fallback={null}>
+            <OnboardingModal />
+        </React.Suspense>
+    );
+};
+
 const AppRoutes = () => {
   return (
     <Routes>
@@ -95,6 +134,14 @@ const AppRoutes = () => {
           element={
             <RequireAuth>
               <FloorPlanGenerator />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/projects"
+          element={
+            <RequireAuth>
+              <ProjectsPage />
             </RequireAuth>
           }
         />
@@ -144,6 +191,7 @@ const App = () => {
         <QueryClientProvider client={queryClient}>
           <BrowserRouter>
             <ScrollToTop />
+            <OnboardingWrapper />
             <Toaster
               position="top-center"
               toastOptions={{

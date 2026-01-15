@@ -99,6 +99,7 @@ const TopBar = () => {
         { name: "AI Designs", href: "/moodboard" },
       ],
     },
+    { name: "Projects", href: "/projects" },
     { name: "Pricing", href: "/pricing" },
     { name: "About", href: "/about" },
   ];
