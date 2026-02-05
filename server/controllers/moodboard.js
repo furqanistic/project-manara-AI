@@ -48,12 +48,14 @@ const withTimeout = (promise, timeoutMs = 120000, label = 'Operation') => {
 
 const activeProgressStreams = new Map()
 
-const broadcastProgress = (moodboardId, currentSteps) => {
+const broadcastProgress = (moodboardId, currentSteps, type = 'status', fieldData = null) => {
   if (!activeProgressStreams.has(moodboardId)) return
 
   const clients = activeProgressStreams.get(moodboardId)
   const data = JSON.stringify({
     currentSteps,
+    type,
+    fieldData,
     timestamp: new Date().toISOString(),
   })
 
@@ -476,6 +478,7 @@ export const generateMoodboardDescriptions = async (req, res, next) => {
 
     moodboard.designNarrative = designNarrative
     await moodboard.save({ validateBeforeSave: false })
+    broadcastProgress(id, ['Generating design narrative'], 'update', { designNarrative })
 
     // PROGRESS: Materials
     broadcastProgress(id, ['Generating design narrative', 'Generating materials'])
@@ -493,6 +496,7 @@ export const generateMoodboardDescriptions = async (req, res, next) => {
 
     moodboard.materials = materials
     await moodboard.save({ validateBeforeSave: false })
+    broadcastProgress(id, ['Generating design narrative', 'Generating materials'], 'update', { materials })
 
     // PROGRESS: Furniture
     broadcastProgress(id, [
@@ -514,8 +518,10 @@ export const generateMoodboardDescriptions = async (req, res, next) => {
 
     moodboard.furniture = furniture
     await moodboard.save({ validateBeforeSave: false })
+    broadcastProgress(id, ['Generating design narrative', 'Generating materials', 'Generating furniture'], 'update', { furniture })
 
-    // PROGRESS: Lighting
+    // PROGRESS: Lighting (SKIPPED)
+    /*
     broadcastProgress(id, [
       'Generating design narrative',
       'Generating materials',
@@ -536,8 +542,11 @@ export const generateMoodboardDescriptions = async (req, res, next) => {
 
     moodboard.lightingConcept = lightingConcept
     await moodboard.save({ validateBeforeSave: false })
+    broadcastProgress(id, ['Generating design narrative', 'Generating materials', 'Generating furniture', 'Generating lighting'], 'update', { lightingConcept })
+    */
 
-    // PROGRESS: Zones
+    // PROGRESS: Zones (SKIPPED)
+    /*
     broadcastProgress(id, [
       'Generating design narrative',
       'Generating materials',
@@ -559,14 +568,16 @@ export const generateMoodboardDescriptions = async (req, res, next) => {
 
     moodboard.zones = zones
     await moodboard.save({ validateBeforeSave: false })
+    broadcastProgress(id, ['Generating design narrative', 'Generating materials', 'Generating furniture', 'Generating lighting', 'Generating zones'], 'update', { zones })
+    */
 
     // PROGRESS: Variants
     broadcastProgress(id, [
       'Generating design narrative',
       'Generating materials',
       'Generating furniture',
-      'Generating lighting',
-      'Generating zones',
+      // 'Generating lighting',
+      // 'Generating zones',
       'Generating variants',
     ])
     console.log('🔄 Generating variants...')
@@ -584,6 +595,7 @@ export const generateMoodboardDescriptions = async (req, res, next) => {
     moodboard.variants = variants
     moodboard.status = 'completed'
     await moodboard.save()
+    broadcastProgress(id, ['Generating design narrative', 'Generating materials', 'Generating furniture', 'Generating variants'], 'update', { variants })
 
     // PROGRESS: Complete
     broadcastComplete(id)

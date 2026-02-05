@@ -40,7 +40,7 @@ import {
 
 const MoodboardGenerator = () => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [selectedSpace, setSelectedSpace] = useState("Living Room");
+  const [selectedSpace, setSelectedSpace] = useState("");
   const [selectedStyle, setSelectedStyle] = useState("");
   const [selectedColor, setSelectedColor] = useState("Neutral Tones");
   const [changes, setChanges] = useState("");
@@ -423,31 +423,43 @@ const MoodboardGenerator = () => {
   const useProgressTracking = (moodboardId, onProgress) => {
     useEffect(() => {
       if (!moodboardId) return;
-
+  
       const eventSource = new EventSource(
         `/api/moodboards/${moodboardId}/progress-stream`
       );
-
+  
       eventSource.addEventListener("progress", (event) => {
         try {
           const data = JSON.parse(event.data);
-          onProgress(data.currentSteps);
+          
+          // If it's a status update, update the progress steps
+          if (data.type === 'status' || !data.type) {
+            onProgress(data.currentSteps);
+          }
+          
+          // If it's a data update, merge it into our current moodboard state
+          if (data.type === 'update' && data.fieldData) {
+            setCurrentMoodboard(prev => ({
+              ...prev,
+              ...data.fieldData
+            }));
+          }
         } catch (error) {
           console.error("Error parsing progress event:", error);
         }
       });
-
+  
       eventSource.addEventListener("complete", () => {
         eventSource.close();
         onProgress([]); // Clear progress
         setLoadingState(null); // Ensure loader is cleared
       });
-
+  
       eventSource.addEventListener("error", () => {
         eventSource.close();
         setLoadingState(null); // Clear loader on error
       });
-
+  
       return () => {
         eventSource.close();
       };
@@ -465,7 +477,7 @@ const MoodboardGenerator = () => {
           phase={generationPhase}
         />
       )}
-      <div className="min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] relative transition-colors duration-500 flex flex-col pt-20 sm:pt-32 pb-12">
+      <div className="min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] relative transition-colors duration-500 flex flex-col pt-12 sm:pt-20 pb-12">
         {/* Cinematic Ambient Background */}
         <div className='absolute inset-0 overflow-hidden pointer-events-none'>
           <div className='absolute top-[-10%] right-[-5%] w-[70%] h-[70%] rounded-full bg-[#8d775e]/5 dark:bg-[#8d775e]/10 blur-[140px]' />

@@ -6,7 +6,7 @@ dotenv.config({ quiet: true })
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 const GEMINI_IMAGE_MODEL = 'gemini-2.5-flash-image' // Verified available model
-const GEMINI_TEXT_MODEL = 'gemini-2.5-flash'
+const GEMINI_TEXT_MODEL = 'gemini-2.0-flash-exp'
 const USE_MOCK = process.env.USE_MOCK_GEMINI === 'true'
 
 let genAI = null
