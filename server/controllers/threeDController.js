@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { createError } from '../error.js'
 import ThreeDModel from '../models/ThreeDModel.js'
-import { uploadImage, uploadRaw } from '../services/cloudinaryService.js'
+import { deleteAsset, uploadImage, uploadRaw } from '../services/cloudinaryService.js'
 import { generateThreeDVisualization } from '../services/geminiService.js'
 import { generateHunyuan3DModel } from '../services/huggingFaceService.js'
 
@@ -184,6 +184,29 @@ export const deleteThreeDModel = async (req, res, next) => {
 
     if (model.userId.toString() !== req.user.id) {
       return next(createError(403, 'You can only delete your own models'))
+    }
+
+    // Delete assets from Cloudinary
+    if (model.sourceImage) {
+      await deleteAsset(model.sourceImage).catch(err => 
+        console.error('Error deleting 3D source image from Cloudinary:', err)
+      )
+    }
+
+    if (model.glbUrl) {
+      await deleteAsset(model.glbUrl, 'raw').catch(err => 
+        console.error('Error deleting 3D GLB from Cloudinary:', err)
+      )
+    }
+
+    if (model.versions && model.versions.length > 0) {
+      for (const version of model.versions) {
+        if (version.image?.url) {
+          await deleteAsset(version.image.url).catch(err => 
+            console.error('Error deleting 3D version image from Cloudinary:', err)
+          )
+        }
+      }
     }
 
     model.isDeleted = true

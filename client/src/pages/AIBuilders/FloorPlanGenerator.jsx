@@ -1,27 +1,27 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-    ArrowLeft,
-    ArrowRight,
-    Check,
-    ChevronDown,
-    Download,
-    History,
-    Home,
-    Layers,
-    Layout,
-    Loader2,
-    Maximize2,
-    MessageSquare,
-    Palette,
-    Plus,
-    RotateCcw,
-    Send,
-    Settings,
-    Share2,
-    Sparkles,
-    Trash2,
-    Wand2,
-    X
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  Download,
+  History,
+  Home,
+  Layers,
+  Layout,
+  Loader2,
+  Maximize2,
+  MessageSquare,
+  Palette,
+  Plus,
+  RotateCcw,
+  Send,
+  Settings,
+  Share2,
+  Sparkles,
+  Trash2,
+  Wand2,
+  X
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
@@ -86,11 +86,13 @@ const FloorPlanGenerator = () => {
   const location = useLocation()
   
   const [generatedImage, setGeneratedImage] = useState(() => {
+    if (location.state?.reset) return null;
     const saved = localStorage.getItem('fp_generatedImage')
     return saved ? JSON.parse(saved) : null
   })
   
   const [chatHistory, setChatHistory] = useState(() => {
+    if (location.state?.reset) return [];
     const saved = localStorage.getItem('fp_chatHistory')
     return saved ? JSON.parse(saved) : []
   })
@@ -121,7 +123,11 @@ const FloorPlanGenerator = () => {
   }, [generatedImage, chatHistory])
 
   useEffect(() => {
-    if (location.state?.project) {
+    if (location.state?.reset) {
+        handleNewProject();
+        // Clear the state so refreshing doesn't keep resetting if we implement that
+        window.history.replaceState({}, document.title);
+    } else if (location.state?.project) {
         loadFromHistory(location.state.project);
         window.history.replaceState({}, document.title);
     }
@@ -282,7 +288,7 @@ const FloorPlanGenerator = () => {
           
           <div className='flex items-center justify-between p-5 border-b border-[#E5E5E7] dark:border-[#2D2D2F]'>
             <div className='flex items-center gap-2'>
-              <h2 className='font-black tracking-tighter text-base uppercase'>Manara</h2>
+              <h2 className='font-black tracking-tighter text-base uppercase'>Manara Floor Planner</h2>
             </div>
             <div className='flex items-center gap-1'>
               <button 

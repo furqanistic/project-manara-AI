@@ -93,8 +93,49 @@ export const uploadRaw = (fileData, folder = 'manara-ai/3d-models') => {
   })
 }
 
+/**
+ * Delete an asset from Cloudinary
+ * @param {String} url - The URL of the asset to delete
+ * @param {String} resourceType - The resource type ('image', 'video', or 'raw')
+ * @returns {Promise<Object>} - Cloudinary deletion result
+ */
+export const deleteAsset = (url, resourceType = 'image') => {
+  return new Promise((resolve, reject) => {
+    if (!url) return resolve({ result: 'not_found' })
+
+    try {
+      // Extract public ID from URL
+      // Example: https://res.cloudinary.com/demo/image/upload/v12345678/sample.jpg -> sample
+      // For folders: manara-ai/moodboards/abc1234 -> manara-ai/moodboards/abc1234
+      const parts = url.split('/')
+      const lastPart = parts[parts.length - 1]
+      const folderParts = parts.slice(parts.indexOf('upload') + 2, parts.length - 1)
+      const publicIdWithExtension = lastPart.split('?')[0] // remove query params
+      const publicId = publicIdWithExtension.split('.')[0]
+      
+      const fullPublicId = folderParts.length > 0 
+        ? [...folderParts, publicId].join('/')
+        : publicId
+
+      console.log(`🗑️ Deleting Cloudinary asset: ${fullPublicId} (${resourceType})`)
+      
+      cloudinary.uploader.destroy(fullPublicId, { resource_type: resourceType }, (error, result) => {
+        if (error) {
+          console.error('❌ Cloudinary deletion error:', error)
+          return reject(error)
+        }
+        resolve(result)
+      })
+    } catch (error) {
+      console.error('❌ Error parsing Cloudinary URL:', error)
+      resolve({ result: 'error', message: 'Failed to parse URL' })
+    }
+  })
+}
+
 export default {
     uploadImage,
     uploadVideo,
-    uploadRaw
+    uploadRaw,
+    deleteAsset
 }

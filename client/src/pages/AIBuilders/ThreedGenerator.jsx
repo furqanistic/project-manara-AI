@@ -3,181 +3,71 @@ import { ThreeDRenderHistory } from '@/components/ThreeDRender/ThreeDRenderHisto
 import api from '@/config/config'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-    ArrowRight,
-    Box,
-    ChevronRight,
-    Download,
-    Eye,
-    History,
-    Info,
-    Layers,
-    Loader2,
-    MessageSquare,
-    Palette,
-    Plus,
-    RotateCcw,
-    Send,
-    Shapes,
-    Upload,
-    Wand2,
-    X
+  ArrowRight,
+  Box,
+  ChevronRight,
+  Download,
+  Eye,
+  History,
+  Info,
+  Layers,
+  Loader2,
+  MessageSquare,
+  Palette,
+  Plus,
+  RotateCcw,
+  Send,
+  Shapes,
+  Upload,
+  Wand2,
+  X
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useLocation } from 'react-router-dom'
 
 const STYLES = [
-  { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors for rooms & furniture', color: '#de7c7c', recommended: true },
-  { id: 'architectural', label: 'Architectural White', description: 'Clean, minimalist neutral palette', color: '#8d775e' }
+  { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors', color: '#de7c7c' },
+  { id: 'architectural', label: 'Architectural White', description: 'Clean, neutral palette', color: '#8d775e' }
 ]
 
 const LOADING_PHASES = [
-  "Analyzing structural layout...",
-  "Generating spatial geometry...",
-  "Simulating lighting conditions...",
-  "Rendering photorealistic textures...",
-  "Finalizing 3D design..."
+  "Analyzing structures...",
+  "Generating geometry...",
+  "Simulating lighting...",
+  "Rendering textures...",
+  "Finalizing design..."
 ]
 
-const BuildingLoader = ({ progress }) => {
-  const [phaseIndex, setPhaseIndex] = useState(0);
-
-  useEffect(() => {
-    // Progress-based phase switching
-    const index = Math.min(
-      Math.floor((progress / 100) * LOADING_PHASES.length),
-      LOADING_PHASES.length - 1
-    );
-    setPhaseIndex(index);
-  }, [progress]);
-
-  return (
-    <div className="flex flex-col items-center gap-10 max-w-sm text-center">
-      <div className="relative w-32 h-32 flex items-center justify-center">
-        {/* Animated Background Grids */}
-        <div className="absolute inset-0 opacity-20 dark:opacity-40">
-           <div className="absolute inset-0 border border-[#8d775e]/30 scale-100 animate-pulse"></div>
-           <div className="absolute inset-0 border border-[#8d775e]/20 rotate-45 scale-90"></div>
-        </div>
-        
-        {/* Main Progress Ring */}
-        <svg className="w-full h-full -rotate-90">
-          <circle
-            cx="64"
-            cy="64"
-            r="60"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="text-gray-100 dark:text-white/5"
-          />
-          <motion.circle
-            cx="64"
-            cy="64"
-            r="60"
-            fill="none"
-            stroke="#8d775e"
-            strokeWidth="3"
-            strokeDasharray="377"
-            initial={{ strokeDashoffset: 377 }}
-            animate={{ strokeDashoffset: 377 - (377 * progress) / 100 }}
-            transition={{ type: "spring", bounce: 0, duration: 0.5 }}
-          />
-        </svg>
-
-        {/* Floating Architectural Elements */}
-        <div className="absolute inset-0 flex items-center justify-center">
-           <motion.div
-             animate={{ 
-               rotate: [0, 90, 180, 270, 360],
-               scale: [1, 1.1, 1]
-             }}
-             transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-             className="text-[#8d775e]"
-           >
-             <Box className="w-8 h-8 opacity-50" />
-           </motion.div>
-        </div>
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex flex-col items-center gap-1">
-          <AnimatePresence mode="wait">
-            <motion.h3 
-              key={phaseIndex}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="text-xl font-serif text-[#1a1816] dark:text-white"
-            >
-              Building Design
-            </motion.h3>
-          </AnimatePresence>
-          <div className="text-[10px] font-bold text-[#8d775e] bg-[#8d775e]/10 px-3 py-1 rounded-full uppercase tracking-widest animate-pulse">
-            {progress}% Complete
-          </div>
-        </div>
-        
-        <p className="text-sm text-gray-400 font-light h-10 italic">
-          {LOADING_PHASES[phaseIndex]}
-        </p>
-
-        {/* Small detail lines */}
-        <div className="flex justify-center gap-1.5 pt-2">
-           {[...Array(5)].map((_, i) => (
-             <motion.div
-               key={i}
-               animate={{ 
-                 opacity: i <= phaseIndex ? [0.3, 1, 0.3] : 0.1,
-                 scale: i <= phaseIndex ? [1, 1.2, 1] : 1
-               }}
-               transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
-               className={`w-1 h-4 rounded-full ${i <= phaseIndex ? 'bg-[#8d775e]' : 'bg-gray-200 dark:bg-white/10'}`}
-             />
-           ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const ThreedGenerator = () => {
+  const [step, setStep] = useState('config') // 'config' | 'result'
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [showChat, setShowChat] = useState(false)
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
   const location = useLocation()
   
   // State for the current project
   const [sourceImage, setSourceImage] = useState(null)
-  const [versions, setVersions] = useState([]) // Array of { style, image, timestamp, prompt }
+  const [versions, setVersions] = useState([]) 
   const [currentVersionIndex, setCurrentVersionIndex] = useState(-1)
   
   const [uploadProgress, setUploadProgress] = useState(0)
   const [selectedStyle, setSelectedStyle] = useState('architectural')
   const [prompt, setPrompt] = useState('')
   const [chatHistory, setChatHistory] = useState([])
-  // Track the current project ID to prevent duplicate history entries
   const [currentProjectId, setCurrentProjectId] = useState(null)
   
   const fileInputRef = useRef(null)
   const chatContainerRef = useRef(null)
 
+  // Sync theme
   useEffect(() => {
-    // Check for dark mode initially and listen for changes
-    const checkDarkMode = () => {
-      setIsDarkMode(document.documentElement.classList.contains('dark'))
-    }
-    
+    const checkDarkMode = () => setIsDarkMode(document.documentElement.classList.contains('dark'))
     checkDarkMode()
-    
-    // Observer to watch for class changes on html element
     const observer = new MutationObserver(checkDarkMode)
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
-
-    return () => {
-      observer.disconnect()
-    }
+    return () => observer.disconnect()
   }, [])
 
   // Auto-scroll chat
@@ -185,13 +75,15 @@ const ThreedGenerator = () => {
     if (chatContainerRef.current) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
     }
-  }, [chatHistory, showChat])
+  }, [chatHistory])
 
-  // Handle deep-linking from Projects page
+  // Handle deep-linking
   useEffect(() => {
-    if (location.state?.project) {
+    if (location.state?.reset) {
+        handleReset();
+        window.history.replaceState({}, document.title);
+    } else if (location.state?.project) {
         handleLoadFromHistory(location.state.project);
-        // Clear state to prevent reload on refresh
         window.history.replaceState({}, document.title);
     }
   }, [location.state]);
@@ -203,33 +95,33 @@ const ThreedGenerator = () => {
         toast.error('Please upload an image file')
         return
       }
-      
       const reader = new FileReader()
       reader.onload = (event) => {
         setSourceImage(event.target.result)
         setVersions([])
         setCurrentVersionIndex(-1)
-        setCurrentProjectId(null) // Reset project ID for new file
+        setCurrentProjectId(null)
         setChatHistory([])
         setPrompt('')
-        setShowChat(false)
+        setStep('config')
       }
       reader.readAsDataURL(file)
     }
   }
 
-
-
-  const handleGenerate = async (e, customIterationPrompt = null) => {
-    if (e) e.preventDefault()
-    
+  const handleGenerate = async (overriddenPrompt = null) => {
     if (!sourceImage) {
       toast.error('Please upload a floor plan first')
       return
     }
 
-    const isIteration = !!customIterationPrompt || !!prompt.trim();
-    const currentPrompt = customIterationPrompt || prompt;
+    const isIteration = step === 'result' || !!overriddenPrompt || !!prompt.trim();
+    const currentPrompt = overriddenPrompt || prompt;
+
+    if (isIteration && !currentPrompt.trim() && !overriddenPrompt) {
+      toast.error("Please describe your changes")
+      return
+    }
 
     setIsGenerating(true)
     setUploadProgress(0)
@@ -240,15 +132,8 @@ const ThreedGenerator = () => {
     }
 
     try {
-      // Simulate progress
       const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(progressInterval)
-            return 90
-          }
-          return prev + 10
-        })
+        setUploadProgress(prev => Math.min(prev + 10, 90))
       }, 300)
 
       const payload = {
@@ -258,45 +143,28 @@ const ThreedGenerator = () => {
         prompt: isIteration ? currentPrompt : null,
       }
 
-      if (currentProjectId) {
-        payload.projectId = currentProjectId;
-      }
+      if (currentProjectId) payload.projectId = currentProjectId;
 
       const response = await api.post('/3d/visualize', payload)
-
       clearInterval(progressInterval)
       setUploadProgress(100)
 
       if (response.data && response.data.model) {
         const updatedModel = response.data.model
-        
-        // Sync state with backend model
         setVersions(updatedModel.versions || [])
         setCurrentVersionIndex((updatedModel.versions?.length || 1) - 1)
+        if (!currentProjectId) setCurrentProjectId(updatedModel._id)
         
-        // Update Project ID if it was a new project
-        if (!currentProjectId) {
-            setCurrentProjectId(updatedModel._id)
-        }
-
-        const updatedChatHistory = isIteration 
-          ? [...chatHistory, { role: 'user', content: currentPrompt }, { role: 'assistant', content: 'Design updated based on your request.', projectId: updatedModel._id }]
-          : chatHistory;
-
         if (isIteration) {
-          setChatHistory(updatedChatHistory)
+          setChatHistory(prev => [...prev, { role: 'assistant', content: 'Design updated based on your request.' }])
         } else {
-          toast.success('3D visualization created and saved')
+          setStep('result')
+          toast.success('3D visualization ready')
         }
-      } else {
-        throw new Error('Invalid response from server')
       }
     } catch (err) {
-      console.error('Generation Error:', err)
-      toast.error(err.response?.data?.message || 'Synthesis failed. Please try again.')
-      if (isIteration) {
-        setChatHistory(prev => [...prev, { role: 'error', content: 'Neural engine encountered an error during iteration.' }])
-      }
+      toast.error(err.response?.data?.message || 'Synthesis failed')
+      if (isIteration) setChatHistory(prev => [...prev, { role: 'error', content: 'Neural engine error.' }])
     } finally {
       setIsGenerating(false)
     }
@@ -306,11 +174,10 @@ const ThreedGenerator = () => {
     setVersions(item.versions || [])
     setCurrentVersionIndex((item.versions?.length || 0) - 1)
     setSourceImage(item.sourceImage)
-    setCurrentProjectId(item._id) // Restore the project ID using MongoDB _id
-    const timestamp = item.timestamp || item.createdAt;
-    setChatHistory(item.chatHistory || [{ role: 'system', content: `Restored project from ${new Date(timestamp).toLocaleDateString()}` }])
-    setShowChat(!!item.chatHistory?.length)
-    toast.success("Project restored from history")
+    setCurrentProjectId(item._id)
+    setChatHistory(item.chatHistory || [])
+    setStep('result')
+    toast.success("Project restored", { id: 'project-restored' })
   }
 
   const handleDownload = () => {
@@ -318,7 +185,7 @@ const ThreedGenerator = () => {
     if (!currentRender) return
     const link = document.createElement('a')
     link.href = currentRender.url || `data:${currentRender.mimeType || 'image/png'};base64,${currentRender.data}`
-    link.download = `manara-3d-render-${Date.now()}.png`
+    link.download = `manara-3d-${Date.now()}.png`
     link.click()
   }
 
@@ -326,18 +193,20 @@ const ThreedGenerator = () => {
     setSourceImage(null)
     setVersions([])
     setCurrentVersionIndex(-1)
-    setCurrentProjectId(null) // Reset ID
-    setUploadProgress(0)
+    setCurrentProjectId(null)
     setChatHistory([])
     setPrompt('')
-    setShowChat(false)
+    setStep('config')
     if (fileInputRef.current) fileInputRef.current.value = ''
+    toast.success("New project workspace ready", { id: 'workspace-reset' })
   }
+
+  const toggleMobileView = () => setStep(step === 'config' ? 'result' : 'config')
 
   const currentVersion = versions[currentVersionIndex]
 
   return (
-    <div className="min-h-screen bg-[#FDFCFB] dark:bg-[#0a0a0a] text-[#2d2a26] dark:text-white flex flex-col font-sans selection:bg-[#8d775e]/20 selection:text-[#8d775e] transition-colors duration-500">
+    <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
       <TopBar />
       
       <ThreeDRenderHistory 
@@ -346,393 +215,166 @@ const ThreedGenerator = () => {
         onLoadItem={handleLoadFromHistory}
       />
 
-      <div className="flex-1 flex flex-col pt-16">
+      <main className='flex-1 relative flex flex-col md:flex-row pt-16 h-full overflow-hidden'>
         
-        {/* Minimalist Professional Header */}
-        <header className="px-8 py-12 bg-white dark:bg-[#0a0a0a] border-b border-[#e8e2dc] dark:border-white/10 transition-colors duration-500">
-          <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-end gap-8">
-            <div className="space-y-4 max-w-3xl">
-              <div className="flex items-center gap-2 text-[#8d775e] font-bold tracking-[0.2em] text-[10px] uppercase">
-                <Box className="w-3.5 h-3.5" />
-                <span>Modern 3D Design Studio</span>
-              </div>
-              
-              <h1 className="text-5xl font-serif font-medium tracking-tight text-[#1a1816] dark:text-white">
-                3D <span className="text-[#8d775e] italic">Renders</span>
-              </h1>
-              
-              <p className="text-[#6b6257] dark:text-gray-400 text-lg font-light leading-relaxed">
-                Architectural intelligence that translates 2D floor plans into <span className="font-medium text-[#2d2a26] dark:text-white">photorealistic 3D isometric visualizations</span> in seconds.
-              </p>
+        {/* Sidebar Controls */}
+        <aside className={`
+          fixed md:relative top-16 md:top-0 inset-x-0 bottom-0 md:inset-auto z-40 md:z-10
+          w-full md:w-[320px] lg:w-[350px] bg-white dark:bg-[#0c0c0c] border-r border-[#E5E5E7] dark:border-[#2D2D2F]
+          transition-transform duration-500 ease-in-out flex flex-col
+          ${(step === 'config' || isMobileChatOpen) ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
+          
+          <div className='flex items-center justify-between p-5 border-b border-[#E5E5E7] dark:border-[#2D2D2F]'>
+            <div className='flex items-center gap-2'>
+              <h2 className='font-black tracking-tighter text-base uppercase'>Manara 3D STUDIO</h2>
             </div>
-
-            {/* Feature Pills */}
-            <div className="flex flex-wrap gap-3">
-               <button 
-                onClick={handleReset}
-                className='flex items-center gap-2 px-6 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-full text-sm font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-all shadow-sm'
-              >
-                <Plus size={16} />
-                New Project
-              </button>
-               <button 
-                onClick={() => setHistoryOpen(true)}
-                className='flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-full text-sm font-bold hover:bg-black dark:hover:bg-gray-200 transition-all shadow-xl'
-              >
+            <div className='flex items-center gap-1'>
+              <button onClick={() => setHistoryOpen(true)} className='p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400'>
                 <History size={16} />
-                History
               </button>
-              <div className="flex items-center gap-2 px-4 py-2 bg-[#FDFCFB] dark:bg-[#111] border border-[#e8e2dc] dark:border-white/10 rounded-full text-xs font-medium text-[#6b6257] dark:text-gray-300">
-                <Shapes className="w-3.5 h-3.5 text-[#8d775e]" />
-                Isometric
-              </div>
+              <button onClick={handleReset} className='p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400'>
+                <Plus size={16} />
+              </button>
+              <button onClick={() => setIsMobileChatOpen(false)} className={`md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400 ${step === 'result' ? 'block' : 'hidden'}`}>
+                <X size={16} />
+              </button>
             </div>
           </div>
-        </header>
 
-        {/* Studio Workspace */}
-        <main className="flex-1 bg-[#F9F7F5] dark:bg-[#0a0a0a] p-4 md:p-8 transition-colors duration-500">
-          <div className="max-w-[1600px] mx-auto">
-            
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
-              
-              {/* Left: Control Panel */}
-              <div className={`space-y-6 transition-all duration-500 ${showChat ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
-                
-                {/* File Upload */}
-                <div className="bg-white dark:bg-[#111] p-8 rounded-[32px] border border-[#e8e2dc] dark:border-white/10 shadow-sm transition-colors duration-500">
-                  <h3 className="text-lg font-bold mb-6 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                       <Upload className="w-4 h-4 text-[#8d775e]" />
-                       Floor Plan
+          <div className='flex-1 overflow-hidden relative flex flex-col'>
+            {step === 'config' ? (
+              <div className='flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide'>
+                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className='space-y-6'>
+                  <section className='space-y-3'>
+                    <label className='text-[10px] font-black uppercase tracking-widest text-gray-400'>Floor Plan</label>
+                    <div 
+                      onClick={() => fileInputRef.current?.click()}
+                      className={`aspect-video rounded-2xl border-2 border-dashed flex items-center justify-center cursor-pointer transition-all ${sourceImage ? 'border-[#8d775e] bg-[#8d775e]/5' : 'border-[#E5E5E7] dark:border-white/10'}`}
+                    >
+                      {sourceImage ? <img src={sourceImage} className='h-full object-contain p-2' /> : <div className='text-center text-gray-400'><Plus size={24} className='mx-auto mb-2 opacity-50'/><span className='text-[10px] font-bold uppercase'>Upload Plan</span></div>}
+                      <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
                     </div>
-                    {sourceImage && (
-                       <button onClick={handleReset} className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline">Reset</button>
-                    )}
-                  </h3>
-                  
-                  <div 
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`
-                      aspect-video rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-300
-                      ${sourceImage ? 'border-[#8d775e] bg-[#8d775e]/5' : 'border-[#e8e2dc] dark:border-white/10 hover:border-[#8d775e]/50 hover:bg-[#FDFCFB] dark:hover:bg-white/5'}
-                    `}
-                  >
-                    {sourceImage ? (
-                      <img src={sourceImage} alt="Uploaded Floor Plan" className="w-full h-full object-contain rounded-xl p-2" />
-                    ) : (
-                      <div className="flex flex-col items-center gap-3 text-[#6b6257] dark:text-gray-400">
-                        <Plus className="w-8 h-8 text-[#8d775e]/40" />
-                        <span className="text-sm font-medium">Select Floor Plan Image</span>
-                      </div>
-                    )}
-                    <input 
-                      type="file" 
-                      ref={fileInputRef} 
-                      className="hidden" 
-                      accept="image/*" 
-                      onChange={handleFileSelect} 
-                    />
-                  </div>
-                </div>
+                  </section>
 
-                {/* Style Selector */}
-                <div className="bg-white dark:bg-[#111] p-8 rounded-[32px] border border-[#e8e2dc] dark:border-white/10 shadow-sm transition-colors duration-500">
-                  <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                    <Palette className="w-4 h-4 text-[#8d775e]" />
-                    Visual Style
-                  </h3>
-                  
-                  <div className="space-y-3">
-                    {STYLES.map((style) => (
-                      <button
-                        key={style.id}
-                        onClick={() => setSelectedStyle(style.id)}
-                        className={`
-                          w-full p-4 rounded-2xl border transition-all duration-300 text-left
-                          ${selectedStyle === style.id 
-                            ? 'border-[#8d775e] bg-[#8d775e]/5 ring-1 ring-[#8d775e]/30' 
-                            : 'border-[#e8e2dc] dark:border-white/10 hover:bg-gray-50 dark:hover:bg-white/5'}
-                        `}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm tracking-tight">{style.label}</span>
-                            {style.recommended && (
-                              <span className="text-[8px] font-bold bg-[#8d775e] text-white px-2 py-0.5 rounded-full uppercase tracking-tighter">
-                                Recommended
-                              </span>
-                            )}
-                          </div>
-                          <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: style.color }} />
-                        </div>
-                        <p className="text-[11px] text-[#6b6257] dark:text-gray-500 font-medium">{style.description}</p>
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={handleGenerate}
-                    disabled={!sourceImage || isGenerating}
-                    className={`
-                      w-full mt-8 py-4 rounded-2xl flex items-center justify-center gap-3 text-sm font-bold transition-all duration-300
-                      ${!sourceImage || isGenerating 
-                        ? 'bg-gray-100 dark:bg-white/5 text-gray-400 cursor-not-allowed' 
-                        : 'bg-[#8d775e] text-white shadow-lg shadow-[#8d775e]/20 hover:scale-[1.02] active:scale-95'}
-                    `}
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Generating {uploadProgress}%</span>
-                      </>
-                    ) : (
-                      <>
-                        <Wand2 className="w-4 h-4" />
-                        <span>{versions.length > 0 ? 'Generate Alternative' : 'Generate 3D Design'}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Right: Render Canvas & Chat */}
-              <div className={`flex flex-col h-full gap-6 transition-all duration-500 ${showChat ? 'lg:col-span-9' : 'lg:col-span-8'}`}>
-                
-                <div className={`grid grid-cols-1 ${showChat ? 'lg:grid-cols-12' : 'lg:grid-cols-1'} gap-6 h-full items-start`}>
-                  
-                  {/* Main Canvas Area */}
-                  <div className={`bg-white dark:bg-[#111] border border-[#e8e2dc] dark:border-white/10 shadow-[0_10px_40px_rgba(141,119,94,0.08)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col rounded-[48px] transition-all duration-500 shrink-0 ${showChat ? 'lg:col-span-8 h-[750px]' : 'h-[850px]'}`}>
-                    {/* Browser-like Toolbar */}
-                    <div className="h-14 bg-white dark:bg-[#111] border-b border-[#f3f0ed] dark:border-white/5 flex items-center justify-between px-8 transition-colors duration-500 shrink-0">
-                      <div className="flex items-center gap-4">
-                        <div className="flex gap-1.5">
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#8d775e]/20"></div>
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#8d775e]/20"></div>
-                          <div className="w-2.5 h-2.5 rounded-full bg-[#8d775e]/20"></div>
-                        </div>
-                        <div className="h-4 w-[1px] bg-[#f3f0ed] dark:bg-white/10"></div>
-                        <span className="text-[10px] font-bold tracking-widest text-[#8d775e]/60 uppercase flex items-center gap-2">
-                          <Eye className="w-3 h-3" />
-                          {currentVersion ? `Design Version ${currentVersionIndex + 1}` : 'Awaiting initialization'}
-                        </span>
-                      </div>
-
-                      {/* Version Switcher Pins */}
-                      {versions.length > 1 && (
-                         <div className="flex items-center gap-1.5 p-1 bg-stone-50 dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/10">
-                            {versions.map((_, i) => (
-                               <button
-                                  key={i}
-                                  onClick={() => setCurrentVersionIndex(i)}
-                                  className={`w-6 h-6 rounded-full text-[10px] font-bold transition-all ${
-                                     currentVersionIndex === i 
-                                     ? 'bg-[#8d775e] text-white shadow-md' 
-                                     : 'text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'
-                                  }`}
-                               >
-                                  {i + 1}
-                               </button>
-                            ))}
-                         </div>
-                      )}
-
-                      <div className="flex items-center gap-3">
-                        {currentVersion && !showChat && (
-                          <button 
-                            onClick={() => setShowChat(true)}
-                            className="flex items-center gap-2 text-xs font-bold text-white bg-[#8d775e] hover:bg-[#8d775e]/90 px-4 py-2 rounded-full transition-all shadow-lg"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5" />
-                            Make Changes
-                          </button>
-                        )}
-                        {currentVersion && (
-                          <button 
-                            onClick={handleDownload}
-                            className="flex items-center gap-2 text-xs font-bold text-[#8d775e] hover:bg-[#8d775e]/5 px-3 py-1.5 rounded-full transition-all"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                            Export
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Canvas Area */}
-                    <div className="flex-1 relative bg-[#fdfdfd] dark:bg-[#151515] flex items-center justify-center p-8 overflow-hidden">
-                      <AnimatePresence mode="wait">
-                        {isGenerating ? (
-                          <motion.div
-                            key="loading"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="w-full h-full flex items-center justify-center"
-                          >
-                            <BuildingLoader progress={uploadProgress} />
-                          </motion.div>
-                        ) : currentVersion ? (
-                          <motion.div
-                            key={currentVersionIndex}
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="w-full h-full flex items-center justify-center"
-                          >
-                            <img 
-                              src={currentVersion.image?.url || (currentVersion.image?.data ? `data:${currentVersion.image.mimeType || 'image/png'};base64,${currentVersion.image.data}` : '')} 
-                              alt="3D Floor Plan Render" 
-                              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl relative z-10 transition-all duration-500"
-                            />
-                            
-                            {/* Style Badge overlay */}
-                            <div className="absolute top-4 right-4 bg-white/80 dark:bg-black/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 z-20 shadow-lg">
-                               <span className="text-[10px] font-bold text-[#8d775e] uppercase tracking-[0.2em]">
-                                  {currentVersion.style} Style
-                               </span>
-                            </div>
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            key="empty"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="flex flex-col items-center gap-6 max-w-sm text-center"
-                          >
-                            <div className="w-20 h-20 rounded-[28px] bg-[#8d775e]/5 flex items-center justify-center text-[#8d775e]/30">
-                              <Box className="w-10 h-10" />
-                            </div>
-                            <div className="space-y-2">
-                               <h4 className="text-xl font-medium text-gray-900 dark:text-white">3D Generation</h4>
-                               <p className="text-sm text-gray-400 leading-relaxed font-light">
-                                 Upload a floor plan on the left to begin.
-                               </p>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-
-                  {/* Iterative Chat Interface (Conditional) */}
-                  <AnimatePresence>
-                    {showChat && (
-                      <motion.div 
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: 50 }}
-                        className="lg:col-span-4 bg-white dark:bg-[#111] rounded-[48px] border border-gray-100 dark:border-white/5 shadow-xl flex flex-col overflow-hidden h-[750px]"
-                      >
-                        <div className="p-6 border-b border-gray-50 dark:border-white/5 flex items-center justify-between shrink-0">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#8d775e]/10 flex items-center justify-center text-[#8d775e]">
-                              <MessageSquare size={20} />
-                            </div>
-                            <div>
-                              <h4 className="font-bold text-gray-900 dark:text-white text-sm">Iteration Assistant</h4>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => setShowChat(false)}
-                            className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                          >
-                            <X size={20} />
-                          </button>
-                        </div>
-
-                        {/* Chat Thread */}
-                        <div 
-                          ref={chatContainerRef}
-                          className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-hide"
+                  <section className='space-y-3'>
+                    <label className='text-[10px] font-black uppercase tracking-widest text-gray-400'>Style</label>
+                    <div className='grid grid-cols-1 gap-2'>
+                      {STYLES.map((st) => (
+                        <button
+                          key={st.id}
+                          onClick={() => setSelectedStyle(st.id)}
+                          className={`w-full p-4 rounded-xl border transition-all text-left ${selectedStyle === st.id ? 'border-[#8d775e] bg-[#8d775e]/5' : 'border-transparent bg-gray-50 dark:bg-white/5'}`}
                         >
-                          {!chatHistory.length && (
-                            <div className="h-full flex flex-col items-center justify-center opacity-30 text-center space-y-4">
-                              <History size={40} className="text-gray-400" />
-                              <p className="text-xs font-medium">Ready for structural edits</p>
-                            </div>
-                          )}
-                          
-                          {chatHistory.map((msg, i) => (
-                            <motion.div 
-                              initial={{ opacity: 0, y: 10 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              key={i} 
-                              className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-                            >
-                              <div className={`
-                                max-w-[85%] px-5 py-4 rounded-[28px] text-[13px] font-medium leading-relaxed shadow-sm
-                                ${msg.role === 'user' 
-                                  ? 'bg-gray-900 dark:bg-white text-white dark:text-black rounded-tr-none' 
-                                  : 'bg-stone-50 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-tl-none border border-gray-100 dark:border-white/5'}
-                                ${msg.role === 'error' ? 'bg-red-500 text-white' : ''}
-                              `}>
-                                {msg.content}
-                              </div>
-                            </motion.div>
-                          ))}
-                          {isGenerating && (
-                            <div className="flex justify-start">
-                              <div className="bg-stone-50 dark:bg-white/5 rounded-[28px] rounded-tl-none border border-gray-100 dark:border-white/5 px-5 py-3">
-                                <Loader2 className="w-4 h-4 animate-spin text-[#8d775e]" />
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Input Workspace */}
-                        <div className="p-6 pt-0 shrink-0">
-                          <form 
-                            onSubmit={handleGenerate} 
-                            className="relative bg-stone-50 dark:bg-white/10 rounded-2xl border border-gray-100 dark:border-white/10 overflow-hidden"
-                          >
-                            <input 
-                              type="text" 
-                              value={prompt}
-                              onChange={(e) => setPrompt(e.target.value)}
-                              placeholder="Describe changes..."
-                              disabled={isGenerating || !sourceImage}
-                              className="w-full bg-transparent pl-6 pr-14 py-4 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none transition-all"
-                            />
-                            <button 
-                              type="submit"
-                              disabled={!prompt.trim() || isGenerating || !sourceImage}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-[#8d775e] text-white rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-30 disabled:scale-100"
-                            >
-                              <ArrowRight size={18} />
-                            </button>
-                          </form>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                          <div className='flex items-center justify-between mb-1'>
+                            <span className='font-bold text-xs'>{st.label}</span>
+                            <div className='w-2 h-2 rounded-full' style={{backgroundColor: st.color}} />
+                          </div>
+                          <p className='text-[10px] text-gray-400'>{st.description}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                </motion.div>
               </div>
-            </div>
+            ) : (
+              <div ref={chatContainerRef} className='flex-1 overflow-y-auto p-5 scrollbar-hide space-y-4 flex flex-col'>
+                {chatHistory.length === 0 ? (
+                  <div className='flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 opacity-50'>
+                    <div className='w-12 h-12 rounded-full bg-[#8d775e]/10 flex items-center justify-center text-[#8d775e]'>
+                      <MessageSquare size={20} />
+                    </div>
+                    <div className='space-y-1'>
+                      <p className='text-[11px] font-bold uppercase tracking-widest'>Iteration Assistant</p>
+                      <p className='text-[10px] leading-relaxed'>Type below to request structural changes, <br/> style modifications, or refinements.</p>
+                    </div>
+                  </div>
+                ) : (
+                  chatHistory.map((msg, i) => (
+                    <motion.div key={i} initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div className={`max-w-[90%] p-3.5 rounded-2xl text-[12px] font-semibold ${msg.role === 'user' ? 'bg-[#8d775e] text-white rounded-tr-none' : 'bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-tl-none border border-gray-100 dark:border-white/5'}`}>
+                        {msg.content}
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
 
-            {/* Feature Highlights */}
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 pb-20">
-               <div className="space-y-3">
-                 <h4 className="text-xs font-bold text-[#8d775e] uppercase tracking-widest">Design History</h4>
-                 <p className="text-sm text-[#6b6257] dark:text-gray-400 leading-relaxed">
-                   Never lose a concept. All your 3D designs are automatically saved to history.
-                 </p>
-               </div>
-               <div className="space-y-3">
-                 <h4 className="text-xs font-bold text-[#8d775e] uppercase tracking-widest">Multi-Version Canvas</h4>
-                 <p className="text-sm text-[#6b6257] dark:text-gray-400 leading-relaxed">
-                   Switch between design styles and iterations instantly to compare spatial impacts.
-                 </p>
-               </div>
-               <div className="space-y-3">
-                 <h4 className="text-xs font-bold text-[#8d775e] uppercase tracking-widest">Iterative Precision</h4>
-                 <p className="text-sm text-[#6b6257] dark:text-gray-400 leading-relaxed">
-                   Refine specific architectural elements as you need using our integrated Iteration Assistant.
-                 </p>
-               </div>
+          <div className='p-4 border-t border-[#E5E5E7] dark:border-[#2D2D2F] bg-[#FDFCFB] dark:bg-[#0c0c0c]'>
+            <div className='relative'>
+              <input 
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={step === 'config' ? "Describe your vision (optional)..." : "E.g., 'Add a pool', 'Change materials'..."}
+                className='w-full bg-gray-100 dark:bg-white/5 border-none rounded-xl pl-4 pr-10 py-3 h-11 text-[12px] focus:ring-1 focus:ring-[#8d775e]/50'
+                onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+              />
+              <button 
+                onClick={() => handleGenerate()}
+                disabled={isGenerating || (step === 'config' && !sourceImage)}
+                className='absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-[#8d775e] text-white flex items-center justify-center'
+              >
+                {isGenerating ? <Loader2 size={14} className='animate-spin' /> : <ArrowRight size={16} />}
+              </button>
             </div>
           </div>
-        </main>
-      </div>
+        </aside>
+
+        {/* Canvas Area */}
+        <section className='flex-1 relative bg-[#f5f5f5] dark:bg-[#050505] flex flex-col'>
+          <div className='hidden md:flex items-center justify-between px-6 py-3 border-b border-[#E5E5E7] dark:border-[#2D2D2F] bg-white/50 dark:bg-black/50 backdrop-blur-md z-10'>
+            <div className='flex items-center gap-3'>
+              <span className='text-[9px] font-black uppercase tracking-tighter text-[#8d775e]'>
+                {currentVersion ? `Version ${currentVersionIndex + 1}` : 'Isometric View'}
+              </span>
+              {versions.length > 1 && (
+                 <div className="flex gap-1.5">
+                    {versions.map((_, i) => (
+                       <button key={i} onClick={() => setCurrentVersionIndex(i)} className={`w-5 h-5 rounded-full text-[9px] font-bold transition-all ${currentVersionIndex === i ? 'bg-[#8d775e] text-white scale-110' : 'bg-gray-200 dark:bg-white/10 text-gray-400'}`}>{i + 1}</button>
+                    ))}
+                 </div>
+              )}
+            </div>
+            {currentVersion && <button onClick={handleDownload} className='flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/10 border border-[#E5E5E7] dark:border-[#2D2D2F] rounded-lg text-[10px] font-black hover:bg-gray-50'><Download size={12} /> EXPORT</button>}
+          </div>
+
+          <div className='flex-1 relative flex items-center justify-center p-4 md:p-6'>
+            <AnimatePresence mode='wait'>
+              {isGenerating ? (
+                <motion.div key='loading' className='text-center space-y-4'>
+                  <div className='relative w-16 h-16 mx-auto flex items-center justify-center'>
+                    <div className='absolute inset-0 border-t-2 border-[#8d775e] rounded-full animate-spin' />
+                    <Box size={24} className='text-[#8d775e] animate-pulse' />
+                  </div>
+                  <p className='text-[10px] font-black uppercase tracking-widest animate-pulse'>{LOADING_PHASES[Math.floor(uploadProgress/20)]}</p>
+                </motion.div>
+              ) : currentVersion ? (
+                <motion.div key='image' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className='relative max-w-full max-h-full shadow-2xl rounded-[24px] overflow-hidden'>
+                  <img src={currentVersion.image?.url || `data:${currentVersion.image?.mimeType};base64,${currentVersion.image?.data}`} className='max-h-[80vh] w-auto object-contain' />
+                </motion.div>
+              ) : (
+                <motion.div key='empty' initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='text-center space-y-6 max-w-xs'>
+                  <div className='w-20 h-20 mx-auto bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl flex items-center justify-center text-[#8d775e]'><Box size={32} /></div>
+                  <div className='space-y-2'><h3 className='text-xl font-black italic tracking-tighter'>Ready for 3D?</h3><p className='text-gray-400 text-xs'>Upload your plan to generate an immersive isometric render.</p></div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {!isMobileChatOpen && (
+            <div className='md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] flex gap-2 z-50'>
+              {step === 'result' ? (
+                <button onClick={() => setIsMobileChatOpen(true)} className='h-12 flex-1 bg-white dark:bg-[#1a1a1a] text-black dark:text-white border border-gray-200 dark:border-white/10 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 shadow-xl'><MessageSquare size={16} /> Chat</button>
+              ) : (
+                <button onClick={toggleMobileView} className='h-12 flex-1 bg-black dark:bg-white text-white dark:text-black rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 shadow-xl'><ArrowRight size={16} /> Preview</button>
+              )}
+              {currentVersion && <button onClick={handleDownload} className='h-12 w-12 bg-white dark:bg-white/10 border border-white/20 rounded-xl flex items-center justify-center shadow-xl'><Download size={18} /></button>}
+            </div>
+          )}
+        </section>
+      </main>
     </div>
   )
 }

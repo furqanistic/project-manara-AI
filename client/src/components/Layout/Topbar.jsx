@@ -94,8 +94,8 @@ const TopBar = () => {
       href: "#",
       hasDropdown: true,
       dropdownItems: [
-        { name: "3D Renders", href: "/visualizer" },
-        { name: "Floor Plans", href: "/floorplans" },
+        { name: "3D Renders", href: "/visualizer", state: { reset: true } },
+        { name: "Floor Plans", href: "/floorplans", state: { reset: true } },
         { name: "AI Designs", href: "/moodboard" },
       ],
     },
@@ -169,14 +169,15 @@ const TopBar = () => {
                                 {subItem.name}
                               </a>
                             ) : (
-                              <NavLink
-                                key={i}
-                                to={subItem.href}
-                                onClick={() => setActiveDropdown(null)}
-                                className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
-                              >
-                                {subItem.name}
-                              </NavLink>
+                                <NavLink
+                                  key={i}
+                                  to={subItem.href}
+                                  state={subItem.state}
+                                  onClick={() => setActiveDropdown(null)}
+                                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
+                                >
+                                  {subItem.name}
+                                </NavLink>
                             )
                           ))}
                         </motion.div>
@@ -342,6 +343,7 @@ const TopBar = () => {
                             <NavLink
                               key={j}
                               to={sub.href}
+                              state={sub.state}
                               onClick={() => setIsMenuOpen(false)}
                               className="flex items-center gap-3 px-4 py-3 text-[15px] font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"
                             >

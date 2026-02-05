@@ -1,17 +1,20 @@
-import { useUserFloorPlans } from "@/hooks/useFloorPlan";
-import { useUserMoodboards } from "@/hooks/useMoodboard";
-import { useUserThreeDModels } from "@/hooks/useThreeD";
+import { useDeleteFloorPlan, useUserFloorPlans } from "@/hooks/useFloorPlan";
+import { useDeleteMoodboard, useUserMoodboards } from "@/hooks/useMoodboard";
+import { useDeleteThreeDModel, useUserThreeDModels } from "@/hooks/useThreeD";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  AlertCircle,
   Calendar,
   ChevronDown,
   Clock,
   Filter,
   Image as ImageIcon,
   LayoutGrid,
+  Loader2,
   Search,
+  Trash2,
 } from "lucide-react";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import TopBar from "../../components/Layout/Topbar";
 
@@ -34,22 +37,26 @@ const ProjectsPage = () => {
   const [filterType, setFilterType] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
-  const [combinedProjects, setCombinedProjects] = useState([]);
+  const [deleteId, setDeleteId] = useState(null);
+  const [deleteType, setDeleteType] = useState(null);
 
   // Fetch data from server
   const { data: moodboardData, isLoading: moodboardsLoading } = useUserMoodboards(1, 100);
   const { data: floorPlanData, isLoading: floorPlansLoading } = useUserFloorPlans();
   const { data: threeDData, isLoading: threeDLoading } = useUserThreeDModels();
 
+  // Deletion mutations
+  const deleteMoodboard = useDeleteMoodboard();
+  const deleteFloorPlan = useDeleteFloorPlan();
+  const deleteThreeDModel = useDeleteThreeDModel();
+
   // Helper to clean titles
   const cleanTitle = (title) => {
     if (!title) return "";
-    // Remove " - M/D/YYYY, H:MM:SS AM/PM" or similar patterns
     return title.replace(/\s-\s\d{1,2}\/\d{1,2}\/\d{4}.*$/, "");
   };
 
-  useEffect(() => {
-    // Process floor plans from server
+  const combinedProjects = useMemo(() => {
     const floorPlans = (floorPlanData?.data || []).map(fp => ({
       id: fp._id,
       type: "floorplan",
@@ -60,7 +67,6 @@ const ProjectsPage = () => {
       raw: fp
     }));
 
-    // Process moodboards
     const moodboards = (moodboardData?.data?.moodboards || []).map(mb => ({
       id: mb._id,
       type: "moodboard",
@@ -73,7 +79,6 @@ const ProjectsPage = () => {
       raw: mb
     }));
 
-    // Process 3D models
     const threeDModels = (threeDData?.data || []).map(td => ({
         id: td._id,
         type: "threed",
@@ -85,24 +90,27 @@ const ProjectsPage = () => {
         raw: td
     }));
 
-    // Combine and sort
-    const combined = [...floorPlans, ...moodboards, ...threeDModels].sort((a, b) => {
+    return [...floorPlans, ...moodboards, ...threeDModels].sort((a, b) => {
       const dateA = new Date(a.createdAt);
       const dateB = new Date(b.createdAt);
       return sortBy === "recent" ? dateB - dateA : dateA - dateB;
     });
-
-    setCombinedProjects(combined);
-    setCurrentPage(1); // Reset to page 1 on data change/sort
   }, [moodboardData, floorPlanData, threeDData, sortBy]);
 
-  const filteredProjects = combinedProjects.filter(p => {
-    const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         (p.style && p.style.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                         (p.roomType && p.roomType.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesType = filterType === "all" || p.type === filterType;
-    return matchesSearch && matchesType;
-  });
+  const filteredProjects = useMemo(() => {
+    return combinedProjects.filter(p => {
+      const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                           (p.style && p.style.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                           (p.roomType && p.roomType.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesType = filterType === "all" || p.type === filterType;
+      return matchesSearch && matchesType;
+    });
+  }, [combinedProjects, searchQuery, filterType]);
+
+  // Reset page when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterType]);
 
   // Pagination Logic
   const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
@@ -121,6 +129,31 @@ const ProjectsPage = () => {
     }
   };
 
+  const handleDeleteClick = (e, project) => {
+    e.stopPropagation();
+    setDeleteId(project.id);
+    setDeleteType(project.type);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteId || !deleteType) return;
+
+    try {
+      if (deleteType === "moodboard") {
+        await deleteMoodboard.mutateAsync(deleteId);
+      } else if (deleteType === "floorplan") {
+        await deleteFloorPlan.mutateAsync(deleteId);
+      } else if (deleteType === "threed") {
+        await deleteThreeDModel.mutateAsync(deleteId);
+      }
+    } catch (error) {
+      console.error("Failed to delete project:", error);
+    } finally {
+      setDeleteId(null);
+      setDeleteType(null);
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'long',
@@ -128,6 +161,9 @@ const ProjectsPage = () => {
       year: 'numeric'
     });
   };
+
+  // Loading state for mutations
+  const isDeleting = deleteMoodboard.isPending || deleteFloorPlan.isPending || deleteThreeDModel.isPending;
 
   return (
     <div className='min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] font-["Poppins"] selection:bg-[#8d775e]/10'>
@@ -225,8 +261,18 @@ const ProjectsPage = () => {
                          </span>
                     </div>
 
+                    {/* Delete Icon Overlay */}
+                    <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <button
+                        onClick={(e) => handleDeleteClick(e, project)}
+                        className="p-2 bg-white/90 dark:bg-black/80 backdrop-blur-md rounded-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors shadow-sm"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
                     {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 pointer-events-none" />
                   </div>
 
                   {/* Content Below */}
@@ -246,7 +292,7 @@ const ProjectsPage = () => {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {!moodboardsLoading && !floorPlansLoading && !threeDLoading && totalPages > 1 && (
             <div className="mt-12 flex justify-center items-center gap-2">
                 <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
@@ -282,6 +328,68 @@ const ProjectsPage = () => {
             </div>
         )}
       </main>
+
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {deleteId && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 h-screen">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isDeleting && setDeleteId(null)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-white dark:bg-[#151515] rounded-3xl p-8 shadow-2xl overflow-hidden"
+            >
+              {/* Decorative Circle */}
+              <div className="absolute -top-12 -right-12 w-32 h-32 bg-red-500/10 rounded-full blur-3xl" />
+              <div className="absolute -bottom-12 -left-12 w-32 h-32 bg-[#8d775e]/10 rounded-full blur-3xl" />
+
+              <div className="relative">
+                <div className="w-14 h-14 bg-red-100 dark:bg-red-500/20 rounded-2xl flex items-center justify-center mb-6">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                  Delete Project?
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-8">
+                  This action cannot be undone. This will permanently remove the project and its associated high-quality renders from our servers and Cloudinary storage.
+                </p>
+
+                <div className="flex gap-3">
+                  <button
+                    disabled={isDeleting}
+                    onClick={() => setDeleteId(null)}
+                    className="flex-1 px-6 py-3 bg-gray-100 dark:bg-[#1a1a1a] hover:bg-gray-200 dark:hover:bg-[#222] text-gray-700 dark:text-gray-300 font-bold rounded-2xl transition-all disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={isDeleting}
+                    onClick={confirmDelete}
+                    className="flex-1 px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-red-600/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      "Yes, Delete"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

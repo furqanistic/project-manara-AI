@@ -3,7 +3,7 @@ import { createError } from '../error.js'
 import FloorPlan from '../models/FloorPlan.js'
 import { generateFloorPlanElements } from '../services/aiFloorPlanService.js'
 
-import { uploadImage } from '../services/cloudinaryService.js'
+import { deleteAsset, uploadImage } from '../services/cloudinaryService.js'
 import {
     exportToDXF,
     exportToPDF,
@@ -118,6 +118,13 @@ export const deleteFloorPlan = async (req, res, next) => {
 
     if (floorPlan.userId.toString() !== req.user.id) {
       return next(createError(403, 'You can only delete your own floor plans'))
+    }
+
+    // Delete thumbnail from Cloudinary if exists
+    if (floorPlan.thumbnail) {
+      await deleteAsset(floorPlan.thumbnail).catch(err => 
+        console.error('Error deleting floor plan thumbnail from Cloudinary:', err)
+      )
     }
 
     floorPlan.isDeleted = true

@@ -2,7 +2,7 @@
 import mongoose from 'mongoose'
 import { createError } from '../error.js'
 import Moodboard from '../models/Moodboard.js'
-import { uploadImage } from '../services/cloudinaryService.js'
+import { deleteAsset, uploadImage } from '../services/cloudinaryService.js'
 import { extractColorPalette } from '../services/colorExtractor.js'
 import {
     buildMoodboardPrompt,
@@ -1038,11 +1038,29 @@ export const deleteMoodboard = async (req, res, next) => {
       return next(createError(403, 'You can only delete your own moodboards'))
     }
 
+    // Delete images from Cloudinary
+    if (moodboard.compositeMoodboard?.url) {
+      await deleteAsset(moodboard.compositeMoodboard.url).catch(err => 
+        console.error('Error deleting composite moodboard from Cloudinary:', err)
+      )
+    }
+
+    if (moodboard.generatedImages && moodboard.generatedImages.length > 0) {
+      for (const img of moodboard.generatedImages) {
+        if (img.url) {
+          await deleteAsset(img.url).catch(err => 
+            console.error('Error deleting generated image from Cloudinary:', err)
+          )
+        }
+      }
+    }
+
     moodboard.isDeleted = true
     await moodboard.save()
 
-    res.status(204).json({
+    res.status(200).json({
       status: 'success',
+      message: 'Moodboard deleted successfully',
       data: null,
     })
   } catch (error) {
