@@ -85,6 +85,9 @@ const ThreedGenerator = () => {
     } else if (location.state?.project) {
         handleLoadFromHistory(location.state.project);
         window.history.replaceState({}, document.title);
+    } else if (location.state?.sourceImage) {
+        setSourceImage(location.state.sourceImage);
+        window.history.replaceState({}, document.title);
     }
   }, [location.state]);
 
@@ -92,7 +95,7 @@ const ThreedGenerator = () => {
     const file = e.target.files[0]
     if (file) {
       if (!file.type.startsWith('image/')) {
-        toast.error('Please upload an image file')
+        toast.error('Please upload an image file', { id: 'file-type-error' })
         return
       }
       const reader = new FileReader()
@@ -111,7 +114,7 @@ const ThreedGenerator = () => {
 
   const handleGenerate = async (overriddenPrompt = null) => {
     if (!sourceImage) {
-      toast.error('Please upload a floor plan first')
+      toast.error('Please upload a floor plan first', { id: 'no-source-image' })
       return
     }
 
@@ -119,7 +122,7 @@ const ThreedGenerator = () => {
     const currentPrompt = overriddenPrompt || prompt;
 
     if (isIteration && !currentPrompt.trim() && !overriddenPrompt) {
-      toast.error("Please describe your changes")
+      toast.error("Please describe your changes", { id: 'missing-prompt' })
       return
     }
 
@@ -159,11 +162,11 @@ const ThreedGenerator = () => {
           setChatHistory(prev => [...prev, { role: 'assistant', content: 'Design updated based on your request.' }])
         } else {
           setStep('result')
-          toast.success('3D visualization ready')
+          toast.success('3D visualization ready', { id: 'gen-success' })
         }
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Synthesis failed')
+      toast.error(err.response?.data?.message || 'Synthesis failed', { id: 'gen-error' })
       if (isIteration) setChatHistory(prev => [...prev, { role: 'error', content: 'Neural engine error.' }])
     } finally {
       setIsGenerating(false)

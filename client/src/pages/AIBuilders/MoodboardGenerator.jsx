@@ -58,7 +58,7 @@ const MoodboardGenerator = () => {
 
   const handleGenerate = async () => {
     if (!changes.trim()) {
-      toast.error("Please describe your design requirements");
+      toast.error("Please describe your design requirements", { id: 'missing-requirements' });
       return;
     }
 
@@ -126,7 +126,7 @@ const MoodboardGenerator = () => {
       setProgressSteps(["Image generated", "Colors extracted", "Image ready!"]);
       setLoadingState(null);
       setGenerationPhase(null);
-      toast.success("Moodboard image ready! Loading details...");
+      toast.success("Moodboard image ready! Loading details...", { id: 'image-ready' });
       navigate(`/moodboards/${moodboardId}`);
 
       // ========== PHASE 2: Generate Descriptions (Background) ==========
@@ -140,7 +140,7 @@ const MoodboardGenerator = () => {
         // Update moodboard with all descriptions
         setCurrentMoodboard(descriptionsResult.data.moodboard);
         setGenerationPhase(null);
-        toast.success("All details generated successfully!");
+        toast.success("All details generated successfully!", { id: 'all-gen-success' });
       } catch (descError) {
         console.error("Description generation error:", descError);
         setGenerationPhase(null);
@@ -157,14 +157,15 @@ const MoodboardGenerator = () => {
       toast.error(
         error.response?.data?.message ||
           error.message ||
-          "Failed to generate moodboard"
+          "Failed to generate moodboard",
+          { id: 'gen-error' }
       );
     }
   };
 
   const handleRegenerate = async () => {
     if (!currentMoodboard) {
-      toast.error("No moodboard to regenerate");
+      toast.error("No moodboard to regenerate", { id: 'no-moodboard' });
       return;
     }
 
@@ -193,7 +194,7 @@ const MoodboardGenerator = () => {
     } catch (error) {
       console.error("Regeneration error:", error);
       setLoadingState(null);
-      toast.error("Failed to regenerate moodboard");
+      toast.error("Failed to regenerate moodboard", { id: 'regen-error' });
     }
   };
 
@@ -206,7 +207,7 @@ const MoodboardGenerator = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Image downloaded successfully!");
+    toast.success("Image downloaded successfully!", { id: 'download-success' });
   };
 
   const downloadMoodboardPDF = async () => {
@@ -396,7 +397,7 @@ const MoodboardGenerator = () => {
   const handleSelectFromHistory = (moodboard) => {
     setCurrentMoodboard(moodboard);
     setCurrentStep(3);
-    toast.success(`Loaded: ${moodboard.title}`);
+    toast.success(`Loaded: ${moodboard.title}`, { id: 'history-load' });
   };
 
   const steps = [

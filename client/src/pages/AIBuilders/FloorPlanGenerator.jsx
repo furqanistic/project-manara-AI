@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import {
   ArrowLeft,
   ArrowRight,
+  Box,
   Check,
   ChevronDown,
   Download,
@@ -25,7 +26,7 @@ import {
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { FloorPlanHistory } from '../../components/FloorPlan/FloorPlanHistory'
 import TopBar from '../../components/Layout/Topbar'
 import api from '../../config/config'
@@ -138,7 +139,7 @@ const FloorPlanGenerator = () => {
     setChatHistory([])
     setStep('config')
     setConfig({ ...config, prompt: '' })
-    toast.success("New project workspace ready")
+    toast.success("New project workspace ready", { id: 'new-project' })
   }
 
   const handleTypeChange = (typeId) => {
@@ -149,7 +150,7 @@ const FloorPlanGenerator = () => {
   const handleGenerate = async (overriddenPrompt = null) => {
     const currentPrompt = overriddenPrompt || config.prompt
     if (!currentPrompt.trim() && !overriddenPrompt) {
-      toast.error("Please describe your vision")
+      toast.error("Please describe your vision", { id: 'missing-prompt' })
       return
     }
 
@@ -183,7 +184,7 @@ const FloorPlanGenerator = () => {
         content: generatedImage ? "I've updated the layout for you." : `Your ${config.buildingType} plan is ready!` 
       }])
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Synthesis failed')
+      toast.error(err.response?.data?.message || 'Synthesis failed', { id: 'gen-error' })
       setChatHistory(prev => [...prev, { role: 'error', content: 'Connection to AI designer interrupted.' }])
     } finally {
       setIsGenerating(false)
@@ -252,6 +253,14 @@ const FloorPlanGenerator = () => {
     setStep('result')
     
     toast.success("Session restored", { id: 'session-restored' })
+  }
+
+  const navigate = useNavigate()
+
+  const handleConvertTo3D = () => {
+    if (!generatedImage) return
+    const imageUrl = generatedImage.url || `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
+    navigate('/visualizer', { state: { sourceImage: imageUrl } })
   }
 
   const toggleMobileView = () => {
@@ -474,13 +483,22 @@ const FloorPlanGenerator = () => {
             
             <div className='flex items-center gap-2'>
               {generatedImage && (
-                <button 
-                  onClick={handleDownload}
-                  className='flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/10 border border-[#E5E5E7] dark:border-[#2D2D2F] rounded-lg text-[10px] font-black hover:bg-gray-50 transition-all'
-                >
-                  <Download size={12} />
-                  EXPORT
-                </button>
+                <div className='flex items-center gap-2'>
+                  <button 
+                    onClick={handleConvertTo3D}
+                    className='flex items-center gap-2 px-3 py-1.5 bg-[#8d775e] text-white rounded-lg text-[10px] font-black hover:opacity-90 transition-all shadow-lg shadow-[#8d775e]/20'
+                  >
+                    <Box size={12} />
+                    CONVERT TO 3D
+                  </button>
+                  <button 
+                    onClick={handleDownload}
+                    className='flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/10 border border-[#E5E5E7] dark:border-[#2D2D2F] rounded-lg text-[10px] font-black hover:bg-gray-50 transition-all'
+                  >
+                    <Download size={12} />
+                    EXPORT
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -573,13 +591,21 @@ const FloorPlanGenerator = () => {
              </div>
              
              {generatedImage && (
-                <button 
-                  onClick={handleDownload}
-                  className='h-12 w-12 bg-white dark:bg-white/10 border border-white/20 rounded-xl flex items-center justify-center shadow-xl pointer-events-auto'
-                >
-                  <Download size={18} />
-                </button>
-             )}
+                <div className='flex gap-2 pointer-events-auto'>
+                  <button 
+                    onClick={handleConvertTo3D}
+                    className='h-12 w-12 bg-[#8d775e] text-white rounded-xl flex items-center justify-center shadow-xl border border-[#8d775e]/20'
+                  >
+                    <Box size={18} />
+                  </button>
+                  <button 
+                    onClick={handleDownload}
+                    className='h-12 w-12 bg-white dark:bg-white/10 border border-white/20 rounded-xl flex items-center justify-center shadow-xl'
+                  >
+                    <Download size={18} />
+                  </button>
+                </div>
+              )}
           </div>
           )}
         </section>
