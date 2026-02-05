@@ -345,9 +345,14 @@ export const generateImage = async (
     console.error('Gemini API Error:', error)
 
     if (error.message?.includes('quota') || error.status === 429) {
-      throw new Error(
-        'Gemini API quota exceeded. Please enable billing at https://aistudio.google.com/ or set USE_MOCK_GEMINI=true in .env for testing.'
-      )
+      let detailedMessage = 'Gemini API quota exceeded.'
+      if (error.message?.includes('limit: 0')) {
+        detailedMessage += ' This model requires a billing-enabled project even for free tier usage. Please ensure your project is specifically LINKED to a billing account in Google AI Studio (Settings > Billing) or Google Cloud Console.'
+      } else {
+        detailedMessage += ' Please enable billing at https://aistudio.google.com/ or check your current usage.'
+      }
+      detailedMessage += ' You can also set USE_MOCK_GEMINI=true in .env for testing.'
+      throw new Error(detailedMessage)
     }
 
     if (error.message?.includes('API key')) {
@@ -1336,17 +1341,36 @@ export const generateThreeDScene = async (imageBuffer, mimeType) => {
  * Generate a 3D isometric architectural visualization from a 2D floor plan
  * @param {Buffer} imageBuffer - The 2D floor plan image
  * @param {string} mimeType - Image mime type
+ * @param {Object} options - Custom options (style, prompt)
  * @returns {Promise<Object>} - The generated image data
  */
-export const generateThreeDVisualization = async (imageBuffer, mimeType) => {
-  const prompt = `Convert this 2D floor plan into a composite 3D architectural visualization. 
-    Show the SAME 3D floor plan model from 3 different isometric angles (e.g., Front-Left, Rear-Right, and Top-Iso) to fully display the layout structure.
-    Do NOT include interior eye-level perspective shots. Focus purely on the 3D dollhouse/cutaway view of the entire floor plan.
-    Arrange these views cleanly on a single neutral background.`
+export const generateThreeDVisualization = async (imageBuffer, mimeType, options = {}) => {
+  const { style = 'architectural', prompt: customPrompt } = options
+
+  let styleInstruction = ''
+  if (style === 'colorful') {
+    styleInstruction = 'Use a vibrant, colorful color palette for the 3D model. Apply distinct colors to different rooms and furniture items to make them pop. Use professional lighting to enhance the colors.'
+  } else {
+    styleInstruction = 'Use a clean, architectural white/neutral color palette. Focus on shadows and light to show depth. Maintain a professional, minimalist aesthetic.'
+  }
+
+  let finalPrompt = `Convert this 2D floor plan into a HYPER-REALISTIC "7D" ARCHITECTURAL VISUALIZATION. 
+    Perspective: CINEMATIC ISOMETRIC CUTAWAY (angled view, NOT top-down/drone view).
+    Lighting: High-contrast studio lighting with ray-tracing effects, volumetric shadows, and global illumination.
+    Depth: Extreme definition on wall thickness, furniture height, and textures to create a "pop-out" 3D effect.
+    The goal is a touchable, physical-looking dollhouse model that looks like a high-end architectural prototype.
+    Focus on creating a LARGE, clear view that fills the frame with maximum volumetric depth.
+    ${styleInstruction}`
+
+  if (customPrompt) {
+    finalPrompt = `Based on the provided 3D floor plan visualization and the 2D floor plan reference, apply the following changes: ${customPrompt}. 
+    Ensure the output remains a single, large, high-detail 3D isometric view as described above. 
+    Maintain consistency with the original layout but incorporate the requested modifications.`
+  }
 
   const referenceImages = [{ data: imageBuffer.toString('base64'), mimeType }]
 
-  return await generateImage(prompt, referenceImages, '1:1')
+  return await generateImage(finalPrompt, referenceImages, '1:1')
 }
 
 /**

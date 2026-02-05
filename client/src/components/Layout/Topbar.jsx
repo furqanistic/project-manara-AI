@@ -94,7 +94,7 @@ const TopBar = () => {
       href: "#",
       hasDropdown: true,
       dropdownItems: [
-        { name: "3D Renders", href: "https://manarad-furnara-connect.hf.space" },
+        { name: "3D Renders", href: "/visualizer" },
         { name: "Floor Plans", href: "/floorplans" },
         { name: "AI Designs", href: "/moodboard" },
       ],

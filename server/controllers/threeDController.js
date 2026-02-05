@@ -69,7 +69,7 @@ export const generateVisualization = async (req, res, next) => {
 
     console.log(`Starting 3D visualization generation for user ${req.user.id}...`)
 
-    const result = await generateThreeDVisualization(imageBuffer, mimeType)
+    const result = await generateThreeDVisualization(imageBuffer, mimeType, req.body)
 
     res.status(200).json({
       status: 'success',
