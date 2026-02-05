@@ -197,7 +197,7 @@ const FloorPlanSchema = new mongoose.Schema(
     // Status
     status: {
       type: String,
-      enum: ['draft', 'in-progress', 'review', 'approved', 'archived'],
+      enum: ['draft', 'in-progress', 'review', 'approved', 'archived', 'completed'],
       default: 'draft',
     },
 
@@ -250,9 +250,10 @@ FloorPlanSchema.pre('save', function (next) {
         const area = (room.width || 0) * (room.height || 0)
         return total + area
       }, 0)
+    }
+  if (!this.lastModifiedBy) {
+    this.lastModifiedBy = this.userId
   }
-
-  this.lastModifiedBy = this.userId
   next()
 })
 

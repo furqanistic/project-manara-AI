@@ -1,21 +1,27 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
+    ArrowLeft,
     ArrowRight,
-    Box,
-    ChevronRight,
+    Check,
+    ChevronDown,
     Download,
     History,
-    Info,
+    Home,
     Layers,
+    Layout,
     Loader2,
     Maximize2,
     MessageSquare,
+    Palette,
     Plus,
     RotateCcw,
     Send,
-    Shapes,
+    Settings,
+    Share2,
     Sparkles,
-    Wand2
+    Trash2,
+    Wand2,
+    X
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
@@ -24,18 +30,59 @@ import { FloorPlanHistory } from '../../components/FloorPlan/FloorPlanHistory'
 import TopBar from '../../components/Layout/Topbar'
 import api from '../../config/config'
 
-const SUGGESTIONS = [
-  { label: "Modern Apartment", prompt: "Modern 2-bedroom apartment with an open-concept kitchen and large balcony" },
-  { label: "Cozy Studio", prompt: "Cozy studio apartment layout with a dedicated home office corner" },
-  { label: "Luxury Penthouse", prompt: "Luxury 3-bedroom penthouse with spacious master suite and walk-in closet" },
-  { label: "Retail Cafe", prompt: "Small cafe floor plan with seating for 20 and a service counter" },
+const BUILDING_TYPES = [
+  { id: 'apartment', label: 'Apartment', icon: Layout },
+  { id: 'studio', label: 'Studio', icon: Home },
+  { id: 'office', label: 'Office', icon: Layers },
+  { id: 'villa', label: 'Villa', icon: Home },
+]
+
+const SCALES_BY_TYPE = {
+  apartment: [
+    { id: 'studio', label: 'Studio', description: 'Open living' },
+    { id: '1-bed', label: '1 Bedroom', description: 'Compact' },
+    { id: '2-bed', label: '2 Bedroom', description: 'Balanced' },
+    { id: '3-bed', label: '3+ Bedroom', description: 'Spacious' },
+  ],
+  studio: [
+    { id: 'minimalist', label: 'Minimalist', description: 'Essential' },
+    { id: 'open', label: 'Open Concept', description: 'Fluid' },
+    { id: 'divided', label: 'Smart Division', description: 'Optimized' },
+  ],
+  office: [
+    { id: 'private', label: 'Private Suite', description: 'Focused' },
+    { id: 'co-working', label: 'Co-working', description: 'Collaborative' },
+    { id: 'conference', label: 'Meeting Hub', description: 'Group' },
+    { id: 'open-plan', label: 'Open Plan', description: 'Modern' },
+  ],
+  villa: [
+    { id: 'single', label: 'Single Story', description: 'Accessible' },
+    { id: 'duplex', label: 'Duplex', description: 'Two levels' },
+    { id: 'mansion', label: 'Estate', description: 'Luxurious' },
+  ]
+}
+
+const STYLES = [
+  { id: 'architectural', label: 'Architectural', color: 'bg-blue-500' },
+  { id: 'modern', label: 'Modern Minimal', color: 'bg-stone-800' },
+  { id: 'industrial', label: 'Industrial Raw', color: 'bg-orange-900' },
+  { id: 'classic', label: 'Classic Elegance', color: 'bg-amber-700' },
 ]
 
 const FloorPlanGenerator = () => {
-  const [prompt, setPrompt] = useState('')
+  const [step, setStep] = useState('config') // 'config' | 'result'
+  const [config, setConfig] = useState({
+    buildingType: 'apartment',
+    scale: '2-bed',
+    style: 'architectural',
+    prompt: ''
+  })
+  
   const [isGenerating, setIsGenerating] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [showHistoryMobile, setShowHistoryMobile] = useState(false)
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
   const location = useLocation()
   
   const [generatedImage, setGeneratedImage] = useState(() => {
@@ -48,7 +95,6 @@ const FloorPlanGenerator = () => {
     return saved ? JSON.parse(saved) : []
   })
   
-  const chatEndRef = useRef(null)
   const chatContainerRef = useRef(null)
 
   // Sync theme
@@ -71,43 +117,53 @@ const FloorPlanGenerator = () => {
   useEffect(() => {
     localStorage.setItem('fp_generatedImage', generatedImage ? JSON.stringify(generatedImage) : '')
     localStorage.setItem('fp_chatHistory', JSON.stringify(chatHistory))
+    if (generatedImage && step === 'config') setStep('result')
   }, [generatedImage, chatHistory])
 
-  // Handle deep-linking from Projects page
   useEffect(() => {
     if (location.state?.project) {
         loadFromHistory(location.state.project);
-        // Clear state to prevent reload on refresh
         window.history.replaceState({}, document.title);
     }
   }, [location.state]);
 
-  const handleNewChat = () => {
+  const handleNewProject = () => {
     setGeneratedImage(null)
     setChatHistory([])
-    setPrompt('')
-    toast.success("New project started")
+    setStep('config')
+    setConfig({ ...config, prompt: '' })
+    toast.success("New project workspace ready")
   }
 
-  // Removed addToHistoryGallery as it is now handled server-side
+  const handleTypeChange = (typeId) => {
+    const defaultScale = SCALES_BY_TYPE[typeId][0].id
+    setConfig({ ...config, buildingType: typeId, scale: defaultScale })
+  }
 
-  const handleGenerate = async (e) => {
-    if (e) e.preventDefault()
-    if (!prompt.trim()) return
+  const handleGenerate = async (overriddenPrompt = null) => {
+    const currentPrompt = overriddenPrompt || config.prompt
+    if (!currentPrompt.trim() && !overriddenPrompt) {
+      toast.error("Please describe your vision")
+      return
+    }
 
-    const currentPrompt = prompt
     setIsGenerating(true)
-    setChatHistory(prev => [...prev, { role: 'user', content: currentPrompt }])
-    setPrompt('')
+    if (step === 'config') setStep('result')
+    
+    const displayPrompt = overriddenPrompt || `${config.buildingType} ${config.scale} plan in ${config.style} style: ${currentPrompt}`
+    setChatHistory(prev => [...prev, { role: 'user', content: displayPrompt }])
 
     try {
       let response
       if (!generatedImage) {
-        response = await api.post('/floorplans/generate-image', { prompt: currentPrompt, aspectRatio: '1:1' })
+        response = await api.post('/floorplans/generate-image', { 
+            prompt: displayPrompt, 
+            aspectRatio: '1:1' 
+        })
       } else {
         response = await api.post('/floorplans/edit-image', { 
           prompt: currentPrompt, 
-          image: generatedImage.data, 
+          image: generatedImage.url || generatedImage.data, 
           aspectRatio: '1:1' 
         })
       }
@@ -116,42 +172,94 @@ const FloorPlanGenerator = () => {
       if (!image) throw new Error('Generation failed')
 
       setGeneratedImage(image)
-      // addToHistoryGallery removed, backend now handles persistence
       setChatHistory(prev => [...prev, { 
         role: 'assistant', 
-        content: generatedImage ? "Project updated based on your feedback." : "Initial floor plan synthesized." 
+        content: generatedImage ? "I've updated the layout for you." : `Your ${config.buildingType} plan is ready!` 
       }])
     } catch (err) {
       toast.error(err.response?.data?.message || 'Synthesis failed')
-      setChatHistory(prev => [...prev, { role: 'error', content: 'Neural engine encountered an error.' }])
+      setChatHistory(prev => [...prev, { role: 'error', content: 'Connection to AI designer interrupted.' }])
     } finally {
       setIsGenerating(false)
+      setConfig(prev => ({ ...prev, prompt: '' }))
     }
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!generatedImage) return
-    const link = document.createElement('a')
-    link.href = generatedImage.url || `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
-    link.download = `manara-plan-${Date.now()}.png`
-    link.click()
+    let imageUrl = generatedImage.url || `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
+
+    const toastId = toast.loading("Preparing download...")
+
+    try {
+      // 1. Data URL branch
+      if (imageUrl.startsWith('data:')) {
+        const link = document.createElement('a')
+        link.href = imageUrl
+        link.download = `manara-plan-${Date.now()}.png`
+        link.click()
+        toast.success("Download started", { id: toastId })
+        return
+      }
+
+      // 2. Cloudinary specific force-download (server-side)
+      if (imageUrl.includes('cloudinary.com')) {
+        imageUrl = imageUrl.replace('/upload/', '/upload/fl_attachment/')
+      }
+
+      // 3. Attempt Blob fetch
+      try {
+        const response = await fetch(imageUrl, { mode: 'cors' })
+        if (!response.ok) throw new Error('Network response was not ok')
+        
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `manara-plan-${Date.now()}.png`
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        window.URL.revokeObjectURL(url)
+        
+        toast.success("Download started", { id: toastId })
+      } catch (innerErr) {
+        // 4. Fallback to transformed URL with fl_attachment
+        const link = document.createElement('a')
+        link.href = imageUrl
+        link.target = '_blank'
+        link.download = `manara-plan-${Date.now()}.png`
+        link.click()
+        toast.success("Download initiated", { id: toastId })
+      }
+    } catch (err) {
+      console.error("Export failed", err)
+      toast.error("Unable to force download. Opening plan...", { id: toastId })
+      window.open(imageUrl, '_blank')
+    }
   }
 
   const loadFromHistory = (item) => {
-    // Handle both new backend model structure and legacy local storage items
     const imageToLoad = item.image || { url: item.thumbnail, mimeType: 'image/png' };
     setGeneratedImage(imageToLoad)
+    setStep('result')
     
-    const timestamp = item.createdAt || item.timestamp;
-    setChatHistory(prev => [...prev, { 
-        role: 'system', 
-        content: `Restored version from ${new Date(timestamp).toLocaleTimeString()}` 
-    }])
-    toast.success("Snapshot restored")
+    toast.success("Session restored", { id: 'session-restored' })
+  }
+
+  const toggleMobileView = () => {
+    if (step === 'config') {
+      setStep('result')
+      setIsMobileChatOpen(false)
+    } else {
+      setStep('config')
+      setIsMobileChatOpen(false)
+    }
   }
 
   return (
-    <div className='min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] font-["Poppins"] selection:bg-[#8d775e]/10 overflow-x-hidden transition-colors duration-500'>
+    <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
       <TopBar />
       
       <FloorPlanHistory 
@@ -160,277 +268,316 @@ const FloorPlanGenerator = () => {
         onLoadItem={loadFromHistory}
       />
 
-      {/* Cinematic Ambient Background */}
-      <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <div className='absolute top-[-10%] right-[-5%] w-[70%] h-[70%] rounded-full bg-[#8d775e]/5 dark:bg-[#8d775e]/10 blur-[140px]' />
-        <div className='absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#b8a58c]/3 dark:bg-[#b8a58c]/5 blur-[120px]' />
-      {/* Grain Overlay */}
-        <div className='absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none' 
-             style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }} />
-      </div>
-
-      <main className='relative z-10 max-w-[1600px] mx-auto px-6 md:px-12 pt-24 pb-24'>
+      {/* Main Container */}
+      <main className='flex-1 relative flex flex-col md:flex-row pt-16 h-full overflow-hidden'>
         
-        {/* Header Section */}
-        <div className='flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10'>
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className='space-y-6'
-          >
-            <div className='flex items-center gap-4'>
-              <div className='w-12 h-[1px] bg-[#8d775e]'></div>
-              <span className='text-[10px] font-bold tracking-[0.5em] text-[#8d775e] uppercase'>Spatial Synthesis Studio</span>
-            </div>
-            <h1 className='text-5xl md:text-7xl font-bold text-gray-900 dark:text-white tracking-tightest leading-[0.85]'>
-              Neural <br />
-              <span className='text-[#8d775e] font-serif italic'>Floor Plans.</span>
-            </h1>
-            <p className='text-gray-400 dark:text-gray-500 font-medium text-lg max-w-xl leading-relaxed'>
-              Transform architectural concepts into high-precision layouts through advanced neural mapping.
-            </p>
-          </motion.div>
-
-          {/* Action Pills */}
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className='flex flex-wrap gap-3'
-          >
-            <button 
-              onClick={handleNewChat}
-              className='flex items-center gap-2 px-6 py-3 bg-white dark:bg-white/5 border border-[#e8e2dc] dark:border-white/10 rounded-full text-sm font-bold text-[#8d775e] hover:bg-gray-50 dark:hover:bg-white/10 transition-all shadow-sm'
-            >
-              <Plus size={16} />
-              New Project
-            </button>
-            <button 
-              onClick={() => setHistoryOpen(true)}
-              className='flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-full text-sm font-bold hover:bg-black dark:hover:bg-gray-200 transition-all shadow-xl'
-            >
-              <History size={16} />
-              Vault
-            </button>
-          </motion.div>
-        </div>
-
-        {/* Main Interface Grid */}
-        <div className='grid xl:grid-cols-12 gap-10 items-stretch'>
+        {/* Left Section: Controls & Config (Compact Sidebar) */}
+        <aside className={`
+          fixed md:relative top-16 md:top-0 inset-x-0 bottom-0 md:inset-auto z-40 md:z-10
+          w-full md:w-[320px] lg:w-[350px] bg-white dark:bg-[#0c0c0c] border-r border-[#E5E5E7] dark:border-[#2D2D2F]
+          transition-transform duration-500 ease-in-out flex flex-col
+          ${step === 'result' && 'md:translate-x-0'}
+          ${(step === 'config' || showHistoryMobile || (step === 'result' && isMobileChatOpen)) ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+        `}>
           
-          {/* Left: Canvas Area */}
-          <motion.div 
-            className='xl:col-span-8'
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-          >
-            <div className='rounded-[48px] overflow-hidden h-[800px] flex flex-col relative group'>
-              
-               {/* Browser-like Toolbar */}
-               <div className='h-14 bg-white/5 dark:bg-white/5 backdrop-blur-md border border-gray-100/10 dark:border-white/5 flex items-center justify-between px-8 rounded-t-[48px]'>
-                <div className='flex items-center gap-6'>
-                  <div className='flex gap-1.5'>
-                    <div className='w-2.5 h-2.5 rounded-full bg-[#8d775e]/30'></div>
-                    <div className='w-2.5 h-2.5 rounded-full bg-[#8d775e]/30'></div>
-                    <div className='w-2.5 h-2.5 rounded-full bg-[#8d775e]/30'></div>
-                  </div>
-                  <div className='h-4 w-[1px] bg-gray-200 dark:bg-white/10'></div>
-                  <span className='text-[10px] font-bold tracking-[0.2em] text-[#8d775e]/60 uppercase'>
-                    {generatedImage ? 'Active Layout: HD Synthesis' : 'Awaiting initialization...'}
-                  </span>
-                </div>
-                
-                {generatedImage && (
-                  <button 
-                    onClick={handleDownload}
-                    className='text-[#8d775e] hover:bg-[#8d775e]/10 p-2 rounded-full transition-all'
-                    title="Download Assets"
-                  >
-                    <Download size={18} />
-                  </button>
-                )}
-              </div>
-
-              {/* The Visualizer Canvas */}
-              <div className='flex-1 relative flex items-center justify-center p-6'>
-                <AnimatePresence mode='wait'>
-                  {generatedImage ? (
-                    <motion.div 
-                      key='generated'
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className='relative w-full h-full flex items-center justify-center'
-                    >
-                      <div className='relative max-h-full aspect-square'>
-                        <img 
-                          src={generatedImage.url || `data:${generatedImage.mimeType};base64,${generatedImage.data}`} 
-                          alt="Layout Synthesis" 
-                          className='max-h-full w-auto object-contain rounded-2xl relative z-10'
-                        />
-                      </div>
-                    </motion.div>
-                  ) : (
-                    <motion.div 
-                      key='empty'
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className='text-center space-y-8 max-w-sm'
-                    >
-                      <div className='w-24 h-24 bg-white/5 dark:bg-white/5 border border-gray-100/10 dark:border-white/5 rounded-[32px] flex items-center justify-center text-[#8d775e]/40 mx-auto transform -rotate-12'>
-                         <Wand2 size={40} />
-                      </div>
-                      <div className='space-y-4'>
-                        <h3 className='text-3xl font-light text-gray-900 dark:text-white tracking-tight'>Start Synthesis.</h3>
-                        <p className='text-gray-400 dark:text-gray-500 font-medium text-sm leading-relaxed'>
-                          Our engine converts natural language into executable architectural data. Upload a reference or describe your spatial vision.
-                        </p>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Loading Overlay */}
-                <AnimatePresence>
-                  {isGenerating && (
-                    <motion.div 
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      className='absolute inset-0 bg-[#faf8f6]/95 dark:bg-[#0a0a0a]/95 backdrop-blur-md z-30 flex flex-col items-center justify-center'
-                    >
-                      <div className='relative w-32 h-32 mb-8'>
-                        <motion.div 
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
-                          className='absolute inset-0 border-t-2 border-[#8d775e] rounded-full'
-                        />
-                        <div className='absolute inset-4 rounded-full bg-[#8d775e]/5 flex items-center justify-center'>
-                           <img src="/min-logo.png" alt="Manara" className='w-12 h-12 object-contain animate-pulse' />
-                        </div>
-                      </div>
-                      <p className='text-[#8d775e] font-bold tracking-[0.3em] uppercase text-xs animate-pulse'>Synthesizing Geometry...</p>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+          <div className='flex items-center justify-between p-5 border-b border-[#E5E5E7] dark:border-[#2D2D2F]'>
+            <div className='flex items-center gap-2'>
+              <h2 className='font-black tracking-tighter text-base uppercase'>Manara</h2>
             </div>
-          </motion.div>
-
-          {/* Right: Studio Controls */}
-          <motion.div 
-            className='xl:col-span-4 flex flex-col gap-6'
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            {/* Assistant Panel */}
-            <div className='flex-1 bg-white dark:bg-[#111] rounded-[48px] border border-gray-100 dark:border-white/5 shadow-xl flex flex-col overflow-hidden h-[800px]'>
-              <div className='p-8 border-b border-gray-50 dark:border-white/5 flex items-center justify-between'>
-                <div className='flex items-center gap-3'>
-                  <div className='w-10 h-10 rounded-xl bg-[#8d775e]/10 flex items-center justify-center text-[#8d775e]'>
-                    <MessageSquare size={20} />
-                  </div>
-                  <div>
-                    <h4 className='font-bold text-gray-900 dark:text-white text-sm'>Synthesis Assistant</h4>
-                    <p className='text-[10px] text-green-500 font-bold uppercase tracking-widest'>Engine Active</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chat Thread */}
-              <div 
-                ref={chatContainerRef}
-                className='flex-1 overflow-y-auto p-8 space-y-6 scrollbar-hide'
+            <div className='flex items-center gap-1'>
+              <button 
+                onClick={() => setHistoryOpen(true)}
+                className='p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-400'
               >
-                {chatHistory.length === 0 && (
-                  <div className='h-full flex flex-col items-center justify-center opacity-30 text-center space-y-4'>
-                    <Shapes size={40} className='text-gray-400' />
-                    <p className='text-sm font-medium'>Awaiting neural parameters</p>
-                  </div>
-                )}
-                
-                {chatHistory.map((msg, i) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    key={i} 
-                    className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
-                  >
-                    <div className={`
-                      max-w-[90%] px-5 py-4 rounded-[28px] text-[13px] font-medium leading-relaxed shadow-sm
-                      ${msg.role === 'user' 
-                        ? 'bg-gray-900 dark:bg-white text-white dark:text-black rounded-tr-none' 
-                        : msg.role === 'system'
-                          ? 'bg-gray-100 dark:bg-white/5 text-gray-400 text-[10px] py-2 px-4 uppercase tracking-widest border border-dashed border-gray-200 dark:border-white/10 w-full text-center rounded-xl'
-                          : 'bg-stone-50 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-tl-none border border-gray-100 dark:border-white/5'}
-                      ${msg.role === 'error' ? 'bg-red-500 text-white' : ''}
-                    `}>
-                      {msg.content}
-                    </div>
-                  </motion.div>
-                ))}
-                <div ref={chatEndRef} />
-              </div>
+                <History size={16} />
+              </button>
+              <button 
+                onClick={handleNewProject}
+                className='p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-400'
+              >
+                <Plus size={16} />
+              </button>
+              
+              {/* Mobile Close Button */}
+              <button 
+                onClick={() => setIsMobileChatOpen(false)}
+                className={`md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-400 ${step === 'result' ? 'block' : 'hidden'}`}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
 
-              {/* Input Workspace */}
-              <div className='p-8 pt-0'>
-                <div className='bg-stone-50 dark:bg-white/5 rounded-[32px] p-6 space-y-6 border border-gray-100 dark:border-white/5'>
-                  {/* Suggestions Grid */}
+          <div className='flex-1 overflow-hidden relative flex flex-col'>
+            {step === 'config' ? (
+              <div className='flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide'>
+              <motion.div  
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className='space-y-6'
+              >
+                {/* Building Type */}
+                <section className='space-y-3'>
+                  <label className='text-[10px] font-black uppercase tracking-widest text-gray-400'>Type</label>
                   <div className='grid grid-cols-2 gap-2'>
-                    {SUGGESTIONS.map((s, i) => (
-                      <button 
-                        key={i}
-                        onClick={() => setPrompt(s.prompt)}
-                        className='text-[9px] font-bold uppercase tracking-widest py-3 px-4 bg-white dark:bg-white/10 border border-gray-100 dark:border-white/10 rounded-2xl text-gray-400 dark:text-gray-500 hover:text-[#8d775e] dark:hover:text-white hover:border-[#8d775e]/30 transition-all'
+                    {BUILDING_TYPES.map((type) => (
+                      <button
+                        key={type.id}
+                        onClick={() => handleTypeChange(type.id)}
+                        className={`
+                          flex items-center gap-3 p-3 rounded-2xl border transition-all text-xs font-bold
+                          ${config.buildingType === type.id 
+                            ? 'border-[#8d775e] bg-[#8d775e]/5 text-[#8d775e]' 
+                            : 'border-transparent bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10'}
+                        `}
                       >
-                        {s.label}
+                        <type.icon size={14} />
+                        {type.label}
                       </button>
                     ))}
                   </div>
+                </section>
 
-                  <form onSubmit={handleGenerate} className='relative'>
-                    <input 
-                      type="text" 
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value)}
-                      placeholder={generatedImage ? "Iterate on layout..." : "Describe spatial intent..."}
-                      disabled={isGenerating}
-                      className='w-full bg-white dark:bg-white/10 border border-gray-100 dark:border-white/10 rounded-2xl pl-6 pr-14 py-4 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#8d775e]/30 transition-all'
-                    />
-                    <button 
-                      type="submit"
-                      disabled={!prompt.trim() || isGenerating}
-                      className='absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-[#8d775e] text-white rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg disabled:opacity-30'
+                {/* Dynamic Scale */}
+                <section className='space-y-3'>
+                  <label className='text-[10px] font-black uppercase tracking-widest text-gray-400'>Select Size</label>
+                  <div className='grid grid-cols-1 gap-1.5'>
+                    {SCALES_BY_TYPE[config.buildingType].map((scale) => (
+                      <button
+                        key={scale.id}
+                        onClick={() => setConfig({ ...config, scale: scale.id })}
+                        className={`
+                          w-full flex items-center justify-between p-3 rounded-xl border transition-all
+                          ${config.scale === scale.id 
+                            ? 'border-[#8d775e] bg-[#8d775e]/5' 
+                            : 'border-transparent bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10'}
+                        `}
+                      >
+                        <div className='text-left'>
+                          <p className='font-bold text-[11px]'>{scale.label}</p>
+                          <p className='text-[9px] text-gray-400'>{scale.description}</p>
+                        </div>
+                        {config.scale === scale.id && <Check size={12} className='text-[#8d775e]' />}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                {/* Style */}
+                <section className='space-y-3'>
+                  <label className='text-[10px] font-black uppercase tracking-widest text-gray-400'>Style</label>
+                  <div className='flex flex-wrap gap-1.5'>
+                    {STYLES.map((st) => (
+                      <button
+                        key={st.id}
+                        onClick={() => setConfig({ ...config, style: st.id })}
+                        className={`
+                          px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border
+                          ${config.style === st.id 
+                            ? 'border-[#8d775e] bg-[#8d775e] text-white' 
+                            : 'border-transparent bg-gray-100 dark:bg-white/5 text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'}
+                        `}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+                </section>
+              </motion.div>
+              </div>
+            ) : (
+              <div 
+                ref={chatContainerRef}
+                className='flex-1 overflow-y-auto p-5 scrollbar-hide space-y-4 flex flex-col'
+              >
+                <div className='space-y-3 pb-16'>
+                  {chatHistory.map((msg, i) => (
+                    <motion.div 
+                      key={i}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                      {isGenerating ? <Loader2 size={18} className='animate-spin' /> : <ArrowRight size={18} />}
-                    </button>
-                  </form>
+                      <div className={`
+                        max-w-[90%] p-3.5 rounded-2xl text-[12px] font-semibold leading-relaxed
+                        ${msg.role === 'user' 
+                          ? 'bg-[#8d775e] text-white rounded-tr-none shadow-lg shadow-[#8d775e]/10' 
+                          : msg.role === 'system'
+                            ? 'bg-transparent text-gray-400 text-[9px] uppercase tracking-widest border border-dashed border-gray-200 dark:border-white/10 w-full text-center rounded-lg py-1.5'
+                            : 'bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-tl-none border border-gray-100 dark:border-white/5'}
+                      `}>
+                        {msg.content}
+                      </div>
+                    </motion.div>
+                  ))}
                 </div>
               </div>
-            </div>
+            )}
+          </div>
 
-            {/* Workflow Guide */}
-            <div className='bg-white dark:bg-[#111] rounded-[32px] p-6 border border-gray-100 dark:border-white/5 shadow-sm space-y-4'>
-               <div className='flex items-center gap-3 text-[#8d775e]'>
-                  <Info size={16} />
-                  <span className='text-[10px] font-bold uppercase tracking-widest'>Optimization Guide</span>
+          {/* Input Area (Compact) */}
+          <div className='p-4 border-t border-[#E5E5E7] dark:border-[#2D2D2F] bg-[#FDFCFB] dark:bg-[#0c0c0c]'>
+            <div className='relative flex flex-col gap-2'>
+               <div className='relative'>
+                <input 
+                  type="text"
+                  value={config.prompt}
+                  onChange={(e) => setConfig({ ...config, prompt: e.target.value })}
+                  placeholder={step === 'config' ? `Tell us more about your ${config.buildingType}...` : "What would you like to change?"}
+                  className='w-full bg-gray-100 dark:bg-white/5 border-none rounded-xl pl-4 pr-10 py-3 h-11 text-[12px] placeholder:text-gray-400 focus:ring-1 focus:ring-[#8d775e]/50 transition-all font-medium'
+                  onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                />
+                <button 
+                  onClick={() => handleGenerate()}
+                  disabled={isGenerating || (step === 'config' && !config.prompt.trim())}
+                  className={`
+                    absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all bg-[#8d775e] text-white hover:scale-105 active:scale-95 disabled:opacity-20
+                  `}
+                >
+                  {isGenerating ? <Loader2 size={14} className='animate-spin' /> : <ArrowRight size={16} />}
+                </button>
                </div>
-               <p className='text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed'>
-                  For high-fidelity results, specify dimensions and light orientation. Neural maps are compatible with standard BIM workflows.
-               </p>
+               
+               {step === 'result' && (
+                 <div className='flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide'>
+                    {['Add Balcony', 'Open Plan', 'Luxury Bath'].map((tag) => (
+                      <button 
+                        key={tag}
+                        onClick={() => handleGenerate(`Requesting ${tag}`)}
+                        className='shrink-0 px-2.5 py-1 bg-gray-100 dark:bg-white/10 rounded-lg text-[9px] font-black text-gray-400 hover:text-[#8d775e] transition-colors whitespace-nowrap'
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                 </div>
+               )}
             </div>
-          </motion.div>
-        </div>
-      </main>
+          </div>
+        </aside>
 
-      {/* Aesthetic Side Accents */}
-      {!isDarkMode && (
-        <div className='fixed left-10 top-1/2 -translate-y-1/2 h-64 flex flex-col items-center justify-between opacity-10 pointer-events-none'>
-          <div className='w-[1px] h-24 bg-[#8d775e]' />
-          <span className='[writing-mode:vertical-lr] text-[10px] font-bold tracking-[0.8em] uppercase text-[#8d775e]'>Manara Studio</span>
-          <div className='w-[1px] h-24 bg-[#8d775e]' />
-        </div>
-      )}
+        {/* Right Section: Canvas / Full View */}
+        <section className='flex-1 relative bg-[#f5f5f5] dark:bg-[#050505] flex flex-col'>
+          
+          {/* Desktop Canvas Header */}
+          <div className='hidden md:flex items-center justify-between px-6 py-3 border-b border-[#E5E5E7] dark:border-[#2D2D2F] bg-white/50 dark:bg-black/50 backdrop-blur-md z-10'>
+            <div className='flex items-center gap-3'>
+              <span className='text-[9px] font-black uppercase tracking-tighter text-[#8d775e]'>
+                High Quality • Standard View
+              </span>
+            </div>
+            
+            <div className='flex items-center gap-2'>
+              {generatedImage && (
+                <button 
+                  onClick={handleDownload}
+                  className='flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/10 border border-[#E5E5E7] dark:border-[#2D2D2F] rounded-lg text-[10px] font-black hover:bg-gray-50 transition-all'
+                >
+                  <Download size={12} />
+                  EXPORT
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Visualizer */}
+          <div className={`flex-1 relative flex ${generatedImage ? 'items-start' : 'items-center'} justify-center p-4 md:p-6 md:pt-4`}>
+             <AnimatePresence mode='wait'>
+                {generatedImage ? (
+                  <motion.div 
+                    key='image'
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className='relative max-w-full max-h-full group shadow-2xl rounded-[24px] overflow-hidden'
+                  >
+                    <img 
+                      src={generatedImage.url || `data:${generatedImage.mimeType};base64,${generatedImage.data}`} 
+                      alt="Floor Plan" 
+                      className='max-h-[85vh] w-auto object-contain cursor-crosshair'
+                    />
+                  </motion.div>
+                ) : (
+                  <motion.div 
+                    key='empty'
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className='text-center space-y-6 max-w-xs'
+                  >
+                    <div className='relative w-20 h-20 mx-auto'>
+                        <div className='absolute inset-0 bg-[#8d775e]/20 blur-2xl rounded-full opacity-50' />
+                        <div className='relative w-full h-full bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl flex items-center justify-center text-[#8d775e] group-hover:rotate-6 transition-transform duration-500'>
+                           <Layout size={32} />
+                        </div>
+                    </div>
+                    <div className='space-y-2'>
+                      <h3 className='text-xl font-black italic tracking-tighter'>Let's design your space.</h3>
+                      <p className='text-gray-400 text-xs leading-relaxed'>
+                        Select your {config.buildingType} details on the left to get started.
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+             </AnimatePresence>
+
+             {/* Dynamic Loader */}
+             <AnimatePresence>
+                {isGenerating && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className='absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-xl z-30 flex flex-col items-center justify-center'
+                  >
+                    <div className='relative w-16 h-16 mb-4 flex items-center justify-center'>
+                       <div className='absolute inset-0 border-t-2 border-[#8d775e] rounded-full animate-spin' />
+                       <img 
+                          src="/logoicon.png" 
+                          alt="Processing" 
+                          className='w-8 h-8 object-contain animate-pulse'
+                       />
+                    </div>
+                    <p className='text-[10px] font-black uppercase tracking-[0.3em] animate-pulse'>Designing</p>
+                  </motion.div>
+                )}
+             </AnimatePresence>
+          </div>
+
+          {/* Mobile Overlay Actions */}
+          {!isMobileChatOpen && (
+          <div className='md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] flex gap-2 z-50 pointer-events-none'>
+             <div className='flex-1 flex gap-2 pointer-events-auto'>
+                {step === 'result' && (
+                  <button 
+                     onClick={() => setIsMobileChatOpen(true)}
+                     className='h-12 flex-1 bg-white dark:bg-[#1a1a1a] text-black dark:text-white border border-gray-200 dark:border-white/10 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2'
+                  >
+                     <MessageSquare size={16} />
+                     Chat
+                  </button>
+                )}
+                
+                {step === 'config' && (
+                <button 
+                  onClick={toggleMobileView}
+                  className='h-12 flex-1 bg-black dark:bg-white text-white dark:text-black rounded-xl text-xs font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2'
+                >
+                  <ArrowRight size={16} />
+                  Preview
+                </button>
+                )}
+             </div>
+             
+             {generatedImage && (
+                <button 
+                  onClick={handleDownload}
+                  className='h-12 w-12 bg-white dark:bg-white/10 border border-white/20 rounded-xl flex items-center justify-center shadow-xl pointer-events-auto'
+                >
+                  <Download size={18} />
+                </button>
+             )}
+          </div>
+          )}
+        </section>
+      </main>
     </div>
   )
 }

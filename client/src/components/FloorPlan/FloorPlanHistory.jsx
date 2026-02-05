@@ -112,6 +112,15 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
     setFilteredItems(result.slice(0, 5));
   }, [historyItems, searchQuery]);
 
+  const formatDate = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.toLocaleString('en-GB', { month: 'long' });
+    const year = date.getFullYear();
+    return `${day} ${month}, ${year}`;
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -136,10 +145,10 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
             <div className="p-8 pt-12 border-b border-gray-100 dark:border-white/5 flex items-center justify-between">
               <div>
                 <div className='flex items-center gap-2 mb-1'>
-                    <div className='w-8 h-[1px] bg-[#8d775e]'></div>
-                    <span className='text-[9px] font-bold tracking-[0.4em] text-[#8d775e] uppercase'>Synthesis Vault</span>
+                    <div className='w-8 h-[0.5px] bg-[#8d775e]/50'></div>
+                    <span className='text-[8px] font-bold tracking-[0.3em] text-[#8d775e] uppercase'>Recent Work</span>
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Project History</h2>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-white tracking-tight">History</h2>
               </div>
               <button
                 onClick={onClose}
@@ -175,13 +184,14 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
               ) : (
                 filteredItems.map((item, idx) => (
                   <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05 }}
+                    transition={{ delay: idx * 0.03 }}
                     key={item._id}
                   >
                     <HistoryCard 
                         item={item} 
+                        dateText={formatDate(item.timestamp || item.createdAt)}
                         onLoad={() => {
                             onLoadItem(item);
                             onClose();
@@ -194,20 +204,18 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
             </div>
 
             {/* View All Footer */}
-            {historyItems.length > 5 && (
-              <div className="p-6 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20">
-                <button 
-                  onClick={() => {
-                    onClose();
-                    window.location.href = '/projects';
-                  }}
-                  className="w-full py-4 rounded-[20px] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm font-bold text-[#8d775e] hover:bg-gray-50 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2 group"
-                >
-                  View All in Projects Vault
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </button>
-              </div>
-            )}
+            <div className="p-6 border-t border-gray-100 dark:border-white/5">
+              <button 
+                onClick={() => {
+                  onClose();
+                  window.location.href = '/projects';
+                }}
+                className="w-full py-3.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 group"
+              >
+                View Full Projects Vault
+                <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+              </button>
+            </div>
           </motion.div>
         </>
       )}
@@ -215,75 +223,117 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
   );
 };
 
-const HistoryCard = ({ item, onLoad, onDelete }) => {
+const HistoryCard = ({ item, dateText, onLoad, onDelete }) => {
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-  const handleDownload = (e) => {
+  const handleDownload = async (e) => {
     e.stopPropagation();
-    if (!item.image) {
+    let imageUrl = item.thumbnail || (item.image && (item.image.url || `data:${item.image.mimeType};base64,${item.image.data}`));
+    
+    if (!imageUrl) {
       toast.error("Snapshot data missing");
       return;
     }
-    const link = document.createElement('a');
-    link.href = item.image.url || `data:${item.image.mimeType};base64,${item.image.data}`;
-    link.download = `manara-snapshot-${Date.now()}.png`;
-    link.click();
+
+    const toastId = toast.loading("Preparing download...");
+
+    try {
+      // 1. Data URL branch
+      if (imageUrl.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.download = `manara-snapshot-${Date.now()}.png`;
+        link.click();
+        toast.success("Download started", { id: toastId });
+        return;
+      }
+
+      // 2. Cloudinary specific force-download (server-side)
+      if (imageUrl.includes('cloudinary.com')) {
+        // Inject fl_attachment into the URL for Cloudinary
+        // Typical structure: .../upload/v123456/path/to/image.jpg
+        // We want: .../upload/fl_attachment/v123456/path/to/image.jpg
+        imageUrl = imageUrl.replace('/upload/', '/upload/fl_attachment/');
+      }
+
+      // 3. Attempt Blob fetch for local save (best for naming)
+      try {
+        const response = await fetch(imageUrl, { mode: 'cors' });
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `manara-snapshot-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+        
+        toast.success("Download started", { id: toastId });
+      } catch (innerErr) {
+        // 4. Fallback: If blob fetch fails, just try opening the transformed URL
+        // With fl_attachment, Cloudinary should force a download header
+        const link = document.createElement('a');
+        link.href = imageUrl;
+        link.target = '_blank';
+        link.download = `manara-snapshot-${Date.now()}.png`;
+        link.click();
+        toast.success("Download initiated", { id: toastId });
+      }
+    } catch (err) {
+      console.error("Download failed", err);
+      toast.error("Unable to force download. Opening snapshot...", { id: toastId });
+      window.open(imageUrl, '_blank');
+    }
   };
 
   return (
     <>
       <div 
         onClick={onLoad}
-        className="group bg-white dark:bg-white/5 rounded-[28px] border border-gray-100 dark:border-white/5 overflow-hidden hover:border-[#8d775e]/30 dark:hover:border-[#8d775e]/30 hover:shadow-2xl hover:shadow-[#8d775e]/5 transition-all cursor-pointer flex gap-5 p-4"
+        className="group bg-white dark:bg-white/5 rounded-[28px] border border-gray-100 dark:border-white/5 overflow-hidden hover:border-[#8d775e]/30 dark:hover:border-[#8d775e]/30 hover:shadow-2xl hover:shadow-[#8d775e]/5 transition-all cursor-pointer flex items-center gap-5 p-4"
       >
         {/* Thumbnail */}
-        <div className="w-28 h-28 bg-stone-100 dark:bg-stone-900 rounded-[20px] shrink-0 overflow-hidden border border-gray-100 dark:border-white/5 relative">
+        <div className="w-20 h-20 bg-stone-100 dark:bg-stone-900 rounded-2xl shrink-0 overflow-hidden border border-gray-100 dark:border-white/5 relative">
           {item.thumbnail || item.image ? (
             <img 
               src={item.thumbnail || item.image.url || `data:${item.image.mimeType};base64,${item.image.data}`} 
               alt="Synthesis Thumbnail" 
-              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
+              className="w-full h-full object-cover transition-all duration-700 group-hover:scale-110"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-white/5">
-              <ImageIcon className="w-8 h-8 text-gray-300" />
+              <ImageIcon className="w-6 h-6 text-gray-300" />
             </div>
           )}
-          <div className='absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all' />
         </div>
 
         {/* Info */}
-        <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
-          <div className='space-y-2'>
-            <p className="text-sm font-bold text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug">
-              {item.name || item.prompt}
+        <div className="flex-1 min-w-0 flex flex-col justify-center py-1">
+          <div className='space-y-1'>
+            <p className="text-[13px] font-bold text-gray-800 dark:text-gray-200 line-clamp-1 leading-none group-hover:text-[#8d775e] transition-colors">
+              {item.name?.split(' - ')[0] || item.prompt}
             </p>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#8d775e] uppercase tracking-widest">
-                <Calendar className="w-3 h-3" />
-                <span>{new Date(item.timestamp || item.createdAt).toLocaleDateString()}</span>
-              </div>
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                <Clock className="w-3 h-3" />
-                <span>{new Date(item.timestamp || item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-            </div>
+            <span className='text-[10px] font-medium text-gray-400'>{dateText}</span>
           </div>
           
-          <div className="flex justify-end gap-2 mt-2">
+          <div className="flex gap-2 mt-3">
              <button 
                onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
-               className="p-2.5 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl transition-all"
+               className="p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-red-500 transition-all rounded-lg"
                title="Discard Snapshot"
              >
-               <Trash2 className="w-4 h-4" />
+               <Trash2 className="w-3.5 h-3.5" />
              </button>
              <button 
                onClick={handleDownload}
-               className="p-2.5 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-[#8d775e] hover:bg-[#8d775e]/10 rounded-xl transition-all"
+               className="p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-[#8d775e] transition-all rounded-lg"
                title="Download Assets"
              >
-               <Download className="w-4 h-4" />
+               <Download className="w-3.5 h-3.5" />
              </button>
           </div>
         </div>
@@ -295,5 +345,5 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
         onCancel={() => setDeleteOpen(false)}
       />
     </>
-  )
-}
+  );
+};

@@ -44,7 +44,7 @@ const upload = multer({
 })
 
 // Protected routes
-// router.use(verifyToken)
+router.use(verifyToken)
 
 // CRUD operations
 router.post('/', createFloorPlan)
