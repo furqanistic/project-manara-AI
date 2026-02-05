@@ -24,17 +24,129 @@ import {
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { useLocation } from 'react-router-dom'
 
 const STYLES = [
-  { id: 'architectural', label: 'Architectural White', description: 'Clean, minimalist neutral palette', color: '#8d775e' },
-  { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors for rooms & furniture', color: '#de7c7c' }
+  { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors for rooms & furniture', color: '#de7c7c', recommended: true },
+  { id: 'architectural', label: 'Architectural White', description: 'Clean, minimalist neutral palette', color: '#8d775e' }
 ]
+
+const LOADING_PHASES = [
+  "Analyzing structural layout...",
+  "Generating spatial geometry...",
+  "Simulating lighting conditions...",
+  "Rendering photorealistic textures...",
+  "Finalizing 3D design..."
+]
+
+const BuildingLoader = ({ progress }) => {
+  const [phaseIndex, setPhaseIndex] = useState(0);
+
+  useEffect(() => {
+    // Progress-based phase switching
+    const index = Math.min(
+      Math.floor((progress / 100) * LOADING_PHASES.length),
+      LOADING_PHASES.length - 1
+    );
+    setPhaseIndex(index);
+  }, [progress]);
+
+  return (
+    <div className="flex flex-col items-center gap-10 max-w-sm text-center">
+      <div className="relative w-32 h-32 flex items-center justify-center">
+        {/* Animated Background Grids */}
+        <div className="absolute inset-0 opacity-20 dark:opacity-40">
+           <div className="absolute inset-0 border border-[#8d775e]/30 scale-100 animate-pulse"></div>
+           <div className="absolute inset-0 border border-[#8d775e]/20 rotate-45 scale-90"></div>
+        </div>
+        
+        {/* Main Progress Ring */}
+        <svg className="w-full h-full -rotate-90">
+          <circle
+            cx="64"
+            cy="64"
+            r="60"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className="text-gray-100 dark:text-white/5"
+          />
+          <motion.circle
+            cx="64"
+            cy="64"
+            r="60"
+            fill="none"
+            stroke="#8d775e"
+            strokeWidth="3"
+            strokeDasharray="377"
+            initial={{ strokeDashoffset: 377 }}
+            animate={{ strokeDashoffset: 377 - (377 * progress) / 100 }}
+            transition={{ type: "spring", bounce: 0, duration: 0.5 }}
+          />
+        </svg>
+
+        {/* Floating Architectural Elements */}
+        <div className="absolute inset-0 flex items-center justify-center">
+           <motion.div
+             animate={{ 
+               rotate: [0, 90, 180, 270, 360],
+               scale: [1, 1.1, 1]
+             }}
+             transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+             className="text-[#8d775e]"
+           >
+             <Box className="w-8 h-8 opacity-50" />
+           </motion.div>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex flex-col items-center gap-1">
+          <AnimatePresence mode="wait">
+            <motion.h3 
+              key={phaseIndex}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="text-xl font-serif text-[#1a1816] dark:text-white"
+            >
+              Building Design
+            </motion.h3>
+          </AnimatePresence>
+          <div className="text-[10px] font-bold text-[#8d775e] bg-[#8d775e]/10 px-3 py-1 rounded-full uppercase tracking-widest animate-pulse">
+            {progress}% Complete
+          </div>
+        </div>
+        
+        <p className="text-sm text-gray-400 font-light h-10 italic">
+          {LOADING_PHASES[phaseIndex]}
+        </p>
+
+        {/* Small detail lines */}
+        <div className="flex justify-center gap-1.5 pt-2">
+           {[...Array(5)].map((_, i) => (
+             <motion.div
+               key={i}
+               animate={{ 
+                 opacity: i <= phaseIndex ? [0.3, 1, 0.3] : 0.1,
+                 scale: i <= phaseIndex ? [1, 1.2, 1] : 1
+               }}
+               transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.1 }}
+               className={`w-1 h-4 rounded-full ${i <= phaseIndex ? 'bg-[#8d775e]' : 'bg-gray-200 dark:bg-white/10'}`}
+             />
+           ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ThreedGenerator = () => {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [showChat, setShowChat] = useState(false)
+  const location = useLocation()
   
   // State for the current project
   const [sourceImage, setSourceImage] = useState(null)
@@ -45,6 +157,8 @@ const ThreedGenerator = () => {
   const [selectedStyle, setSelectedStyle] = useState('architectural')
   const [prompt, setPrompt] = useState('')
   const [chatHistory, setChatHistory] = useState([])
+  // Track the current project ID to prevent duplicate history entries
+  const [currentProjectId, setCurrentProjectId] = useState(null)
   
   const fileInputRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -73,6 +187,15 @@ const ThreedGenerator = () => {
     }
   }, [chatHistory, showChat])
 
+  // Handle deep-linking from Projects page
+  useEffect(() => {
+    if (location.state?.project) {
+        handleLoadFromHistory(location.state.project);
+        // Clear state to prevent reload on refresh
+        window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const handleFileSelect = (e) => {
     const file = e.target.files[0]
     if (file) {
@@ -86,6 +209,7 @@ const ThreedGenerator = () => {
         setSourceImage(event.target.result)
         setVersions([])
         setCurrentVersionIndex(-1)
+        setCurrentProjectId(null) // Reset project ID for new file
         setChatHistory([])
         setPrompt('')
         setShowChat(false)
@@ -94,23 +218,7 @@ const ThreedGenerator = () => {
     }
   }
 
-  const addToLocalHistory = (projectData) => {
-    try {
-      const existing = JSON.parse(localStorage.getItem('threed_history_gallery') || '[]')
-      // Update if same ID exists, else prepend
-      const index = existing.findIndex(item => item.id === projectData.id)
-      let updated
-      if (index > -1) {
-        updated = [...existing]
-        updated[index] = projectData
-      } else {
-        updated = [projectData, ...existing].slice(0, 50)
-      }
-      localStorage.setItem('threed_history_gallery', JSON.stringify(updated))
-    } catch (e) {
-      console.error("History saving failed", e)
-    }
-  }
+
 
   const handleGenerate = async (e, customIterationPrompt = null) => {
     if (e) e.preventDefault()
@@ -143,44 +251,42 @@ const ThreedGenerator = () => {
         })
       }, 300)
 
-      const response = await api.post('/3d/visualize', {
+      const payload = {
         image: sourceImage,
         mimeType: sourceImage.split(';')[0].split(':')[1],
         style: selectedStyle,
-        prompt: isIteration ? currentPrompt : null
-      })
+        prompt: isIteration ? currentPrompt : null,
+      }
+
+      if (currentProjectId) {
+        payload.projectId = currentProjectId;
+      }
+
+      const response = await api.post('/3d/visualize', payload)
 
       clearInterval(progressInterval)
       setUploadProgress(100)
 
-      if (response.data && response.data.data) {
-        const newImageData = response.data.data
-        const newVersion = {
-          style: isIteration ? 'Edit' : selectedStyle,
-          image: newImageData,
-          timestamp: new Date().toISOString(),
-          prompt: currentPrompt || (selectedStyle === 'architectural' ? 'Architectural Synthesis' : 'Colorful Synthesis')
+      if (response.data && response.data.model) {
+        const updatedModel = response.data.model
+        
+        // Sync state with backend model
+        setVersions(updatedModel.versions || [])
+        setCurrentVersionIndex((updatedModel.versions?.length || 1) - 1)
+        
+        // Update Project ID if it was a new project
+        if (!currentProjectId) {
+            setCurrentProjectId(updatedModel._id)
         }
 
-        const updatedVersions = [...versions, newVersion]
-        setVersions(updatedVersions)
-        setCurrentVersionIndex(updatedVersions.length - 1)
-
-        // Save project to history
-        const projectId = versions.length === 0 ? Date.now().toString() : chatHistory[0]?.projectId || Date.now().toString()
-        const projectData = {
-          id: projectId,
-          timestamp: new Date().toISOString(),
-          sourceImage: sourceImage,
-          versions: updatedVersions,
-          style: selectedStyle // Last used style
-        }
-        addToLocalHistory(projectData)
+        const updatedChatHistory = isIteration 
+          ? [...chatHistory, { role: 'user', content: currentPrompt }, { role: 'assistant', content: 'Design updated based on your request.', projectId: updatedModel._id }]
+          : chatHistory;
 
         if (isIteration) {
-          setChatHistory(prev => [...prev, { role: 'assistant', content: 'Design updated based on your request.', projectId }])
+          setChatHistory(updatedChatHistory)
         } else {
-          toast.success('3D visualization synthesized successfully')
+          toast.success('3D visualization created and saved')
         }
       } else {
         throw new Error('Invalid response from server')
@@ -196,21 +302,22 @@ const ThreedGenerator = () => {
     }
   }
 
-  const handleLoadFromVault = (item) => {
-    setSourceImage(item.sourceImage)
+  const handleLoadFromHistory = (item) => {
     setVersions(item.versions || [])
     setCurrentVersionIndex((item.versions?.length || 0) - 1)
-    setSelectedStyle(item.style || 'architectural')
-    setChatHistory([{ role: 'system', content: `Restored project from ${new Date(item.timestamp).toLocaleDateString()}` }])
-    setShowChat(false)
-    toast.success("Project restored from vault")
+    setSourceImage(item.sourceImage)
+    setCurrentProjectId(item._id) // Restore the project ID using MongoDB _id
+    const timestamp = item.timestamp || item.createdAt;
+    setChatHistory(item.chatHistory || [{ role: 'system', content: `Restored project from ${new Date(timestamp).toLocaleDateString()}` }])
+    setShowChat(!!item.chatHistory?.length)
+    toast.success("Project restored from history")
   }
 
   const handleDownload = () => {
     const currentRender = versions[currentVersionIndex]?.image
     if (!currentRender) return
     const link = document.createElement('a')
-    link.href = `data:${currentRender.mimeType || 'image/png'};base64,${currentRender.data}`
+    link.href = currentRender.url || `data:${currentRender.mimeType || 'image/png'};base64,${currentRender.data}`
     link.download = `manara-3d-render-${Date.now()}.png`
     link.click()
   }
@@ -219,6 +326,7 @@ const ThreedGenerator = () => {
     setSourceImage(null)
     setVersions([])
     setCurrentVersionIndex(-1)
+    setCurrentProjectId(null) // Reset ID
     setUploadProgress(0)
     setChatHistory([])
     setPrompt('')
@@ -235,7 +343,7 @@ const ThreedGenerator = () => {
       <ThreeDRenderHistory 
         isOpen={historyOpen} 
         onClose={() => setHistoryOpen(false)}
-        onLoadItem={handleLoadFromVault}
+        onLoadItem={handleLoadFromHistory}
       />
 
       <div className="flex-1 flex flex-col pt-16">
@@ -246,7 +354,7 @@ const ThreedGenerator = () => {
             <div className="space-y-4 max-w-3xl">
               <div className="flex items-center gap-2 text-[#8d775e] font-bold tracking-[0.2em] text-[10px] uppercase">
                 <Box className="w-3.5 h-3.5" />
-                <span>Spatial Intelligence Studio</span>
+                <span>Modern 3D Design Studio</span>
               </div>
               
               <h1 className="text-5xl font-serif font-medium tracking-tight text-[#1a1816] dark:text-white">
@@ -261,11 +369,18 @@ const ThreedGenerator = () => {
             {/* Feature Pills */}
             <div className="flex flex-wrap gap-3">
                <button 
+                onClick={handleReset}
+                className='flex items-center gap-2 px-6 py-3 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white rounded-full text-sm font-bold hover:bg-gray-50 dark:hover:bg-white/10 transition-all shadow-sm'
+              >
+                <Plus size={16} />
+                New Project
+              </button>
+               <button 
                 onClick={() => setHistoryOpen(true)}
                 className='flex items-center gap-2 px-6 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-full text-sm font-bold hover:bg-black dark:hover:bg-gray-200 transition-all shadow-xl'
               >
                 <History size={16} />
-                Vault
+                History
               </button>
               <div className="flex items-center gap-2 px-4 py-2 bg-[#FDFCFB] dark:bg-[#111] border border-[#e8e2dc] dark:border-white/10 rounded-full text-xs font-medium text-[#6b6257] dark:text-gray-300">
                 <Shapes className="w-3.5 h-3.5 text-[#8d775e]" />
@@ -289,7 +404,7 @@ const ThreedGenerator = () => {
                   <h3 className="text-lg font-bold mb-6 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                        <Upload className="w-4 h-4 text-[#8d775e]" />
-                       Blueprint
+                       Floor Plan
                     </div>
                     {sourceImage && (
                        <button onClick={handleReset} className="text-[10px] font-bold text-red-500 uppercase tracking-widest hover:underline">Reset</button>
@@ -341,7 +456,14 @@ const ThreedGenerator = () => {
                         `}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-sm tracking-tight">{style.label}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm tracking-tight">{style.label}</span>
+                            {style.recommended && (
+                              <span className="text-[8px] font-bold bg-[#8d775e] text-white px-2 py-0.5 rounded-full uppercase tracking-tighter">
+                                Recommended
+                              </span>
+                            )}
+                          </div>
                           <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: style.color }} />
                         </div>
                         <p className="text-[11px] text-[#6b6257] dark:text-gray-500 font-medium">{style.description}</p>
@@ -362,12 +484,12 @@ const ThreedGenerator = () => {
                     {isGenerating ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Synthesizing {uploadProgress}%</span>
+                        <span>Generating {uploadProgress}%</span>
                       </>
                     ) : (
                       <>
                         <Wand2 className="w-4 h-4" />
-                        <span>{versions.length > 0 ? 'Generate Alternative' : 'Generate 3D Render'}</span>
+                        <span>{versions.length > 0 ? 'Generate Alternative' : 'Generate 3D Design'}</span>
                       </>
                     )}
                   </button>
@@ -392,7 +514,7 @@ const ThreedGenerator = () => {
                         <div className="h-4 w-[1px] bg-[#f3f0ed] dark:bg-white/10"></div>
                         <span className="text-[10px] font-bold tracking-widest text-[#8d775e]/60 uppercase flex items-center gap-2">
                           <Eye className="w-3 h-3" />
-                          {currentVersion ? `Render Version ${currentVersionIndex + 1}` : 'Awaiting initialization'}
+                          {currentVersion ? `Design Version ${currentVersionIndex + 1}` : 'Awaiting initialization'}
                         </span>
                       </div>
 
@@ -440,7 +562,17 @@ const ThreedGenerator = () => {
                     {/* Canvas Area */}
                     <div className="flex-1 relative bg-[#fdfdfd] dark:bg-[#151515] flex items-center justify-center p-8 overflow-hidden">
                       <AnimatePresence mode="wait">
-                        {currentVersion ? (
+                        {isGenerating ? (
+                          <motion.div
+                            key="loading"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="w-full h-full flex items-center justify-center"
+                          >
+                            <BuildingLoader progress={uploadProgress} />
+                          </motion.div>
+                        ) : currentVersion ? (
                           <motion.div
                             key={currentVersionIndex}
                             initial={{ opacity: 0, scale: 0.95 }}
@@ -448,7 +580,7 @@ const ThreedGenerator = () => {
                             className="w-full h-full flex items-center justify-center"
                           >
                             <img 
-                              src={`data:${currentVersion.image.mimeType || 'image/png'};base64,${currentVersion.image.data}`} 
+                              src={currentVersion.image?.url || (currentVersion.image?.data ? `data:${currentVersion.image.mimeType || 'image/png'};base64,${currentVersion.image.data}` : '')} 
                               alt="3D Floor Plan Render" 
                               className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl relative z-10 transition-all duration-500"
                             />
@@ -458,30 +590,6 @@ const ThreedGenerator = () => {
                                <span className="text-[10px] font-bold text-[#8d775e] uppercase tracking-[0.2em]">
                                   {currentVersion.style} Style
                                </span>
-                            </div>
-                          </motion.div>
-                        ) : isGenerating && !chatHistory.length ? (
-                          <motion.div
-                            key="loading"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="flex flex-col items-center gap-6"
-                          >
-                            <div className="relative w-24 h-24">
-                              <div className="absolute inset-0 border-4 border-[#8d775e]/10 rounded-full"></div>
-                              <div className="absolute inset-0 border-4 border-[#8d775e] border-t-transparent rounded-full animate-spin"></div>
-                              <div className="absolute inset-0 flex items-center justify-center p-4">
-                                <img src="/min-logo.png" alt="Manara Logo" className="w-full h-full object-contain animate-pulse" />
-                              </div>
-                            </div>
-                            <div className="flex flex-col items-center gap-2">
-                              <h3 className="text-xl font-serif text-[#1a1816] dark:text-white">Synthesizing Geometry</h3>
-                              <div className="flex items-center gap-1">
-                                <span className="w-1.5 h-1.5 bg-[#8d775e] rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                                <span className="w-1.5 h-1.5 bg-[#8d775e] rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                                <span className="w-1.5 h-1.5 bg-[#8d775e] rounded-full animate-bounce"></span>
-                              </div>
                             </div>
                           </motion.div>
                         ) : (
@@ -495,9 +603,9 @@ const ThreedGenerator = () => {
                               <Box className="w-10 h-10" />
                             </div>
                             <div className="space-y-2">
-                               <h4 className="text-xl font-medium text-gray-900 dark:text-white">Neural Synthesis</h4>
+                               <h4 className="text-xl font-medium text-gray-900 dark:text-white">3D Generation</h4>
                                <p className="text-sm text-gray-400 leading-relaxed font-light">
-                                 Upload a blueprint on the left to begin.
+                                 Upload a floor plan on the left to begin.
                                </p>
                             </div>
                           </motion.div>
@@ -604,9 +712,9 @@ const ThreedGenerator = () => {
             {/* Feature Highlights */}
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 pb-20">
                <div className="space-y-3">
-                 <h4 className="text-xs font-bold text-[#8d775e] uppercase tracking-widest">Architectural Vault</h4>
+                 <h4 className="text-xs font-bold text-[#8d775e] uppercase tracking-widest">Design History</h4>
                  <p className="text-sm text-[#6b6257] dark:text-gray-400 leading-relaxed">
-                   Never lose a concept. All your 3D Synthesis projects are automatically vaulted.
+                   Never lose a concept. All your 3D designs are automatically saved to history.
                  </p>
                </div>
                <div className="space-y-3">

@@ -7,6 +7,7 @@ import fs from 'fs'
 import https from 'https'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import { uploadRaw } from './cloudinaryService.js'
 
 dotenv.config()
 
@@ -184,8 +185,13 @@ async function downloadAndSave(fileUrl, token) {
   fs.writeFileSync(filePath, glbBuffer)
   console.log('Saved generated GLB model to:', filePath)
 
+  // Upload to Cloudinary
+  console.log('☁️ Uploading GLB to Cloudinary...')
+  const cloudinaryResult = await uploadRaw(glbBuffer, 'manara-ai/3d-models')
+
   return {
-    url: `/uploads/3d/${filename}`,
+    url: cloudinaryResult.secure_url,
+    localUrl: `/uploads/3d/${filename}`,
     path: filePath,
   }
 }

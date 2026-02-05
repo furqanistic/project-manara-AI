@@ -37,6 +37,21 @@ const threeDSchema = new mongoose.Schema(
     deletedAt: {
       type: Date,
     },
+    versions: [
+      {
+        style: String,
+        image: {
+          url: String,
+          data: String, // base64
+          mimeType: String,
+        },
+        prompt: String,
+        timestamp: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   { timestamps: true }
 )

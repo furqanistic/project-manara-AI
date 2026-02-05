@@ -1,24 +1,25 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowRight,
-  Box,
-  ChevronRight,
-  Download,
-  History,
-  Info,
-  Layers,
-  Loader2,
-  Maximize2,
-  MessageSquare,
-  Plus,
-  RotateCcw,
-  Send,
-  Shapes,
-  Sparkles,
-  Wand2
+    ArrowRight,
+    Box,
+    ChevronRight,
+    Download,
+    History,
+    Info,
+    Layers,
+    Loader2,
+    Maximize2,
+    MessageSquare,
+    Plus,
+    RotateCcw,
+    Send,
+    Shapes,
+    Sparkles,
+    Wand2
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { useLocation } from 'react-router-dom'
 import { FloorPlanHistory } from '../../components/FloorPlan/FloorPlanHistory'
 import TopBar from '../../components/Layout/Topbar'
 import api from '../../config/config'
@@ -35,6 +36,7 @@ const FloorPlanGenerator = () => {
   const [isGenerating, setIsGenerating] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const location = useLocation()
   
   const [generatedImage, setGeneratedImage] = useState(() => {
     const saved = localStorage.getItem('fp_generatedImage')
@@ -71,6 +73,15 @@ const FloorPlanGenerator = () => {
     localStorage.setItem('fp_chatHistory', JSON.stringify(chatHistory))
   }, [generatedImage, chatHistory])
 
+  // Handle deep-linking from Projects page
+  useEffect(() => {
+    if (location.state?.project) {
+        loadFromHistory(location.state.project);
+        // Clear state to prevent reload on refresh
+        window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
+
   const handleNewChat = () => {
     setGeneratedImage(null)
     setChatHistory([])
@@ -78,21 +89,7 @@ const FloorPlanGenerator = () => {
     toast.success("New project started")
   }
 
-  const addToHistoryGallery = (image, promptText) => {
-    try {
-      const existing = JSON.parse(localStorage.getItem('fp_history_gallery') || '[]')
-      const newItem = {
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString(),
-        prompt: promptText,
-        image: image
-      }
-      const updated = [newItem, ...existing].slice(0, 50)
-      localStorage.setItem('fp_history_gallery', JSON.stringify(updated))
-    } catch (e) {
-      console.error("History saving failed", e)
-    }
-  }
+  // Removed addToHistoryGallery as it is now handled server-side
 
   const handleGenerate = async (e) => {
     if (e) e.preventDefault()
@@ -119,7 +116,7 @@ const FloorPlanGenerator = () => {
       if (!image) throw new Error('Generation failed')
 
       setGeneratedImage(image)
-      addToHistoryGallery(image, currentPrompt)
+      // addToHistoryGallery removed, backend now handles persistence
       setChatHistory(prev => [...prev, { 
         role: 'assistant', 
         content: generatedImage ? "Project updated based on your feedback." : "Initial floor plan synthesized." 
@@ -135,14 +132,21 @@ const FloorPlanGenerator = () => {
   const handleDownload = () => {
     if (!generatedImage) return
     const link = document.createElement('a')
-    link.href = `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
+    link.href = generatedImage.url || `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
     link.download = `manara-plan-${Date.now()}.png`
     link.click()
   }
 
   const loadFromHistory = (item) => {
-    setGeneratedImage(item.image)
-    setChatHistory(prev => [...prev, { role: 'system', content: `Restored version from ${new Date(item.timestamp).toLocaleTimeString()}` }])
+    // Handle both new backend model structure and legacy local storage items
+    const imageToLoad = item.image || { url: item.thumbnail, mimeType: 'image/png' };
+    setGeneratedImage(imageToLoad)
+    
+    const timestamp = item.createdAt || item.timestamp;
+    setChatHistory(prev => [...prev, { 
+        role: 'system', 
+        content: `Restored version from ${new Date(timestamp).toLocaleTimeString()}` 
+    }])
     toast.success("Snapshot restored")
   }
 
@@ -259,7 +263,7 @@ const FloorPlanGenerator = () => {
                     >
                       <div className='relative max-h-full aspect-square'>
                         <img 
-                          src={`data:${generatedImage.mimeType};base64,${generatedImage.data}`} 
+                          src={generatedImage.url || `data:${generatedImage.mimeType};base64,${generatedImage.data}`} 
                           alt="Layout Synthesis" 
                           className='max-h-full w-auto object-contain rounded-2xl relative z-10'
                         />

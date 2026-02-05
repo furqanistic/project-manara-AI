@@ -216,7 +216,8 @@ const enforceAspectRatio = async (imageBuffer, aspectRatio) => {
 export const generateImage = async (
   prompt,
   referenceImages = [],
-  aspectRatio = null
+  aspectRatio = null,
+  negativePrompt = null
 ) => {
   try {
     if (USE_MOCK) {
@@ -282,9 +283,13 @@ export const generateImage = async (
       responseModalities: ['IMAGE'],
     }
 
-    const systemInstruction = aspectRatio
+    let systemInstruction = aspectRatio
       ? `Generate high-quality interior design images. Maintain the ${aspectRatio} aspect ratio strictly. The output should be photorealistic with professional composition.`
       : `Generate high-quality interior design images with natural composition. The output should be photorealistic with professional composition. Choose the aspect ratio that best suits the content.`
+
+    if (negativePrompt) {
+      systemInstruction += ` NEGATIVE CONSTRAINTS (Strictly avoid these elements): ${negativePrompt}`
+    }
 
     const result = await imageModel.generateContent({
       contents: [
@@ -1348,29 +1353,41 @@ export const generateThreeDVisualization = async (imageBuffer, mimeType, options
   const { style = 'architectural', prompt: customPrompt } = options
 
   let styleInstruction = ''
+  let negativePrompt = ''
+
   if (style === 'colorful') {
     styleInstruction = 'Use a vibrant, colorful color palette for the 3D model. Apply distinct colors to different rooms and furniture items to make them pop. Use professional lighting to enhance the colors.'
   } else {
-    styleInstruction = 'Use a clean, architectural white/neutral color palette. Focus on shadows and light to show depth. Maintain a professional, minimalist aesthetic.'
+    // Premium Dollhouse Architectural White Style
+    styleInstruction = `Convert the uploaded 2D floor plan into a realistic 3D dollhouse-style apartment render.
+Preserve the exact layout, room proportions, walls, doors, and windows from the floor plan.
+Render the apartment in a three-quarter perspective, slightly elevated, not top-down.
+Camera angle should feel like a rotatable 3D model, with visible depth and parallax.
+Furniture should extend outward in perspective so beds, sofas, and kitchen counters feel dimensional.
+Cutaway walls to reveal interiors while keeping wall thickness realistic.
+Modern residential interior, light wood floors, white walls, realistic materials.
+Soft daylight, global illumination, natural shadows.
+High-quality architectural visualization, photorealistic, no text or labels.`
+    
+    negativePrompt = `orthographic view, top-down view, flat isometric, blueprint, axonometric diagram, low-poly, cartoon, distorted scale, floating furniture, text labels`
   }
 
-  let finalPrompt = `Convert this 2D floor plan into a HYPER-REALISTIC "7D" ARCHITECTURAL VISUALIZATION. 
-    Perspective: CINEMATIC ISOMETRIC CUTAWAY (angled view, NOT top-down/drone view).
-    Lighting: High-contrast studio lighting with ray-tracing effects, volumetric shadows, and global illumination.
-    Depth: Extreme definition on wall thickness, furniture height, and textures to create a "pop-out" 3D effect.
-    The goal is a touchable, physical-looking dollhouse model that looks like a high-end architectural prototype.
-    Focus on creating a LARGE, clear view that fills the frame with maximum volumetric depth.
+  let finalPrompt = `Convert this 2D floor plan into a HYPER-REALISTIC architectural visualization. 
+    Perspective: THREE-QUARTER VIEW DOLLHOUSE.
+    Lighting: High-contrast studio lighting with realistic depth and clean shadows.
+    Focus on creating a LARGE, clear 3D view that fills the frame.
     ${styleInstruction}`
 
   if (customPrompt) {
     finalPrompt = `Based on the provided 3D floor plan visualization and the 2D floor plan reference, apply the following changes: ${customPrompt}. 
-    Ensure the output remains a single, large, high-detail 3D isometric view as described above. 
-    Maintain consistency with the original layout but incorporate the requested modifications.`
+    Ensure the output remains a single, large, high-detail 3D isometric view.
+    Maintain the architectural style: ${style === 'colorful' ? 'Vibrant' : 'Architectural White'}.
+    Instruction: ${styleInstruction}`
   }
 
   const referenceImages = [{ data: imageBuffer.toString('base64'), mimeType }]
 
-  return await generateImage(finalPrompt, referenceImages, '1:1')
+  return await generateImage(finalPrompt, referenceImages, '1:1', negativePrompt)
 }
 
 /**

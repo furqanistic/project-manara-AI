@@ -2,22 +2,23 @@
 import mongoose from 'mongoose'
 import { createError } from '../error.js'
 import Moodboard from '../models/Moodboard.js'
+import { uploadImage } from '../services/cloudinaryService.js'
 import { extractColorPalette } from '../services/colorExtractor.js'
 import {
-  buildMoodboardPrompt,
-  editImage,
-  generateDesignNarrative,
-  generateFurniture,
-  generateImage,
-  generateLightingConcept,
-  generateMaterials,
-  generateMoodDescription,
-  generateVariants,
-  generateZones,
+    buildMoodboardPrompt,
+    editImage,
+    generateDesignNarrative,
+    generateFurniture,
+    generateImage,
+    generateLightingConcept,
+    generateMaterials,
+    generateMoodDescription,
+    generateVariants,
+    generateZones,
 } from '../services/geminiService.js'
 import {
-  createCompositeMoodboard,
-  getImageRegions,
+    createCompositeMoodboard,
+    getImageRegions,
 } from '../services/imageCompositor.js'
 
 // ============================================================================
@@ -301,7 +302,11 @@ export const generateMoodboardImages = async (req, res, next) => {
     )
 
     const imageData = result.images[0].data
-    const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
+    const base64Image = `data:${result.images[0].mimeType};base64,${imageData}`
+    
+    console.log('☁️ Uploading generated image to Cloudinary...')
+    const uploadResult = await uploadImage(base64Image, 'manara-ai/moodboards')
+    const imageUrl = uploadResult.secure_url
 
     console.log('✅ Image generated successfully')
 
@@ -686,7 +691,11 @@ export const regenerateMoodboardImages = async (req, res, next) => {
     )
 
     const imageData = result.images[0].data
-    const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
+    const base64Image = `data:${result.images[0].mimeType};base64,${imageData}`
+
+    console.log('☁️ Uploading regenerated image to Cloudinary...')
+    const uploadResult = await uploadImage(base64Image, 'manara-ai/moodboards')
+    const imageUrl = uploadResult.secure_url
 
     const palette = await extractColorPalette(imageData)
 
@@ -810,7 +819,11 @@ export const editMoodboardImage = async (req, res, next) => {
     )
 
     const imageData = result.images[0].data
-    const imageUrl = `data:${result.images[0].mimeType};base64,${imageData}`
+    const base64Image = `data:${result.images[0].mimeType};base64,${imageData}`
+
+    console.log('☁️ Uploading edited image to Cloudinary...')
+    const uploadResult = await uploadImage(base64Image, 'manara-ai/moodboards')
+    const imageUrl = uploadResult.secure_url
 
     const palette = await extractColorPalette(imageData)
 

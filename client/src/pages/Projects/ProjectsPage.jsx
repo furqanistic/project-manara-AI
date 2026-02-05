@@ -1,4 +1,6 @@
+import { useUserFloorPlans } from "@/hooks/useFloorPlan";
 import { useUserMoodboards } from "@/hooks/useMoodboard";
+import { useUserThreeDModels } from "@/hooks/useThreeD";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     Calendar,
@@ -22,6 +24,7 @@ const FILTER_OPTIONS = [
   { value: "all", label: "All Projects" },
   { value: "moodboard", label: "Moodboards" },
   { value: "floorplan", label: "Floor Plans" },
+  { value: "threed", label: "3D Models" },
 ];
 
 const ProjectsPage = () => {
@@ -31,26 +34,22 @@ const ProjectsPage = () => {
   const [filterType, setFilterType] = useState("all");
   const [combinedProjects, setCombinedProjects] = useState([]);
 
-  // Fetch moodboards from server
+  // Fetch data from server
   const { data: moodboardData, isLoading: moodboardsLoading } = useUserMoodboards(1, 100);
+  const { data: floorPlanData, isLoading: floorPlansLoading } = useUserFloorPlans();
+  const { data: threeDData, isLoading: threeDLoading } = useUserThreeDModels();
 
   useEffect(() => {
-    // Load floor plans from localStorage
-    let floorPlans = [];
-    try {
-      const saved = localStorage.getItem("fp_history_gallery");
-      if (saved) {
-        floorPlans = JSON.parse(saved).map(fp => ({
-          ...fp,
-          type: "floorplan",
-          title: fp.prompt || "Untitled Floor Plan",
-          createdAt: fp.timestamp,
-          thumbnail: fp.image?.data ? `data:${fp.image.mimeType};base64,${fp.image.data}` : null
-        }));
-      }
-    } catch (err) {
-      console.error("Failed to load floor plans from storage", err);
-    }
+    // Process floor plans from server
+    const floorPlans = (floorPlanData?.data || []).map(fp => ({
+      id: fp._id,
+      type: "floorplan",
+      title: fp.name || "Untitled Floor Plan",
+      createdAt: fp.createdAt,
+      thumbnail: fp.thumbnail,
+      status: fp.status,
+      raw: fp
+    }));
 
     // Process moodboards
     const moodboards = (moodboardData?.data?.moodboards || []).map(mb => ({
@@ -61,18 +60,31 @@ const ProjectsPage = () => {
       thumbnail: mb.compositeMoodboard?.url,
       status: mb.status,
       style: mb.style,
-      roomType: mb.roomType
+      roomType: mb.roomType,
+      raw: mb
+    }));
+
+    // Process 3D models
+    const threeDModels = (threeDData?.data || []).map(td => ({
+        id: td._id,
+        type: "threed",
+        title: td.name || "3D Project",
+        createdAt: td.createdAt,
+        thumbnail: td.sourceImage || (td.versions?.[0]?.image?.url),
+        status: td.status,
+        style: td.versions?.[0]?.style,
+        raw: td
     }));
 
     // Combine and sort
-    const combined = [...floorPlans, ...moodboards].sort((a, b) => {
+    const combined = [...floorPlans, ...moodboards, ...threeDModels].sort((a, b) => {
       const dateA = new Date(a.createdAt);
       const dateB = new Date(b.createdAt);
       return sortBy === "recent" ? dateB - dateA : dateA - dateB;
     });
 
     setCombinedProjects(combined);
-  }, [moodboardData, sortBy]);
+  }, [moodboardData, floorPlanData, threeDData, sortBy]);
 
   const filteredProjects = combinedProjects.filter(p => {
     const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -84,13 +96,11 @@ const ProjectsPage = () => {
 
   const handleCardClick = (project) => {
     if (project.type === "moodboard") {
-      navigate(`/moodboards/${project.id}`);
+      navigate(`/moodboards/${project.id}`, { state: { project: project.raw } });
+    } else if (project.type === "threed") {
+      navigate("/visualizer", { state: { project: project.raw } });
     } else {
-      // For floor plans, we navigate back to the generator and let it handle the history
-      // or we could save the selected ID in local storage to auto-load it.
-      // Given how FloorPlanGenerator works, it currently doesn't have a direct URL for a specific plan,
-      // it uses its internal history state.
-      navigate("/floorplans");
+      navigate("/floorplans", { state: { project: project.raw } });
     }
   };
 
@@ -179,9 +189,8 @@ const ProjectsPage = () => {
           </div>
         </div>
 
-        {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
-          {moodboardsLoading ? (
+          {moodboardsLoading || floorPlansLoading || threeDLoading ? (
             [...Array(8)].map((_, i) => (
               <div key={i} className="flex md:flex-col gap-4 p-3 rounded-[24px] bg-white dark:bg-white/5 animate-pulse border border-gray-100 dark:border-white/10">
                 <div className="w-24 h-24 md:w-full md:aspect-square rounded-xl bg-gray-200 dark:bg-white/10" />
@@ -233,9 +242,11 @@ const ProjectsPage = () => {
                     <span className={`px-2 md:px-3 py-1 rounded-full text-[8px] md:text-[9px] font-bold uppercase tracking-wider backdrop-blur-md border ${
                       project.type === "moodboard" 
                         ? "bg-[#8d775e]/20 text-[#8d775e] border-[#8d775e]/30" 
+                        : project.type === "threed"
+                        ? "bg-purple-500/20 text-purple-400 border-purple-500/30"
                         : "bg-blue-500/20 text-blue-400 border-blue-500/30"
                     }`}>
-                      {project.type === "moodboard" ? "MB" : "FP"}
+                      {project.type === "moodboard" ? "MB" : project.type === "threed" ? "3D" : "FP"}
                     </span>
                   </div>
                 </div>

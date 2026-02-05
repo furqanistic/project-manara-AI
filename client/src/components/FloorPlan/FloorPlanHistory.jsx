@@ -1,5 +1,7 @@
+import api from "@/config/config";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+    ArrowRight,
     Calendar,
     Clock,
     Download,
@@ -74,25 +76,28 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
     }
   }, [isOpen]);
 
-  const loadHistory = () => {
+  const loadHistory = async () => {
     try {
-      const saved = localStorage.getItem('fp_history_gallery');
-      if (saved) {
-        setHistoryItems(JSON.parse(saved)); // Assumed newest first in storage
-      } else {
-        setHistoryItems([]);
+      const response = await api.get('/floorplans/user');
+      if (response.data && response.data.data) {
+        setHistoryItems(response.data.data);
       }
     } catch (err) {
       console.error("Failed to load history", err);
-      setHistoryItems([]);
+      toast.error("Failed to load history");
     }
   };
 
-  const handleDelete = (id) => {
-    const updated = historyItems.filter(item => item.id !== id);
-    setHistoryItems(updated);
-    localStorage.setItem('fp_history_gallery', JSON.stringify(updated));
-    toast.success("Record discarded from vault");
+  const handleDelete = async (id) => {
+    try {
+        await api.delete(`/floorplans/${id}`);
+        const updated = historyItems.filter(item => item._id !== id);
+        setHistoryItems(updated);
+        toast.success("Record discarded from vault");
+    } catch (err) {
+        console.error("Failed to delete record", err);
+        toast.error("Failed to delete record");
+    }
   };
 
   useEffect(() => {
@@ -101,10 +106,10 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
       const q = searchQuery.toLowerCase();
       result = result.filter(item => 
         (item.prompt || "").toLowerCase().includes(q) ||
-        (new Date(item.timestamp).toLocaleDateString().includes(q))
+        (new Date(item.timestamp || item.createdAt).toLocaleDateString().includes(q))
       );
     }
-    setFilteredItems(result);
+    setFilteredItems(result.slice(0, 5));
   }, [historyItems, searchQuery]);
 
   return (
@@ -173,7 +178,7 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    key={item.id}
+                    key={item._id}
                   >
                     <HistoryCard 
                         item={item} 
@@ -181,12 +186,28 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
                             onLoadItem(item);
                             onClose();
                         }}
-                        onDelete={() => handleDelete(item.id)}
+                        onDelete={() => handleDelete(item._id)}
                     />
                   </motion.div>
                 ))
               )}
             </div>
+
+            {/* View All Footer */}
+            {historyItems.length > 5 && (
+              <div className="p-6 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20">
+                <button 
+                  onClick={() => {
+                    onClose();
+                    window.location.href = '/projects';
+                  }}
+                  className="w-full py-4 rounded-[20px] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm font-bold text-[#8d775e] hover:bg-gray-50 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2 group"
+                >
+                  View All in Projects Vault
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </button>
+              </div>
+            )}
           </motion.div>
         </>
       )}
@@ -199,8 +220,12 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
 
   const handleDownload = (e) => {
     e.stopPropagation();
+    if (!item.image) {
+      toast.error("Snapshot data missing");
+      return;
+    }
     const link = document.createElement('a');
-    link.href = `data:${item.image.mimeType};base64,${item.image.data}`;
+    link.href = item.image.url || `data:${item.image.mimeType};base64,${item.image.data}`;
     link.download = `manara-snapshot-${Date.now()}.png`;
     link.click();
   };
@@ -213,11 +238,17 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
       >
         {/* Thumbnail */}
         <div className="w-28 h-28 bg-stone-100 dark:bg-stone-900 rounded-[20px] shrink-0 overflow-hidden border border-gray-100 dark:border-white/5 relative">
-          <img 
-            src={`data:${item.image.mimeType};base64,${item.image.data}`} 
-            alt="Synthesis Thumbnail" 
-            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
-          />
+          {item.thumbnail || item.image ? (
+            <img 
+              src={item.thumbnail || item.image.url || `data:${item.image.mimeType};base64,${item.image.data}`} 
+              alt="Synthesis Thumbnail" 
+              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-white/5">
+              <ImageIcon className="w-8 h-8 text-gray-300" />
+            </div>
+          )}
           <div className='absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all' />
         </div>
 
@@ -225,16 +256,16 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
         <div className="flex-1 min-w-0 flex flex-col justify-between py-1">
           <div className='space-y-2'>
             <p className="text-sm font-bold text-gray-800 dark:text-gray-200 line-clamp-2 leading-snug">
-              {item.prompt}
+              {item.name || item.prompt}
             </p>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#8d775e] uppercase tracking-widest">
                 <Calendar className="w-3 h-3" />
-                <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+                <span>{new Date(item.timestamp || item.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                 <Clock className="w-3 h-3" />
-                <span>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span>{new Date(item.timestamp || item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
             </div>
           </div>

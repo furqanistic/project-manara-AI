@@ -3,6 +3,7 @@ import { createError } from '../error.js'
 import FloorPlan from '../models/FloorPlan.js'
 import { generateFloorPlanElements } from '../services/aiFloorPlanService.js'
 
+import { uploadImage } from '../services/cloudinaryService.js'
 import {
     exportToDXF,
     exportToPDF,
@@ -393,10 +394,32 @@ export const generateFloorPlanImage = async (req, res, next) => {
       throw new Error('No image generated')
     }
 
+    const base64Image = `data:${result.images[0].mimeType};base64,${result.images[0].data}`
+    console.log('☁️ Uploading generated floor plan to Cloudinary...')
+    const uploadResult = await uploadImage(base64Image, 'manara-ai/floorplans')
+
+    // Save to database as a project
+    const floorPlan = new FloorPlan({
+      userId: req.user._id,
+      name: `AI Floor Plan - ${new Date().toLocaleString()}`,
+      status: 'completed',
+      thumbnail: uploadResult.secure_url,
+      aiGenerations: [{
+        prompt: prompt,
+        timestamp: new Date(),
+        success: true
+      }]
+    })
+    await floorPlan.save()
+
     res.status(200).json({
       status: 'success',
-      image: result.images[0], // { data: base64, mimeType }
-      message: 'Floor plan generated successfully',
+      image: {
+          url: uploadResult.secure_url,
+          mimeType: result.images[0].mimeType
+      },
+      data: floorPlan,
+      message: 'Floor plan generated and saved successfully',
     })
   } catch (error) {
     console.error('Error generating floor plan image:', error)
@@ -429,9 +452,16 @@ export const editFloorPlanImage = async (req, res, next) => {
       throw new Error('No image generated')
     }
 
+    const base64Image = `data:${result.images[0].mimeType};base64,${result.images[0].data}`
+    console.log('☁️ Uploading edited floor plan to Cloudinary...')
+    const uploadResult = await uploadImage(base64Image, 'manara-ai/floorplans')
+
     res.status(200).json({
       status: 'success',
-      image: result.images[0],
+      image: {
+          url: uploadResult.secure_url,
+          mimeType: result.images[0].mimeType
+      },
       message: 'Floor plan modified successfully',
     })
   } catch (error) {

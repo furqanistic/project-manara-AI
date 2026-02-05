@@ -3,22 +3,22 @@ import { useDeleteMoodboard, useUserMoodboards } from "@/hooks/useMoodboard";
 import { deleteMoodboard } from "@/services/moodboardService";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertCircle,
-  ArrowRight,
-  Calendar,
-  CheckCircle,
-  ChevronDown,
-  Clock,
-  FileText,
-  Filter,
-  Image as ImageIcon,
-  Layout,
-  Loader,
-  Palette,
-  RotateCcw,
-  Search,
-  Trash2,
-  X,
+    AlertCircle,
+    ArrowRight,
+    Calendar,
+    CheckCircle,
+    ChevronDown,
+    Clock,
+    FileText,
+    Filter,
+    Image as ImageIcon,
+    Layout,
+    Loader,
+    Palette,
+    RotateCcw,
+    Search,
+    Trash2,
+    X,
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
@@ -432,6 +432,20 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
                   <ChevronDown className="w-5 h-5 -rotate-90" />
                 </button>
               </div>
+            </div>
+
+            {/* View All Projects Link */}
+            <div className="px-10 py-4 bg-gray-50/50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5">
+              <button 
+                onClick={() => {
+                  onClose();
+                  navigate('/projects');
+                }}
+                className="w-full flex items-center justify-center gap-2 text-xs font-bold text-[#8d775e] hover:text-[#b8a58c] transition-colors uppercase tracking-[0.2em]"
+              >
+                View Unified Projects Vault
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           </motion.div>
         </>

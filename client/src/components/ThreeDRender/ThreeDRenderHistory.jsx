@@ -1,5 +1,7 @@
+import api from "@/config/config";
 import { AnimatePresence, motion } from "framer-motion";
 import {
+    ArrowRight,
     Calendar,
     Clock,
     Download,
@@ -37,9 +39,9 @@ const DeleteConfirmationDialog = ({
             className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-[#111] rounded-[32px] shadow-2xl z-[210] w-[90%] max-w-sm p-8 overflow-hidden border border-gray-100 dark:border-white/5"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Discard Record?</h3>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Delete from History?</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-8 text-sm leading-relaxed">
-              This will permanently remove the 3D render from your architectural vault. This action is irreversible.
+              This will permanently remove the 3D render from your history. This action is irreversible.
             </p>
 
             <div className="flex gap-4">
@@ -63,6 +65,7 @@ const DeleteConfirmationDialog = ({
   );
 };
 
+
 export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
   const [historyItems, setHistoryItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -74,25 +77,28 @@ export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
     }
   }, [isOpen]);
 
-  const loadHistory = () => {
+  const loadHistory = async () => {
     try {
-      const saved = localStorage.getItem('threed_history_gallery');
-      if (saved) {
-        setHistoryItems(JSON.parse(saved));
-      } else {
-        setHistoryItems([]);
+      const response = await api.get('/3d/my-models');
+      if (response.data && response.data.data) {
+        setHistoryItems(response.data.data);
       }
     } catch (err) {
       console.error("Failed to load history", err);
-      setHistoryItems([]);
+      toast.error("Failed to load history");
     }
   };
 
-  const handleDelete = (id) => {
-    const updated = historyItems.filter(item => item.id !== id);
-    setHistoryItems(updated);
-    localStorage.setItem('threed_history_gallery', JSON.stringify(updated));
-    toast.success("Record discarded from vault");
+  const handleDelete = async (id) => {
+    try {
+        await api.delete(`/3d/${id}`);
+        const updated = historyItems.filter(item => item._id !== id);
+        setHistoryItems(updated);
+        toast.success("Record deleted from history");
+    } catch (err) {
+        console.error("Failed to delete item", err);
+        toast.error("Failed to delete item");
+    }
   };
 
   useEffect(() => {
@@ -101,10 +107,10 @@ export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
       const q = searchQuery.toLowerCase();
       result = result.filter(item => 
         (item.style || "").toLowerCase().includes(q) ||
-        (new Date(item.timestamp).toLocaleDateString().includes(q))
+        (new Date(item.timestamp || item.createdAt).toLocaleDateString().includes(q))
       );
     }
-    setFilteredItems(result);
+    setFilteredItems(result.slice(0, 5));
   }, [historyItems, searchQuery]);
 
   return (
@@ -132,9 +138,9 @@ export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
               <div>
                 <div className='flex items-center gap-2 mb-1'>
                     <div className='w-8 h-[1px] bg-[#8d775e]'></div>
-                    <span className='text-[9px] font-bold tracking-[0.4em] text-[#8d775e] uppercase'>3D Synthesis Vault</span>
+                    <span className='text-[9px] font-bold tracking-[0.4em] text-[#8d775e] uppercase'>3D Design History</span>
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Render History</h2>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">History</h2>
               </div>
               <button
                 onClick={onClose}
@@ -150,7 +156,7 @@ export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#8d775e] transition-colors" />
                   <input 
                     type="text" 
-                    placeholder="Search your vault..." 
+                    placeholder="Search history..." 
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-12 pr-6 py-4 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 rounded-[20px] text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#8d775e]/20 transition-all font-medium"
@@ -165,7 +171,7 @@ export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
                   <div className='p-6 bg-white dark:bg-white/5 rounded-full border border-gray-100 dark:border-white/10'>
                     <ImageIcon className="w-10 h-10 text-[#8d775e]" />
                   </div>
-                  <p className='text-sm font-medium'>Vault is currently empty</p>
+                  <p className='text-sm font-medium'>No history found</p>
                 </div>
               ) : (
                 filteredItems.map((item, idx) => (
@@ -173,7 +179,7 @@ export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.05 }}
-                    key={item.id}
+                    key={item._id}
                   >
                     <HistoryCard 
                         item={item} 
@@ -181,12 +187,28 @@ export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
                             onLoadItem(item);
                             onClose();
                         }}
-                        onDelete={() => handleDelete(item.id)}
+                        onDelete={() => handleDelete(item._id)}
                     />
                   </motion.div>
                 ))
               )}
             </div>
+
+            {/* View All Footer */}
+            {historyItems.length > 5 && (
+              <div className="p-6 border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20">
+                <button 
+                  onClick={() => {
+                    onClose();
+                    window.location.href = '/projects';
+                  }}
+                  className="w-full py-4 rounded-[20px] bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-sm font-bold text-[#8d775e] hover:bg-gray-50 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2 group"
+                >
+                  View All in Projects Vault
+                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                </button>
+              </div>
+            )}
           </motion.div>
         </>
       )}
@@ -202,8 +224,12 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
 
   const handleDownload = (e) => {
     e.stopPropagation();
+    if (!displayImage) {
+      toast.error("Image data missing");
+      return;
+    }
     const link = document.createElement('a');
-    link.href = `data:${displayImage.mimeType};base64,${displayImage.data}`;
+    link.href = displayImage.url || `data:${displayImage.mimeType};base64,${displayImage.data}`;
     link.download = `manara-render-${Date.now()}.png`;
     link.click();
   };
@@ -216,11 +242,17 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
       >
         {/* Thumbnail */}
         <div className="w-28 h-28 bg-stone-100 dark:bg-stone-900 rounded-[20px] shrink-0 overflow-hidden border border-gray-100 dark:border-white/5 relative">
-          <img 
-            src={`data:${displayImage.mimeType};base64,${displayImage.data}`} 
-            alt="Render Thumbnail" 
-            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
-          />
+          {displayImage ? (
+            <img 
+              src={displayImage.url || `data:${displayImage.mimeType};base64,${displayImage.data}`} 
+              alt="Render Thumbnail" 
+              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-110"
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-white/5">
+              <ImageIcon className="w-8 h-8 text-gray-300" />
+            </div>
+          )}
           <div className='absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all' />
         </div>
 
@@ -233,11 +265,11 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#8d775e] uppercase tracking-widest">
                 <Calendar className="w-3 h-3" />
-                <span>{new Date(item.timestamp).toLocaleDateString()}</span>
+                <span>{new Date(item.timestamp || item.createdAt).toLocaleDateString()}</span>
               </div>
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                 <Clock className="w-3 h-3" />
-                <span>{new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                <span>{new Date(item.timestamp || item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
             </div>
             {item.versions?.length > 1 && (
