@@ -27,4 +27,23 @@ export const deleteThreeDModel = async (id) => {
     console.error('❌ Error deleting 3D model:', error)
     throw error
   }
+
+
+}
+
+/**
+ * Update a 3D model
+
+ * @param {String} id - Model ID
+ * @param {Object} data - Update data
+ * @returns {Promise}
+ */
+export const updateThreeDModel = async (id, data) => {
+  try {
+    const response = await axiosInstance.put(`/3d/${id}`, data)
+    return response.data
+  } catch (error) {
+    console.error('❌ Error updating 3D model:', error)
+    throw error
+  }
 }

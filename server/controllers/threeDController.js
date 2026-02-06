@@ -302,3 +302,32 @@ export const getMeshyStatus = async (req, res, next) => {
     next(createError(500, 'Failed to check 3D conversion status'));
   }
 };
+
+export const updateThreeDModel = async (req, res, next) => {
+  try {
+    const { name } = req.body
+    const model = await ThreeDModel.findById(req.params.id)
+
+    if (!model) {
+      return next(createError(404, '3D Model not found'))
+    }
+
+    if (model.userId.toString() !== req.user.id) {
+      return next(createError(403, 'You can only update your own models'))
+    }
+
+    if (name) {
+      model.name = name
+    }
+
+    await model.save()
+
+    res.status(200).json({
+      status: 'success',
+      data: model,
+    })
+  } catch (error) {
+    console.error('Error updating 3D model:', error)
+    next(createError(500, 'Failed to update 3D model'))
+  }
+}

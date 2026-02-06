@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { deleteFloorPlan, getUserFloorPlans } from '../services/floorPlanService'
+import { deleteFloorPlan, getUserFloorPlans, updateFloorPlan } from '../services/floorPlanService'
 
 export const useUserFloorPlans = () => {
   return useQuery({
@@ -18,6 +18,19 @@ export const useDeleteFloorPlan = () => {
     },
     onError: (error) => {
       console.error('❌ Delete floor plan error:', error)
+    },
+  })
+}
+
+export const useUpdateFloorPlan = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, data }) => updateFloorPlan(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['floor-plans'] })
+    },
+    onError: (error) => {
+      console.error('❌ Update floor plan error:', error)
     },
   })
 }

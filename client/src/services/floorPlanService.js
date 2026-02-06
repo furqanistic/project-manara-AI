@@ -27,4 +27,23 @@ export const deleteFloorPlan = async (id) => {
     console.error('❌ Error deleting floor plan:', error)
     throw error
   }
+
+
+}
+
+/**
+ * Update a floor plan
+
+ * @param {String} id - Floor plan ID
+ * @param {Object} data - Update data
+ * @returns {Promise}
+ */
+export const updateFloorPlan = async (id, data) => {
+  try {
+    const response = await axiosInstance.put(`/floorplans/${id}`, data)
+    return response.data
+  } catch (error) {
+    console.error('❌ Error updating floor plan:', error)
+    throw error
+  }
 }
