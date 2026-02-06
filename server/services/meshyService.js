@@ -8,83 +8,56 @@ import { uploadRaw } from './cloudinaryService.js'
 dotenv.config()
 
 const MESHY_API_KEY = process.env.MESHY_API_KEY
-const MESHY_API_URL = 'https://api.meshy.ai/v2/image-to-3d'
+const MESHY_API_URL = 'https://api.meshy.ai/openapi/v1/image-to-3d'
 
 /**
- * Generate a 3D model using Meshy AI
- * @param {Buffer} imageBuffer - The image buffer
- * @param {string} mimeType - The mime type
- * @returns {Promise<Object>} - The generated model URL and metadata
+ * Step 1: Create a 3D model generation task
  */
-export const generateMeshyModel = async (imageBuffer, mimeType) => {
+export const createMeshyTask = async (imageBuffer, mimeType) => {
   if (!MESHY_API_KEY) {
     throw new Error('MESHY_API_KEY is not defined')
   }
 
   try {
-    console.log('🚀 Starting Meshy AI 3D generation...')
-
-    // 1. Create Task
     const headers = {
       Authorization: `Bearer ${MESHY_API_KEY}`,
       'Content-Type': 'application/json',
     }
 
     const dataUri = `data:${mimeType};base64,${imageBuffer.toString('base64')}`
-
     const payload = {
       image_url: dataUri,
       enable_pbr: true,
       should_remesh: true,
     }
 
-    const createResponse = await axios.post(MESHY_API_URL, payload, { headers })
-    const taskId = createResponse.data.result
-    
-    console.log(`✅ Meshy Task Created: ${taskId}`)
-
-    // 2. Poll for Completion
-    const modelUrls = await pollMeshyTask(taskId, headers)
-    
-    // 3. Download and Save GLB
-    return await downloadAndSaveModel(modelUrls.glb, taskId)
-
+    const response = await axios.post(MESHY_API_URL, payload, { headers })
+    return response.data.result // Task ID
   } catch (error) {
-    console.error('❌ Meshy API Error:', error.response?.data || error.message)
-    throw new Error(error.response?.data?.message || 'Failed to generate 3D model with Meshy')
+    console.error('❌ Meshy Create Task Error:', error.response?.data || error.message)
+    throw new Error(error.response?.data?.message || 'Failed to start 3D generation')
   }
 }
 
 /**
- * Poll Meshy API for task completion
+ * Step 2: Check status of a task
  */
-const pollMeshyTask = async (taskId, headers) => {
-  const maxRetries = 120 // 10 minutes (5s interval)
-  let retries = 0
-
-  while (retries < maxRetries) {
-    await new Promise((resolve) => setTimeout(resolve, 5000))
-    retries++
-
-    try {
-      const response = await axios.get(`${MESHY_API_URL}/${taskId}`, { headers })
-      const status = response.data.status
-      const progress = response.data.progress
-
-      console.log(`⏳ Meshy Task ${taskId}: ${status} (${progress}%)`)
-
-      if (status === 'SUCCEEDED') {
-        return response.data.model_urls
-      } else if (status === 'FAILED' || status === 'EXPIRED') {
-        throw new Error(`Meshy task failed with status: ${status}`)
-      }
-    } catch (error) {
-      if (error.message.includes('Meshy task failed')) throw error
-      console.warn('Network error while polling, continuing...', error.message)
-    }
+export const getMeshyTaskStatus = async (taskId) => {
+  const headers = { Authorization: `Bearer ${MESHY_API_KEY}` }
+  try {
+    const response = await axios.get(`${MESHY_API_URL}/${taskId}`, { headers })
+    return response.data
+  } catch (error) {
+    console.error('❌ Meshy Get Status Error:', error.response?.data || error.message)
+    throw new Error(error.response?.data?.message || 'Failed to check task status')
   }
+}
 
-  throw new Error('Meshy task timed out')
+/**
+ * Step 3: Handle the successful result
+ */
+export const processMeshyResult = async (taskId, modelUrls) => {
+  return await downloadAndSaveModel(modelUrls.glb, taskId)
 }
 
 /**
@@ -106,10 +79,7 @@ const downloadAndSaveModel = async (glbUrl, taskId) => {
     const filePath = path.join(uploadsDir, filename)
     fs.writeFileSync(filePath, buffer)
     
-    console.log(`💾 Saved GLB to: ${filePath}`)
-
     // Upload to Cloudinary
-    console.log('☁️ Uploading GLB to Cloudinary...')
     const cloudinaryResult = await uploadRaw(buffer, 'manara-ai/3d-models')
     
     return {

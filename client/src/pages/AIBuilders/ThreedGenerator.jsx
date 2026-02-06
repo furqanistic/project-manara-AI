@@ -3,28 +3,33 @@ import { ThreeDRenderHistory } from '@/components/ThreeDRender/ThreeDRenderHisto
 import api from '@/config/config'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowRight,
-  Box,
-  ChevronRight,
-  Download,
-  Eye,
-  History,
-  Info,
-  Layers,
-  Loader2,
-  MessageSquare,
-  Palette,
-  Plus,
-  RotateCcw,
-  Send,
-  Shapes,
-  Upload,
-  Wand2,
-  X
+    ArrowRight,
+    Box,
+    ChevronRight,
+    Download,
+    Eye,
+    FileDown,
+    History,
+    Info,
+    Layers,
+    Loader2,
+    Maximize,
+    MessageSquare,
+    Moon,
+    Palette,
+    Plus,
+    RotateCcw,
+    ScanLine,
+    Send,
+    Shapes,
+    Sun,
+    Upload,
+    Wand2,
+    X
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useParams } from 'react-router-dom'
 
 const STYLES = [
   { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors', color: '#de7c7c' },
@@ -44,8 +49,15 @@ const ThreedGenerator = () => {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [historyOpen, setHistoryOpen] = useState(false)
-  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
+  const [isMobileChatOpen, setMobileChatOpen] = useState(false)
+  const [isConvertingTo3D, setIsConvertingTo3D] = useState(false)
+  const [meshyModelUrl, setMeshyModelUrl] = useState(null)
+  const [meshyProgress, setMeshyProgress] = useState(0)
+  const [resultTab, setResultTab] = useState('image') // 'image' or '3d'
+  const modelRef = useRef(null)
+  const pollingRef = useRef(null)
   const location = useLocation()
+  const { id } = useParams()
   
   // State for the current project
   const [sourceImage, setSourceImage] = useState(null)
@@ -87,9 +99,26 @@ const ThreedGenerator = () => {
         window.history.replaceState({}, document.title);
     } else if (location.state?.sourceImage) {
         setSourceImage(location.state.sourceImage);
-        window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location, currentProjectId])
+
+  // Handle direct ID loading
+  useEffect(() => {
+    const loadProjectById = async () => {
+      if (id && !currentProjectId) {
+        try {
+          const response = await api.get(`/3d/projects/${id}`)
+          if (response.data?.data) {
+            handleLoadFromHistory(response.data.data)
+          }
+        } catch (err) {
+          console.error('Error loading project by ID:', err)
+          toast.error('Could not find the requested project')
+        }
+      }
+    }
+    loadProjectById()
+  }, [id, currentProjectId])
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0]
@@ -128,6 +157,8 @@ const ThreedGenerator = () => {
 
     setIsGenerating(true)
     setUploadProgress(0)
+    setResultTab('image')
+    setMeshyModelUrl(null)
     
     if (isIteration) {
       setChatHistory(prev => [...prev, { role: 'user', content: currentPrompt }])
@@ -180,7 +211,95 @@ const ThreedGenerator = () => {
     setCurrentProjectId(item._id)
     setChatHistory(item.chatHistory || [])
     setStep('result')
+    setMeshyModelUrl(item.glbUrl || null)
+    
+    // Check if we need to resume polling
+    if (item.meshyStatus === 'pending' && item.meshyTaskId) {
+      setMeshyModelUrl(null)
+      setMeshyProgress(0)
+      setResultTab('image')
+      setIsConvertingTo3D(false)
+      startPolling(item.meshyTaskId, item._id)
+    } else if (item.meshyStatus === 'succeeded' && item.glbUrl) {
+      setMeshyProgress(100)
+      setMeshyModelUrl(item.glbUrl)
+      setResultTab('3d')
+    } else {
+      setMeshyProgress(0)
+      setResultTab('image')
+    }
+
     toast.success("Project restored", { id: 'project-restored' })
+  }
+
+  const startPolling = (taskId, pId = currentProjectId) => {
+    if (pollingRef.current) clearInterval(pollingRef.current)
+    setIsConvertingTo3D(true)
+    
+    pollingRef.current = setInterval(async () => {
+      try {
+        const response = await api.get(`/3d/meshy/status/${taskId}?projectId=${pId}`)
+        const taskData = response.data.data
+        
+        setMeshyProgress(taskData.progress || 0)
+
+        if (taskData.status === 'SUCCEEDED') {
+          clearInterval(pollingRef.current)
+          // Fetch the updated model to get the Cloudinary GLB URL
+          const modelResponse = await api.get(`/3d/my-models`)
+          const updatedModel = modelResponse.data.data.find(m => m._id === pId)
+          if (updatedModel?.glbUrl) {
+            setMeshyModelUrl(updatedModel.glbUrl)
+            setResultTab('3d')
+          }
+          setIsConvertingTo3D(false)
+          toast.success('3D object ready!', { id: 'meshy-success' })
+        } else if (taskData.status === 'FAILED' || taskData.status === 'EXPIRED') {
+          clearInterval(pollingRef.current)
+          setIsConvertingTo3D(false)
+          toast.error('3D conversion failed on Meshy', { id: 'meshy-fail' })
+        }
+      } catch (err) {
+        console.error('Polling error:', err)
+      }
+    }, 3000)
+  }
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current)
+    }
+  }, [])
+
+  const handleConvertTo3D = async () => {
+    const currentRender = versions[currentVersionIndex]?.image
+    if (!currentRender) {
+      toast.error('No image to convert', { id: 'no-render' })
+      return
+    }
+
+    setIsConvertingTo3D(true)
+    setMeshyProgress(0)
+    setResultTab('3d')
+    
+    try {
+      const payload = {
+        image: currentRender.url || `data:${currentRender.mimeType};base64,${currentRender.data}`,
+        mimeType: currentRender.mimeType,
+        projectId: currentProjectId
+      }
+
+      const response = await api.post('/3d/meshy/generate', payload)
+      const { meshyTaskId } = response.data.data
+      
+      if (meshyTaskId) {
+        startPolling(meshyTaskId, currentProjectId)
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || '3D conversion failed', { id: 'meshy-error' })
+      setIsConvertingTo3D(false)
+    }
   }
 
   const handleDownload = () => {
@@ -192,6 +311,41 @@ const ThreedGenerator = () => {
     link.click()
   }
 
+  const handleDownloadGLB = async () => {
+    if (!meshyModelUrl) return
+    try {
+      toast.loading('Preparing 3D model...', { id: 'download-glb' })
+      const response = await fetch(meshyModelUrl)
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.setAttribute('download', `manara-design-${Date.now()}.glb`)
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      toast.success('Download started!', { id: 'download-glb' })
+    } catch (err) {
+      console.error('Download error:', err)
+      // Fallback
+      const link = document.createElement('a')
+      link.href = meshyModelUrl
+      link.download = `manara-design-${Date.now()}.glb`
+      link.target = "_blank"
+      link.click()
+      toast.success('Download opened in new tab', { id: 'download-glb' })
+    }
+  }
+
+  const handleFullscreen = () => {
+    if (modelRef.current) {
+      if (modelRef.current.requestFullscreen) {
+        modelRef.current.requestFullscreen()
+      }
+    }
+  }
+
   const handleReset = () => {
     setSourceImage(null)
     setVersions([])
@@ -199,6 +353,7 @@ const ThreedGenerator = () => {
     setCurrentProjectId(null)
     setChatHistory([])
     setPrompt('')
+    setMeshyModelUrl(null)
     setStep('config')
     if (fileInputRef.current) fileInputRef.current.value = ''
     toast.success("New project workspace ready", { id: 'workspace-reset' })
@@ -340,10 +495,58 @@ const ThreedGenerator = () => {
                  </div>
               )}
             </div>
-            {currentVersion && <button onClick={handleDownload} className='flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-white/10 border border-[#E5E5E7] dark:border-[#2D2D2F] rounded-lg text-[10px] font-black hover:bg-gray-50'><Download size={12} /> EXPORT</button>}
+            {currentVersion && (
+              <div className='flex items-center gap-2'>
+                {!meshyModelUrl && (
+                  <motion.button 
+                    onClick={handleConvertTo3D} 
+                    disabled={isConvertingTo3D}
+                    initial={{ scale: 1 }}
+                    animate={{ 
+                      scale: [1, 1.04, 1],
+                      boxShadow: [
+                        "0px 0px 10px rgba(141, 119, 94, 0.2)",
+                        "0px 0px 30px rgba(141, 119, 94, 0.6)",
+                        "0px 0px 10px rgba(141, 119, 94, 0.2)"
+                      ]
+                    }}
+                    transition={{ 
+                      duration: 1.5, 
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                    whileHover={{ scale: 1.08, boxShadow: "0px 0px 40px rgba(141, 119, 94, 0.8)" }}
+                    whileTap={{ scale: 0.92 }}
+                    className='flex items-center gap-2.5 px-5 py-2 bg-gradient-to-r from-[#8d775e] via-[#a68d71] to-[#8d775e] bg-[length:200%_auto] text-white rounded-xl text-[10px] font-black hover:bg-right transition-all duration-500 shadow-2xl relative overflow-hidden group'
+                  >
+                    <motion.div
+                      className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                      initial={{ x: "-100%" }}
+                      animate={{ x: "200%" }}
+                      transition={{ duration: 1.2, repeat: Infinity, ease: "linear", repeatDelay: 2 }}
+                    />
+                    <div className='p-1 bg-white/20 rounded-lg group-hover:rotate-12 transition-transform duration-300'>
+                      {isGenerating || isConvertingTo3D ? <Loader2 size={12} className='animate-spin' /> : <Box size={14} />}
+                    </div>
+                    <span className='tracking-[0.1em]'>CONVERT DESIGN TO 3D MODEL</span>
+                  </motion.button>
+                )}
+                <motion.button 
+                  onClick={handleDownload} 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className='flex items-center gap-2.5 px-5 py-2 bg-white dark:bg-white/10 border border-[#E5E5E7] dark:border-[#2D2D2F] rounded-xl text-[10px] font-black hover:bg-gray-50 dark:hover:bg-white/15 transition-all shadow-sm'
+                >
+                  <div className='p-1 bg-gray-100 dark:bg-white/10 rounded-lg'>
+                    <Download size={14} /> 
+                  </div>
+                  <span className='tracking-[0.1em]'>EXPORT RENDER IMAGE</span>
+                </motion.button>
+              </div>
+            )}
           </div>
 
-          <div className='flex-1 relative flex items-center justify-center p-4 md:p-6'>
+          <div className='flex-1 relative flex flex-col overflow-hidden'>
             <AnimatePresence mode='wait'>
               {isGenerating ? (
                 <motion.div key='loading' className='text-center space-y-4'>
@@ -354,13 +557,108 @@ const ThreedGenerator = () => {
                   <p className='text-[10px] font-black uppercase tracking-widest animate-pulse'>{LOADING_PHASES[Math.floor(uploadProgress/20)]}</p>
                 </motion.div>
               ) : currentVersion ? (
-                <motion.div key='image' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className='relative max-w-full max-h-full shadow-2xl rounded-[24px] overflow-hidden'>
-                  <img src={currentVersion.image?.url || `data:${currentVersion.image?.mimeType};base64,${currentVersion.image?.data}`} className='max-h-[80vh] w-auto object-contain' />
+                <motion.div key='content' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className='flex-1 w-full flex flex-col p-3 md:p-5 overflow-hidden'>
+                  
+                  {(meshyModelUrl || isConvertingTo3D) && (
+                    <div className='flex items-center justify-center mb-4 shrink-0'>
+                      <div className='flex bg-gray-100 dark:bg-white/5 p-1 rounded-xl border border-gray-200 dark:border-white/10'>
+                        <button
+                          onClick={() => setResultTab('image')}
+                          className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${resultTab === 'image' ? 'bg-white dark:bg-white/10 shadow-sm text-[#8d775e]' : 'text-gray-400'}`}
+                        >
+                          3D Render
+                        </button>
+                        <button
+                          onClick={() => setResultTab('3d')}
+                          className={`px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${resultTab === '3d' ? 'bg-white dark:bg-white/10 shadow-sm text-[#8d775e]' : 'text-gray-400'}`}
+                        >
+                          Interactive 3D
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className='flex-1 relative w-full overflow-hidden'>
+                    <div className='absolute inset-0'>
+                      {(!meshyModelUrl || resultTab === 'image') && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full bg-white dark:bg-white/5 rounded-3xl overflow-hidden border border-[#E5E5E7] dark:border-white/5 flex flex-col items-center justify-center relative'>
+                          <img 
+                            src={currentVersion.image?.url || `data:${currentVersion.image?.mimeType};base64,${currentVersion.image?.data}`} 
+                            className='max-h-full max-w-full object-contain p-4' 
+                          />
+                        </motion.div>
+                      )}
+                      
+                      {meshyModelUrl && resultTab === '3d' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full relative bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#0a0a0a] dark:to-[#1a1a1a] rounded-3xl overflow-hidden border border-[#E5E5E7] dark:border-white/5 shadow-2xl'>
+                          {/* Viewer Controls Overlay */}
+                          <div className='absolute top-4 right-4 z-20 flex flex-col gap-2'>
+                            <button
+                              onClick={handleFullscreen}
+                              className='p-3 bg-white/90 dark:bg-black/80 backdrop-blur-md rounded-xl hover:bg-white dark:hover:bg-black/90 transition-all shadow-lg border border-white/20 dark:border-white/10'
+                              title="Fullscreen"
+                            >
+                              <Maximize size={18} className='text-gray-700 dark:text-gray-300' />
+                            </button>
+
+                            <button
+                              onClick={handleDownloadGLB}
+                              className='p-3 bg-[#8d775e] text-white backdrop-blur-md rounded-xl hover:bg-[#7a6650] transition-all shadow-lg border border-white/10'
+                              title="Download 3D Model (.glb)"
+                            >
+                              <FileDown size={18} />
+                            </button>
+                          </div>
+
+                          <model-viewer
+                            ref={modelRef}
+                            src={meshyModelUrl}
+                            alt="3D generated model"
+                            ar
+                            ar-modes="webxr scene-viewer quick-look"
+                            camera-controls
+                            auto-rotate
+                            shadow-intensity="1"
+                            exposure="1.2"
+                            style={{ width: '100%', height: '100%' }}
+                            className='rounded-3xl'
+                          >
+                            <button
+                              slot="ar-button"
+                              className='absolute bottom-4 left-1/2 -translate-x-1/2 px-6 py-3 bg-white dark:bg-black/90 border border-gray-200 dark:border-white/10 rounded-full text-sm font-bold text-gray-900 dark:text-white backdrop-blur-md shadow-2xl hover:scale-105 transition-transform flex items-center gap-2'
+                            >
+                              <ScanLine size={16} />
+                              View in Your Space
+                            </button>
+                          </model-viewer>
+                        </motion.div>
+                      )}
+
+                      {isConvertingTo3D && resultTab === '3d' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full bg-white/50 dark:bg-black/50 backdrop-blur-sm rounded-3xl border border-[#E5E5E7] dark:border-white/5 flex flex-col items-center justify-center p-8 text-center'>
+                          <div className='relative w-20 h-20 mb-6'>
+                            <svg className="w-full h-full transform -rotate-90">
+                              <circle cx="40" cy="40" r="36" stroke="currentColor" strokeWidth="4" fill="transparent" className="text-gray-200 dark:text-white/10" />
+                              <circle cx="40" cy="40" r="36" stroke="#8d775e" strokeWidth="4" fill="transparent" strokeDasharray={226} strokeDashoffset={226 - (226 * meshyProgress) / 100} className="transition-all duration-500" />
+                            </svg>
+                            <div className='absolute inset-0 flex items-center justify-center font-black text-xs'>{meshyProgress}%</div>
+                          </div>
+                          <h4 className='font-bold text-xs uppercase tracking-widest'>Generating 3D Object...</h4>
+                          <p className='text-[10px] text-gray-400 mt-2 max-w-[200px]'>You can safely close this page or check other projects; we'll keep building it for you in the background.</p>
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
                 </motion.div>
               ) : (
-                <motion.div key='empty' initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='text-center space-y-6 max-w-xs'>
-                  <div className='w-20 h-20 mx-auto bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl flex items-center justify-center text-[#8d775e]'><Box size={32} /></div>
-                  <div className='space-y-2'><h3 className='text-xl font-black italic tracking-tighter'>Ready for 3D?</h3><p className='text-gray-400 text-xs'>Upload your plan to generate an immersive isometric render.</p></div>
+                <motion.div key='empty' initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='flex-1 w-full h-full flex flex-col items-center justify-center text-center p-6'>
+                  <div className='space-y-6 max-w-xs flex flex-col items-center'>
+                    <div className='w-20 h-20 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-2xl flex items-center justify-center text-[#8d775e]'><Box size={32} /></div>
+                    <div className='space-y-2'>
+                        <h3 className='text-xl font-black italic tracking-tighter'>Ready for 3D?</h3>
+                        <p className='text-gray-400 text-xs'>Upload your plan to generate an immersive isometric render.</p>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

@@ -1,9 +1,11 @@
+import axios from 'axios'
 import fs from 'fs'
 import { createError } from '../error.js'
 import ThreeDModel from '../models/ThreeDModel.js'
 import { deleteAsset, uploadImage, uploadRaw } from '../services/cloudinaryService.js'
 import { generateThreeDVisualization } from '../services/geminiService.js'
 import { generateHunyuan3DModel } from '../services/huggingFaceService.js'
+import { createMeshyTask, getMeshyTaskStatus, processMeshyResult } from '../services/meshyService.js'
 
 export const generate3D = async (req, res, next) => {
   try {
@@ -222,3 +224,81 @@ export const deleteThreeDModel = async (req, res, next) => {
     next(createError(500, 'Failed to delete 3D model'))
   }
 }
+
+export const generateMeshy3D = async (req, res, next) => {
+  try {
+    const { image, mimeType, projectId } = req.body;
+    
+    if (!image) {
+      return next(createError(400, 'Image is required for 3D conversion'));
+    }
+
+    let buffer;
+    if (image.startsWith('data:')) {
+      const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+      buffer = Buffer.from(base64Data, 'base64');
+    } else {
+      const response = await axios.get(image, { responseType: 'arraybuffer' });
+      buffer = Buffer.from(response.data);
+    }
+
+    const taskId = await createMeshyTask(buffer, mimeType || 'image/png');
+
+    let model;
+    if (projectId) {
+      model = await ThreeDModel.findById(projectId);
+      if (!model) return next(createError(404, 'Project not found'));
+      
+      model.meshyTaskId = taskId;
+      model.meshyStatus = 'pending';
+      model.meshyProgress = 0;
+      await model.save();
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: {
+        meshyTaskId: taskId,
+        model: model
+      }
+    });
+  } catch (error) {
+    console.error('Error in generateMeshy3D:', error);
+    next(createError(500, error.message || 'Failed to start Meshy 3D generation'));
+  }
+};
+
+export const getMeshyStatus = async (req, res, next) => {
+  try {
+    const { taskId } = req.params;
+    const { projectId } = req.query;
+
+    const taskData = await getMeshyTaskStatus(taskId);
+    
+    if (projectId) {
+      const model = await ThreeDModel.findById(projectId);
+      if (model) {
+        model.meshyProgress = taskData.progress;
+        
+        if (taskData.status === 'SUCCEEDED' && model.meshyStatus !== 'succeeded') {
+          const result = await processMeshyResult(taskId, taskData.model_urls);
+          model.glbUrl = result.url;
+          model.glbPath = result.path;
+          model.meshyStatus = 'succeeded';
+        } else if (taskData.status === 'FAILED' || taskData.status === 'EXPIRED') {
+          model.meshyStatus = 'failed';
+        }
+        
+        await model.save();
+      }
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: taskData
+    });
+  } catch (error) {
+    console.error('Error in getMeshyStatus:', error);
+    next(createError(500, 'Failed to check 3D conversion status'));
+  }
+};

@@ -52,6 +52,18 @@ const threeDSchema = new mongoose.Schema(
         },
       },
     ],
+    meshyTaskId: {
+      type: String,
+    },
+    meshyProgress: {
+      type: Number,
+      default: 0,
+    },
+    meshyStatus: {
+      type: String,
+      enum: ['none', 'pending', 'succeeded', 'failed'],
+      default: 'none',
+    },
   },
   { timestamps: true }
 )

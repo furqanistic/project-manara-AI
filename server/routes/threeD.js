@@ -3,7 +3,9 @@ import multer from 'multer'
 import {
     deleteThreeDModel,
     generate3D,
+    generateMeshy3D,
     generateVisualization,
+    getMeshyStatus,
     getMyThreeDModels,
 } from '../controllers/threeDController.js'
 import { verifyToken } from '../middleware/authMiddleware.js'
@@ -32,6 +34,8 @@ router.use(verifyToken)
 
 router.post('/generate', upload.single('image'), generate3D)
 router.post('/visualize', upload.single('image'), generateVisualization)
+router.post('/meshy/generate', generateMeshy3D)
+router.get('/meshy/status/:taskId', getMeshyStatus)
 router.get('/my-models', getMyThreeDModels)
 router.delete('/:id', deleteThreeDModel)
 

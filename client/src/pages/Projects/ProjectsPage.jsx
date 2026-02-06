@@ -3,18 +3,18 @@ import { useDeleteMoodboard, useUserMoodboards } from "@/hooks/useMoodboard";
 import { useDeleteThreeDModel, useUserThreeDModels } from "@/hooks/useThreeD";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  AlertCircle,
-  ArrowRight,
-  Calendar,
-  ChevronDown,
-  Clock,
-  Filter,
-  Image as ImageIcon,
-  LayoutGrid,
-  Loader2,
-  Search,
-  Sparkles,
-  Trash2,
+ AlertCircle,
+ ArrowRight,
+ Calendar,
+ ChevronDown,
+ Clock,
+ Filter,
+ Image as ImageIcon,
+ LayoutGrid,
+ Loader2,
+ Search,
+ Sparkles,
+ Trash2,
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -89,6 +89,7 @@ const ProjectsPage = () => {
         thumbnail: td.sourceImage || (td.versions?.[0]?.image?.url),
         status: td.status,
         style: td.versions?.[0]?.style,
+        isInteractive: td.glbUrl && td.meshyStatus === 'succeeded',
         raw: td
     }));
 
@@ -281,16 +282,21 @@ const ProjectsPage = () => {
                     )}
                     
                     {/* Badge */}
-                    <div className="absolute top-4 left-4 z-10">
-                         <span className={`px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-md shadow-sm border border-white/10 ${
+                    <div className="absolute top-4 left-4 z-10 flex flex-row gap-2 pt-0.5">
+                         <span className={`px-2.5 py-1 rounded-md text-[9px] font-semibold uppercase tracking-[0.15em] backdrop-blur-xl shadow-sm border border-white/20 ${
                             project.type === "moodboard" 
-                                ? "bg-purple-500/90 text-white" 
+                                ? "bg-purple-500/80 text-white" 
                                 : project.type === "threed" 
-                                    ? "bg-blue-500/90 text-white" 
-                                    : "bg-[#8d775e]/90 text-white"
+                                    ? "bg-blue-600/80 text-white" 
+                                    : "bg-[#8d775e]/80 text-white"
                          }`}>
-                            {project.type === "moodboard" ? "Moodboard" : project.type === "threed" ? "3D Model" : "Floor Plan"}
+                            {project.type === "moodboard" ? "Moodboard" : project.type === "threed" ? "3D Render" : "Floor Plan"}
                          </span>
+                         {project.isInteractive && (
+                            <span className="px-2.5 py-1 rounded-md text-[9px] font-semibold uppercase tracking-[0.15em] bg-white/90 dark:bg-black/90 text-gray-900 dark:text-white backdrop-blur-xl shadow-sm border border-black/5 dark:border-white/10">
+                              Interactive
+                            </span>
+                         )}
                     </div>
 
                     {/* Delete Icon Overlay */}
