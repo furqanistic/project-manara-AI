@@ -331,3 +331,23 @@ export const updateThreeDModel = async (req, res, next) => {
     next(createError(500, 'Failed to update 3D model'))
   }
 }
+
+export const getThreeDModel = async (req, res, next) => {
+  try {
+    const model = await ThreeDModel.findById(req.params.id)
+    if (!model) {
+      return next(createError(404, '3D Model not found'))
+    }
+    if (model.userId.toString() !== req.user.id) {
+      return next(createError(403, 'You can only access your own models'))
+    }
+
+    res.status(200).json({
+      status: 'success',
+      data: model,
+    })
+  } catch (error) {
+    console.error('Error fetching 3D model:', error)
+    next(createError(500, 'Failed to fetch 3D model'))
+  }
+}

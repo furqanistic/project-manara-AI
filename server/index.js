@@ -10,8 +10,10 @@ import path from 'path'
 import authRoute from './routes/auth.js'
 import floorPlanRoutes from './routes/floorPlan.js'
 import moodboardRoute from './routes/moodboard.js'
+import projectRoutes from './routes/project.js'
 import stripeRoutes from './routes/stripe.js'
 import threeDRoutes from './routes/threeD.js'
+
 
 const app = express()
 dotenv.config({ quiet: true })
@@ -88,6 +90,8 @@ app.use('/api/moodboards/', moodboardRoute)
 app.use('/api/floorplans', floorPlanRoutes)
 app.use('/api/3d', threeDRoutes)
 app.use('/api/stripe', stripeRoutes)
+app.use('/api/projects', projectRoutes)
+
 
 const uploadsDir = path.join(process.cwd(), 'uploads/furniture')
 if (!fs.existsSync(uploadsDir)) {

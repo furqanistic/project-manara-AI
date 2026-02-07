@@ -1,32 +1,32 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  ArrowLeft,
-  ArrowRight,
-  Box,
-  Check,
-  ChevronDown,
-  Download,
-  History,
-  Home,
-  Layers,
-  Layout,
-  Loader2,
-  Maximize2,
-  MessageSquare,
-  Palette,
-  Plus,
-  RotateCcw,
-  Send,
-  Settings,
-  Share2,
-  Sparkles,
-  Trash2,
-  Wand2,
-  X
+    ArrowLeft,
+    ArrowRight,
+    Box,
+    Check,
+    ChevronDown,
+    Download,
+    History,
+    Home,
+    Layers,
+    Layout,
+    Loader2,
+    Maximize2,
+    MessageSquare,
+    Palette,
+    Plus,
+    RotateCcw,
+    Send,
+    Settings,
+    Share2,
+    Sparkles,
+    Trash2,
+    Wand2,
+    X
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FloorPlanHistory } from '../../components/FloorPlan/FloorPlanHistory'
 import TopBar from '../../components/Layout/Topbar'
 import api from '../../config/config'
@@ -85,6 +85,7 @@ const FloorPlanGenerator = () => {
   const [showHistoryMobile, setShowHistoryMobile] = useState(false)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
   const location = useLocation()
+  const { id } = useParams()
   
   const [generatedImage, setGeneratedImage] = useState(() => {
     if (location.state?.reset) return null;
@@ -133,6 +134,24 @@ const FloorPlanGenerator = () => {
         window.history.replaceState({}, document.title);
     }
   }, [location.state]);
+
+  // Handle direct ID loading
+  useEffect(() => {
+    const loadProjectById = async () => {
+      if (id) {
+        try {
+          const response = await api.get(`/floorplans/${id}`)
+          if (response.data?.data) {
+            loadFromHistory(response.data.data)
+          }
+        } catch (err) {
+          console.error('Error loading floor plan by ID:', err)
+          toast.error('Could not find the requested project')
+        }
+      }
+    }
+    loadProjectById()
+  }, [id])
 
   const handleNewProject = () => {
     setGeneratedImage(null)

@@ -122,6 +122,14 @@ const AppRoutes = () => {
           }
         />
         <Route
+          path="/visualizer/:id"
+          element={
+            <RequireAuth>
+              <ThreedGenerator />
+            </RequireAuth>
+          }
+        />
+        <Route
           path="/moodboard"
           element={
             <RequireAuth>
@@ -131,6 +139,14 @@ const AppRoutes = () => {
         />
         <Route
           path="/floorplans"
+          element={
+            <RequireAuth>
+              <FloorPlanGenerator />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/floorplans/:id"
           element={
             <RequireAuth>
               <FloorPlanGenerator />

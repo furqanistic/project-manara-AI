@@ -7,6 +7,7 @@ import {
     generateVisualization,
     getMeshyStatus,
     getMyThreeDModels,
+    getThreeDModel,
     updateThreeDModel,
 } from '../controllers/threeDController.js'
 import { verifyToken } from '../middleware/authMiddleware.js'
@@ -38,6 +39,7 @@ router.post('/visualize', upload.single('image'), generateVisualization)
 router.post('/meshy/generate', generateMeshy3D)
 router.get('/meshy/status/:taskId', getMeshyStatus)
 router.get('/my-models', getMyThreeDModels)
+router.get('/projects/:id', getThreeDModel)
 router.delete('/:id', deleteThreeDModel)
 router.put('/:id', updateThreeDModel)
 

@@ -1,35 +1,36 @@
 import { Badge } from "@/components/ui/badge";
 import {
- Select,
- SelectContent,
- SelectItem,
- SelectTrigger,
- SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
-import { useDeleteFloorPlan, useUpdateFloorPlan, useUserFloorPlans } from "@/hooks/useFloorPlan";
-import { useDeleteMoodboard, useUpdateMoodboard, useUserMoodboards } from "@/hooks/useMoodboard";
-import { useDeleteThreeDModel, useUpdateThreeDModel, useUserThreeDModels } from "@/hooks/useThreeD";
+import { useDeleteFloorPlan, useUpdateFloorPlan } from "@/hooks/useFloorPlan";
+import { useDeleteMoodboard, useUpdateMoodboard } from "@/hooks/useMoodboard";
+import { useProjects } from "@/hooks/useProjects";
+import { useDeleteThreeDModel, useUpdateThreeDModel } from "@/hooks/useThreeD";
 import { AnimatePresence, motion } from "framer-motion";
 import {
- AlertCircle,
- ArrowRight,
- Box,
- Calendar,
- ChevronDown,
- ChevronLeft,
- ChevronRight,
- Clock,
- Edit2,
- Filter,
- Image as ImageIcon,
- Layers,
- LayoutGrid,
- Loader2,
- Image as MoodboardIcon,
- Package,
- Search,
- Sparkles,
- Trash2
+    AlertCircle,
+    ArrowRight,
+    Box,
+    Calendar,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    Clock,
+    Edit2,
+    Filter,
+    Image as ImageIcon,
+    Layers,
+    LayoutGrid,
+    Loader2,
+    Image as MoodboardIcon,
+    Package,
+    Search,
+    Sparkles,
+    Trash2
 } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -53,16 +54,20 @@ const ProjectsPage = () => {
   const [sortBy, setSortBy] = useState("recent");
   const [filterType, setFilterType] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 6;
   const [deleteId, setDeleteId] = useState(null);
   const [deleteType, setDeleteType] = useState(null);
   const [editProject, setEditProject] = useState(null);
   const [editTitle, setEditTitle] = useState("");
 
-  // Fetch data from server
-  const { data: moodboardData, isLoading: moodboardsLoading } = useUserMoodboards(1, 100);
-  const { data: floorPlanData, isLoading: floorPlansLoading } = useUserFloorPlans();
-  const { data: threeDData, isLoading: threeDLoading } = useUserThreeDModels();
+  // Fetch unified projects from server
+  const { data: projectsData, isLoading: projectsLoading } = useProjects({
+    page: currentPage,
+    limit: itemsPerPage,
+    type: filterType,
+    sortBy: sortBy,
+    search: searchQuery
+  });
 
   // Mutations
   const deleteMoodboard = useDeleteMoodboard();
@@ -79,57 +84,56 @@ const ProjectsPage = () => {
     return title.replace(/\s-\s\d{1,2}\/\d{1,2}\/\d{4}.*$/, "");
   };
 
-  const combinedProjects = useMemo(() => {
-    const floorPlans = (floorPlanData?.data || []).map(fp => ({
-      id: fp._id,
-      type: "floorplan",
-      title: cleanTitle(fp.name) || "Untitled Floor Plan",
-      createdAt: fp.createdAt,
-      thumbnail: fp.thumbnail,
-      status: fp.status,
-      raw: fp
-    }));
-
-    const moodboards = (moodboardData?.data?.moodboards || []).map(mb => ({
-      id: mb._id,
-      type: "moodboard",
-      title: cleanTitle(mb.title) || "Untitled Moodboard",
-      createdAt: mb.createdAt,
-      thumbnail: mb.compositeMoodboard?.url,
-      status: mb.status,
-      style: mb.style,
-      roomType: mb.roomType,
-      raw: mb
-    }));
-
-    const threeDModels = (threeDData?.data || []).map(td => ({
-        id: td._id,
-        type: "threed",
-        title: cleanTitle(td.name) || "3D Project",
-        createdAt: td.createdAt,
-        thumbnail: td.sourceImage || (td.versions?.[0]?.image?.url),
-        status: td.status,
-        style: td.versions?.[0]?.style,
-        isInteractive: td.glbUrl && td.meshyStatus === 'succeeded',
-        raw: td
-    }));
-
-    return [...floorPlans, ...moodboards, ...threeDModels].sort((a, b) => {
-      const dateA = new Date(a.createdAt);
-      const dateB = new Date(b.createdAt);
-      return sortBy === "recent" ? dateB - dateA : dateA - dateB;
+  const projects = useMemo(() => {
+    return (projectsData?.data || []).map(p => {
+       // Support both flat structure from aggregated API and nested 'raw' if needed
+       // Though the new API should ideally return what the UI needs
+       
+       if (p.type === 'floorplan') {
+         return {
+           id: p._id,
+           type: 'floorplan',
+           title: cleanTitle(p.name) || "Untitled Floor Plan",
+           createdAt: p.createdAt,
+           thumbnail: p.thumbnail,
+           status: p.status,
+           raw: p
+         }
+       }
+       
+       if (p.type === 'moodboard') {
+         return {
+           id: p._id,
+           type: "moodboard",
+           title: cleanTitle(p.title) || "Untitled Moodboard",
+           createdAt: p.createdAt,
+           thumbnail: p.compositeMoodboard?.url,
+           status: p.status,
+           style: p.style,
+           roomType: p.roomType,
+           raw: p
+         }
+       }
+       
+       if (p.type === 'threed') {
+         return {
+            id: p._id,
+            type: "threed",
+            title: cleanTitle(p.name) || "3D Project",
+            createdAt: p.createdAt,
+            thumbnail: p.sourceImage || (p.versions?.[0]?.image?.url),
+            status: p.status,
+            style: p.style,
+            isInteractive: p.glbUrl && p.meshyStatus === 'succeeded',
+            raw: p
+         }
+       }
+       
+       return p;
     });
-  }, [moodboardData, floorPlanData, threeDData, sortBy]);
+  }, [projectsData]);
 
-  const filteredProjects = useMemo(() => {
-    return combinedProjects.filter(p => {
-      const matchesSearch = p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           (p.style && p.style.toLowerCase().includes(searchQuery.toLowerCase())) ||
-                           (p.roomType && p.roomType.toLowerCase().includes(searchQuery.toLowerCase()));
-      const matchesType = filterType === "all" || p.type === filterType;
-      return matchesSearch && matchesType;
-    });
-  }, [combinedProjects, searchQuery, filterType]);
+  // Reset page when search or filter changes
 
   // Reset page when search or filter changes
   useEffect(() => {
@@ -137,33 +141,27 @@ const ProjectsPage = () => {
   }, [searchQuery, filterType]);
 
   // Pagination Logic
-  const totalPages = Math.ceil(filteredProjects.length / itemsPerPage);
-  const paginatedProjects = filteredProjects.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const totalPages = projectsData?.pagination?.totalPages || 1;
+  const paginatedProjects = projects;
 
   // Stats data
   const stats = useMemo(() => {
-    const total = combinedProjects.length;
-    const mb = combinedProjects.filter(p => p.type === 'moodboard').length;
-    const fp = combinedProjects.filter(p => p.type === 'floorplan').length;
-    const td = combinedProjects.filter(p => p.type === 'threed').length;
+    const counts = projectsData?.counts || {};
     return [
-      { label: "Total", count: total, icon: Package, color: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-white/5" },
-      { label: "Moodboards", count: mb, icon: MoodboardIcon, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10" },
-      { label: "Floor Plans", count: fp, icon: Layers, color: "text-[#8d775e] dark:text-[#a68d71]", bg: "bg-[#8d775e]/5 dark:bg-[#8d775e]/10" },
-      { label: "3D Models", count: td, icon: Box, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10" },
+      { label: "Total", count: counts.total || 0, icon: Package, color: "text-gray-600 dark:text-gray-400", bg: "bg-gray-100 dark:bg-white/5" },
+      { label: "Moodboards", count: counts.moodboard || 0, icon: MoodboardIcon, color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10" },
+      { label: "Floor Plans", count: counts.floorplan || 0, icon: Layers, color: "text-[#8d775e] dark:text-[#a68d71]", bg: "bg-[#8d775e]/5 dark:bg-[#8d775e]/10" },
+      { label: "3D Models", count: counts.threed || 0, icon: Box, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10" },
     ];
-  }, [combinedProjects]);
+  }, [projectsData]);
 
   const handleCardClick = (project) => {
     if (project.type === "moodboard") {
       navigate(`/moodboards/${project.id}`, { state: { project: project.raw } });
     } else if (project.type === "threed") {
-      navigate("/visualizer", { state: { project: project.raw } });
+      navigate(`/visualizer/${project.id}`, { state: { project: project.raw } });
     } else {
-      navigate("/floorplans", { state: { project: project.raw } });
+      navigate(`/floorplans/${project.id}`, { state: { project: project.raw } });
     }
   };
 
@@ -347,7 +345,7 @@ const ProjectsPage = () => {
             </div>
         </div>
         {/* Content Area */}
-        {moodboardsLoading || floorPlansLoading || threeDLoading ? (
+        {projectsLoading ? (
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4 md:gap-8">
                 {[...Array(8)].map((_, i) => (
                 <div key={i} className="flex flex-col gap-3">
@@ -357,7 +355,7 @@ const ProjectsPage = () => {
                 </div>
                 ))}
             </div>
-        ) : filteredProjects.length === 0 ? (
+        ) : projects.length === 0 ? (
            <motion.div 
              initial={{ opacity: 0, scale: 0.9 }}
              animate={{ opacity: 1, scale: 1 }}
@@ -460,7 +458,7 @@ const ProjectsPage = () => {
         )}
 
         {/* Pagination */}
-        {!moodboardsLoading && !floorPlansLoading && !threeDLoading && totalPages > 1 && (
+        {!projectsLoading && totalPages > 1 && (
             <div className="mt-16 flex justify-center items-center gap-4">
                 <button
                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
