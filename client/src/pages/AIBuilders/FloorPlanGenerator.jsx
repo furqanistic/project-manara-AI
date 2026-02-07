@@ -1,3 +1,4 @@
+import { downloadImage } from '@/lib/downloadUtils'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
     ArrowLeft,
@@ -213,56 +214,15 @@ const FloorPlanGenerator = () => {
 
   const handleDownload = async () => {
     if (!generatedImage) return
-    let imageUrl = generatedImage.url || `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
+    const imageUrl = generatedImage.url || `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
 
     const toastId = toast.loading("Preparing download...")
-
-    try {
-      // 1. Data URL branch
-      if (imageUrl.startsWith('data:')) {
-        const link = document.createElement('a')
-        link.href = imageUrl
-        link.download = `manara-plan-${Date.now()}.png`
-        link.click()
-        toast.success("Download started", { id: toastId })
-        return
-      }
-
-      // 2. Cloudinary specific force-download (server-side)
-      if (imageUrl.includes('cloudinary.com')) {
-        imageUrl = imageUrl.replace('/upload/', '/upload/fl_attachment/')
-      }
-
-      // 3. Attempt Blob fetch
-      try {
-        const response = await fetch(imageUrl, { mode: 'cors' })
-        if (!response.ok) throw new Error('Network response was not ok')
-        
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `manara-plan-${Date.now()}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        window.URL.revokeObjectURL(url)
-        
-        toast.success("Download started", { id: toastId })
-      } catch (innerErr) {
-        // 4. Fallback to transformed URL with fl_attachment
-        const link = document.createElement('a')
-        link.href = imageUrl
-        link.target = '_blank'
-        link.download = `manara-plan-${Date.now()}.png`
-        link.click()
-        toast.success("Download initiated", { id: toastId })
-      }
-    } catch (err) {
-      console.error("Export failed", err)
-      toast.error("Unable to force download. Opening plan...", { id: toastId })
-      window.open(imageUrl, '_blank')
+    const success = await downloadImage(imageUrl, `manara-plan-${Date.now()}`)
+    
+    if (success) {
+      toast.success("Download started", { id: toastId })
+    } else {
+      toast.error("Download failed", { id: toastId })
     }
   }
 

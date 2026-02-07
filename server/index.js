@@ -7,6 +7,7 @@ import mongoose from 'mongoose'
 // Import routes
 import fs from 'fs'
 import path from 'path'
+import { downloadProxy } from './controllers/downloadController.js'
 import authRoute from './routes/auth.js'
 import floorPlanRoutes from './routes/floorPlan.js'
 import moodboardRoute from './routes/moodboard.js'
@@ -91,6 +92,7 @@ app.use('/api/floorplans', floorPlanRoutes)
 app.use('/api/3d', threeDRoutes)
 app.use('/api/stripe', stripeRoutes)
 app.use('/api/projects', projectRoutes)
+app.get('/api/download-proxy', downloadProxy)
 
 
 const uploadsDir = path.join(process.cwd(), 'uploads/furniture')

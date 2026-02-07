@@ -9,6 +9,7 @@ import {
     useGenerateMoodboard,
     useGenerateMoodboardDescriptions,
 } from "@/hooks/useMoodboard";
+import { downloadImage } from '@/lib/downloadUtils';
 import { AnimatePresence, motion } from "framer-motion";
 import {
     ArrowLeft,
@@ -198,16 +199,18 @@ const MoodboardGenerator = () => {
     }
   };
 
-  const downloadMoodboardImage = () => {
+  const downloadMoodboardImage = async () => {
     if (!currentMoodboard?.compositeMoodboard?.url) return;
+    const imageUrl = currentMoodboard.compositeMoodboard.url;
 
-    const link = document.createElement("a");
-    link.href = currentMoodboard.compositeMoodboard.url;
-    link.download = `moodboard-${currentMoodboard._id}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success("Image downloaded successfully!", { id: 'download-success' });
+    const toastId = toast.loading("Preparing download...", { id: 'moodboard-download' });
+    const success = await downloadImage(imageUrl, `moodboard-${currentMoodboard._id}`);
+    
+    if (success) {
+      toast.success("Image downloaded successfully!", { id: toastId });
+    } else {
+      toast.error("Download failed", { id: toastId });
+    }
   };
 
   const downloadMoodboardPDF = async () => {

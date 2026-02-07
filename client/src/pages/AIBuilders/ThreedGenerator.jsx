@@ -1,6 +1,7 @@
 import TopBar from '@/components/Layout/Topbar'
 import { ThreeDRenderHistory } from '@/components/ThreeDRender/ThreeDRenderHistory'
 import api from '@/config/config'
+import { downloadImage } from '@/lib/downloadUtils'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
     ArrowRight,
@@ -16,11 +17,17 @@ import {
     Maximize,
     MessageSquare,
     Moon,
+    MousePointer2,
+    Minus,
     Palette,
     Plus,
     RotateCcw,
     ScanLine,
     Send,
+    SlidersHorizontal,
+    Smartphone,
+    Move,
+    ZoomIn,
     Shapes,
     Sun,
     Upload,
@@ -55,6 +62,7 @@ const ThreedGenerator = () => {
   const [meshyProgress, setMeshyProgress] = useState(0)
   const [resultTab, setResultTab] = useState('image') // 'image' or '3d'
   const modelRef = useRef(null)
+  const viewerContainerRef = useRef(null)
   const pollingRef = useRef(null)
   const location = useLocation()
   const { id } = useParams()
@@ -69,6 +77,16 @@ const ThreedGenerator = () => {
   const [prompt, setPrompt] = useState('')
   const [chatHistory, setChatHistory] = useState([])
   const [currentProjectId, setCurrentProjectId] = useState(null)
+  
+  // 3D Viewer Control States
+  const [showHelp, setShowHelp] = useState(false)
+  const [autoRotateEnabled, setAutoRotateEnabled] = useState(true)
+  const [firstTime3DView, setFirstTime3DView] = useState(true)
+  const [viewerSettingsOpen, setViewerSettingsOpen] = useState(false)
+  const [viewerFov, setViewerFov] = useState(45)
+  const [viewerExposure, setViewerExposure] = useState(1.2)
+  const [viewerShadow, setViewerShadow] = useState(1)
+  const [viewerRotateSpeed, setViewerRotateSpeed] = useState(30)
   
   const fileInputRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -302,13 +320,19 @@ const ThreedGenerator = () => {
     }
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const currentRender = versions[currentVersionIndex]?.image
     if (!currentRender) return
-    const link = document.createElement('a')
-    link.href = currentRender.url || `data:${currentRender.mimeType || 'image/png'};base64,${currentRender.data}`
-    link.download = `manara-3d-${Date.now()}.png`
-    link.click()
+    const imageUrl = currentRender.url || `data:${currentRender.mimeType || 'image/png'};base64,${currentRender.data}`
+
+    const toastId = toast.loading("Preparing download...")
+    const success = await downloadImage(imageUrl, `manara-3d-${Date.now()}`)
+    
+    if (success) {
+      toast.success("Download started", { id: toastId })
+    } else {
+      toast.error("Download failed", { id: toastId })
+    }
   }
 
   const handleDownloadGLB = async () => {
@@ -339,12 +363,66 @@ const ThreedGenerator = () => {
   }
 
   const handleFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen?.()
+      return
+    }
+    const target = viewerContainerRef.current || modelRef.current
+    if (target && target.requestFullscreen) target.requestFullscreen()
+  }
+
+  // 3D Viewer Control Functions
+  const handleResetCamera = () => {
     if (modelRef.current) {
-      if (modelRef.current.requestFullscreen) {
-        modelRef.current.requestFullscreen()
+      modelRef.current.resetTurntableRotation()
+      modelRef.current.cameraOrbit = '0deg 75deg 105%'
+      modelRef.current.fieldOfView = '45deg'
+      setViewerFov(45)
+      toast.success('Camera reset', { id: 'camera-reset', duration: 1500 })
+    }
+  }
+
+  const handleZoomIn = () => {
+    if (modelRef.current) {
+      const currentFOV = parseFloat(modelRef.current.fieldOfView) || viewerFov
+      const nextFov = Math.max(20, currentFOV - 5)
+      modelRef.current.fieldOfView = `${nextFov}deg`
+      setViewerFov(nextFov)
+    }
+  }
+
+  const handleZoomOut = () => {
+    if (modelRef.current) {
+      const currentFOV = parseFloat(modelRef.current.fieldOfView) || viewerFov
+      const nextFov = Math.min(80, currentFOV + 5)
+      modelRef.current.fieldOfView = `${nextFov}deg`
+      setViewerFov(nextFov)
+    }
+  }
+
+  const toggleAutoRotate = () => {
+    setAutoRotateEnabled(!autoRotateEnabled)
+    if (modelRef.current) {
+      if (!autoRotateEnabled) {
+        modelRef.current.setAttribute('auto-rotate', '')
+      } else {
+        modelRef.current.removeAttribute('auto-rotate')
       }
     }
   }
+
+  const handleSetView = (orbit) => {
+    if (modelRef.current) {
+      modelRef.current.cameraOrbit = orbit
+    }
+  }
+
+  // Show help overlay only when the user asks
+  useEffect(() => {
+    if (meshyModelUrl && resultTab === '3d' && firstTime3DView) {
+      setFirstTime3DView(false)
+    }
+  }, [meshyModelUrl, firstTime3DView, resultTab])
 
   const handleReset = () => {
     setSourceImage(null)
@@ -590,8 +668,8 @@ const ThreedGenerator = () => {
                       )}
                       
                       {meshyModelUrl && resultTab === '3d' && (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full relative bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#0a0a0a] dark:to-[#1a1a1a] rounded-3xl overflow-hidden border border-[#E5E5E7] dark:border-white/5 shadow-2xl'>
-                          {/* Viewer Controls Overlay */}
+                        <motion.div ref={viewerContainerRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full relative bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#0a0a0a] dark:to-[#1a1a1a] rounded-3xl overflow-hidden border border-[#E5E5E7] dark:border-white/5 shadow-2xl'>
+                          {/* Right Side Controls */}
                           <div className='absolute top-4 right-4 z-20 flex flex-col gap-2'>
                             <button
                               onClick={handleFullscreen}
@@ -610,6 +688,239 @@ const ThreedGenerator = () => {
                             </button>
                           </div>
 
+                          {/* Left Side Controls - Interaction Panel */}
+                          <div className='absolute top-4 left-4 z-20 flex flex-col gap-2'>
+                            {/* Help/Info Button */}
+                            <button
+                              onClick={() => setShowHelp(!showHelp)}
+                              className='p-3 bg-white/90 dark:bg-black/80 backdrop-blur-md rounded-xl hover:bg-white dark:hover:bg-black/90 transition-all shadow-lg border border-white/20 dark:border-white/10'
+                              title="Show Controls"
+                            >
+                              <Info size={18} className='text-gray-700 dark:text-gray-300' />
+                            </button>
+
+                            {/* Settings Button */}
+                            <button
+                              onClick={() => setViewerSettingsOpen(!viewerSettingsOpen)}
+                              className={`p-3 backdrop-blur-md rounded-xl transition-all shadow-lg border ${
+                                viewerSettingsOpen
+                                  ? 'bg-[#8d775e] border-white/10 text-white'
+                                  : 'bg-white/90 dark:bg-black/80 border-white/20 dark:border-white/10 text-gray-700 dark:text-gray-300'
+                              }`}
+                              title={viewerSettingsOpen ? "Hide Settings" : "Show Settings"}
+                            >
+                              <SlidersHorizontal size={18} />
+                            </button>
+
+                            {/* Zoom Controls */}
+                            <div className='bg-white/90 dark:bg-black/80 backdrop-blur-md rounded-xl shadow-lg border border-white/20 dark:border-white/10 overflow-hidden'>
+                              <button
+                                onClick={handleZoomIn}
+                                className='p-3 hover:bg-gray-100 dark:hover:bg-white/10 transition-all border-b border-gray-200 dark:border-white/10'
+                                title="Zoom In"
+                              >
+                                <Plus size={18} className='text-gray-700 dark:text-gray-300' />
+                              </button>
+                              <button
+                                onClick={handleZoomOut}
+                                className='p-3 hover:bg-gray-100 dark:hover:bg-white/10 transition-all'
+                                title="Zoom Out"
+                              >
+                                <Minus size={18} className='text-gray-700 dark:text-gray-300' />
+                              </button>
+                            </div>
+
+                            {/* Reset Camera */}
+                            <button
+                              onClick={handleResetCamera}
+                              className='p-3 bg-white/90 dark:bg-black/80 backdrop-blur-md rounded-xl hover:bg-white dark:hover:bg-black/90 transition-all shadow-lg border border-white/20 dark:border-white/10'
+                              title="Reset Camera"
+                            >
+                              <RotateCcw size={18} className='text-gray-700 dark:text-gray-300' />
+                            </button>
+
+                            {/* Auto-Rotate Toggle */}
+                            <button
+                              onClick={toggleAutoRotate}
+                              className={`p-3 backdrop-blur-md rounded-xl transition-all shadow-lg border ${
+                                autoRotateEnabled 
+                                  ? 'bg-[#8d775e] border-white/10 text-white' 
+                                  : 'bg-white/90 dark:bg-black/80 border-white/20 dark:border-white/10 text-gray-700 dark:text-gray-300'
+                              }`}
+                              title={autoRotateEnabled ? "Disable Auto-Rotate" : "Enable Auto-Rotate"}
+                            >
+                              <RotateCcw size={18} className={autoRotateEnabled ? 'animate-spin' : ''} style={{ animationDuration: '3s' }} />
+                            </button>
+                          </div>
+
+                          {/* Settings Panel */}
+                          <AnimatePresence>
+                            {viewerSettingsOpen && (
+                              <motion.div
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -10 }}
+                                className='absolute bottom-4 left-4 z-20 w-[260px] bg-white/95 dark:bg-black/85 backdrop-blur-md rounded-2xl border border-white/20 dark:border-white/10 shadow-2xl p-4'
+                              >
+                                <div className='flex items-center justify-between mb-3'>
+                                  <p className='text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400'>Viewer Settings</p>
+                                  <button
+                                    onClick={() => setViewerSettingsOpen(false)}
+                                    className='p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-all'
+                                  >
+                                    <X size={14} className='text-gray-500 dark:text-gray-400' />
+                                  </button>
+                                </div>
+
+                                <div className='space-y-3'>
+                                  <div className='space-y-1'>
+                                    <div className='flex items-center justify-between'>
+                                      <span className='text-[10px] font-semibold text-gray-600 dark:text-gray-300'>View Preset</span>
+                                      <span className='text-[9px] text-gray-400'>Quick angles</span>
+                                    </div>
+                                    <div className='grid grid-cols-4 gap-2'>
+                                      <button onClick={() => handleSetView('0deg 75deg 105%')} className='py-1 rounded-lg text-[9px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/20 transition-all'>Front</button>
+                                      <button onClick={() => handleSetView('90deg 75deg 105%')} className='py-1 rounded-lg text-[9px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/20 transition-all'>Side</button>
+                                      <button onClick={() => handleSetView('0deg 10deg 105%')} className='py-1 rounded-lg text-[9px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/20 transition-all'>Top</button>
+                                      <button onClick={() => handleSetView('45deg 60deg 110%')} className='py-1 rounded-lg text-[9px] font-bold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-white/20 transition-all'>Iso</button>
+                                    </div>
+                                  </div>
+
+                                  <div className='space-y-1'>
+                                    <div className='flex items-center justify-between'>
+                                      <span className='text-[10px] font-semibold text-gray-600 dark:text-gray-300'>Zoom</span>
+                                      <span className='text-[9px] text-gray-400'>{viewerFov}° FOV</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="20"
+                                      max="80"
+                                      value={viewerFov}
+                                      onChange={(e) => {
+                                        const nextFov = Number(e.target.value)
+                                        setViewerFov(nextFov)
+                                        if (modelRef.current) modelRef.current.fieldOfView = `${nextFov}deg`
+                                      }}
+                                      className='w-full accent-[#8d775e]'
+                                    />
+                                  </div>
+
+                                  <div className='space-y-1'>
+                                    <div className='flex items-center justify-between'>
+                                      <span className='text-[10px] font-semibold text-gray-600 dark:text-gray-300'>Lighting</span>
+                                      <span className='text-[9px] text-gray-400'>{viewerExposure.toFixed(1)}x</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="0.6"
+                                      max="2.0"
+                                      step="0.1"
+                                      value={viewerExposure}
+                                      onChange={(e) => setViewerExposure(Number(e.target.value))}
+                                      className='w-full accent-[#8d775e]'
+                                    />
+                                  </div>
+
+                                  <div className='space-y-1'>
+                                    <div className='flex items-center justify-between'>
+                                      <span className='text-[10px] font-semibold text-gray-600 dark:text-gray-300'>Shadows</span>
+                                      <span className='text-[9px] text-gray-400'>{viewerShadow.toFixed(1)}</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="0"
+                                      max="2"
+                                      step="0.1"
+                                      value={viewerShadow}
+                                      onChange={(e) => setViewerShadow(Number(e.target.value))}
+                                      className='w-full accent-[#8d775e]'
+                                    />
+                                  </div>
+
+                                  <div className='space-y-1'>
+                                    <div className='flex items-center justify-between'>
+                                      <span className='text-[10px] font-semibold text-gray-600 dark:text-gray-300'>Auto-Rotate Speed</span>
+                                      <span className='text-[9px] text-gray-400'>{viewerRotateSpeed}°/s</span>
+                                    </div>
+                                    <input
+                                      type="range"
+                                      min="5"
+                                      max="60"
+                                      step="5"
+                                      value={viewerRotateSpeed}
+                                      onChange={(e) => setViewerRotateSpeed(Number(e.target.value))}
+                                      className='w-full accent-[#8d775e]'
+                                    />
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
+                          {/* Help Panel */}
+                          <AnimatePresence>
+                            {showHelp && (
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className='absolute bottom-4 left-4 z-30 w-[260px] bg-white/95 dark:bg-black/85 backdrop-blur-md rounded-2xl border border-white/20 dark:border-white/10 shadow-2xl p-4'
+                              >
+                                <div className='flex items-center justify-between mb-3'>
+                                  <p className='text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400'>3D Viewer Controls</p>
+                                  <button
+                                    onClick={() => setShowHelp(false)}
+                                    className='p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-all'
+                                  >
+                                    <X size={14} className='text-gray-500 dark:text-gray-400' />
+                                  </button>
+                                </div>
+
+                                <div className='space-y-3 text-[11px] text-gray-700 dark:text-gray-300'>
+                                  <div className='flex items-start gap-3'>
+                                    <div className='p-2 bg-[#8d775e]/10 rounded-lg shrink-0'>
+                                      <MousePointer2 size={16} className='text-[#8d775e]' />
+                                    </div>
+                                    <div>
+                                      <p className='font-semibold text-gray-900 dark:text-white'>Rotate</p>
+                                      <p className='text-[10px] text-gray-600 dark:text-gray-400'>Click and drag to rotate the model</p>
+                                    </div>
+                                  </div>
+
+                                  <div className='flex items-start gap-3'>
+                                    <div className='p-2 bg-[#8d775e]/10 rounded-lg shrink-0'>
+                                      <ZoomIn size={16} className='text-[#8d775e]' />
+                                    </div>
+                                    <div>
+                                      <p className='font-semibold text-gray-900 dark:text-white'>Zoom</p>
+                                      <p className='text-[10px] text-gray-600 dark:text-gray-400'>Scroll or use +/− buttons and the Zoom slider</p>
+                                    </div>
+                                  </div>
+
+                                  <div className='flex items-start gap-3'>
+                                    <div className='p-2 bg-[#8d775e]/10 rounded-lg shrink-0'>
+                                      <Move size={16} className='text-[#8d775e]' />
+                                    </div>
+                                    <div>
+                                      <p className='font-semibold text-gray-900 dark:text-white'>Pan</p>
+                                      <p className='text-[10px] text-gray-600 dark:text-gray-400'>Right-click and drag (Desktop)</p>
+                                    </div>
+                                  </div>
+
+                                  <div className='flex items-start gap-3'>
+                                    <div className='p-2 bg-[#8d775e]/10 rounded-lg shrink-0'>
+                                      <Smartphone size={16} className='text-[#8d775e]' />
+                                    </div>
+                                    <div>
+                                      <p className='font-semibold text-gray-900 dark:text-white'>Touch</p>
+                                      <p className='text-[10px] text-gray-600 dark:text-gray-400'>One finger to rotate, two to zoom/pan</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
                           <model-viewer
                             ref={modelRef}
                             src={meshyModelUrl}
@@ -617,9 +928,13 @@ const ThreedGenerator = () => {
                             ar
                             ar-modes="webxr scene-viewer quick-look"
                             camera-controls
-                            auto-rotate
-                            shadow-intensity="1"
-                            exposure="1.2"
+                            auto-rotate={autoRotateEnabled ? '' : undefined}
+                            auto-rotate-speed={viewerRotateSpeed}
+                            shadow-intensity={viewerShadow}
+                            exposure={viewerExposure}
+                            field-of-view={`${viewerFov}deg`}
+                            min-field-of-view="20deg"
+                            max-field-of-view="80deg"
                             style={{ width: '100%', height: '100%' }}
                             className='rounded-3xl'
                           >
