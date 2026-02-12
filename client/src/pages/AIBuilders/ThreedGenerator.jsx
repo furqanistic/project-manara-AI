@@ -36,12 +36,25 @@ import {
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
-import { useLocation, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 const STYLES = [
   { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors', color: '#de7c7c' },
   { id: 'architectural', label: 'Architectural White', description: 'Clean, neutral palette', color: '#8d775e' }
 ]
+
+const BASE_3D_PROMPT = [
+  'Create a realistic 3D architectural render from the floor plan.',
+  'Use a 3/4 angled bird\'s-eye perspective (not top-down), camera tilt ~30-45 degrees, with visible wall height, thickness, depth, and cast shadows.',
+  'Show extruded walls, doors, windows, and furniture with realistic materials, ambient occlusion, and directional lighting.',
+  'Style: dollhouse cutaway / isometric-like interior render with depth and volume.',
+  'Avoid: flat top-down view, orthographic plan, 2D diagram, colored floor plan.'
+].join(' ')
+
+const STYLE_PROMPTS = {
+  colorful: 'Use vibrant yet realistic materials and colors. Balanced contrast and warm lighting.',
+  architectural: 'Use a clean neutral palette: white walls, light wood floors, soft daylight.'
+}
 
 const LOADING_PHASES = [
   "Analyzing structures...",
@@ -64,7 +77,9 @@ const ThreedGenerator = () => {
   const modelRef = useRef(null)
   const viewerContainerRef = useRef(null)
   const pollingRef = useRef(null)
+  const modelUrlWaitRef = useRef(0)
   const location = useLocation()
+  const navigate = useNavigate()
   const { id } = useParams()
   
   // State for the current project
@@ -114,6 +129,9 @@ const ThreedGenerator = () => {
         window.history.replaceState({}, document.title);
     } else if (location.state?.project) {
         handleLoadFromHistory(location.state.project);
+        if (location.state?.sourceImage) {
+          setSourceImage(location.state.sourceImage);
+        }
         window.history.replaceState({}, document.title);
     } else if (location.state?.sourceImage) {
         setSourceImage(location.state.sourceImage);
@@ -159,7 +177,8 @@ const ThreedGenerator = () => {
     }
   }
 
-  const handleGenerate = async (overriddenPrompt = null) => {
+  const handleGenerate = async (overriddenPrompt = null, options = {}) => {
+    const { forceRegenerate = false } = options
     if (!sourceImage) {
       toast.error('Please upload a floor plan first', { id: 'no-source-image' })
       return
@@ -168,7 +187,7 @@ const ThreedGenerator = () => {
     const isIteration = step === 'result' || !!overriddenPrompt || !!prompt.trim();
     const currentPrompt = overriddenPrompt || prompt;
 
-    if (isIteration && !currentPrompt.trim() && !overriddenPrompt) {
+    if (isIteration && !currentPrompt.trim() && !forceRegenerate) {
       toast.error("Please describe your changes", { id: 'missing-prompt' })
       return
     }
@@ -178,36 +197,78 @@ const ThreedGenerator = () => {
     setResultTab('image')
     setMeshyModelUrl(null)
     
-    if (isIteration) {
+    if (isIteration && currentPrompt.trim()) {
       setChatHistory(prev => [...prev, { role: 'user', content: currentPrompt }])
       setPrompt('')
     }
 
     try {
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => Math.min(prev + 10, 90))
-      }, 300)
+      const stylePrompt = STYLE_PROMPTS[selectedStyle] || STYLE_PROMPTS.architectural
+      const composedPrompt = currentPrompt.trim()
+        ? `${currentPrompt}\n\n${BASE_3D_PROMPT}\n${stylePrompt}`
+        : `${BASE_3D_PROMPT}\n${stylePrompt}`
 
       const payload = {
         image: sourceImage,
         mimeType: sourceImage.split(';')[0].split(':')[1],
         style: selectedStyle,
-        prompt: isIteration ? currentPrompt : null,
+        prompt: composedPrompt,
       }
 
-      if (currentProjectId) payload.projectId = currentProjectId;
+      if (currentProjectId) payload.projectId = currentProjectId
 
-      const response = await api.post('/3d/visualize', payload)
-      clearInterval(progressInterval)
+      let response
+      let lastError
+      for (let attempt = 1; attempt <= 3; attempt += 1) {
+        try {
+          response = await api.post('/3d/visualize', payload, {
+            onUploadProgress: (event) => {
+              if (!event.total) return
+              const next = Math.min(100, Math.round((event.loaded / event.total) * 100))
+              setUploadProgress(next)
+            }
+          })
+          lastError = null
+          break
+        } catch (err) {
+          lastError = err
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 400 * attempt))
+          }
+        }
+      }
+
+      if (lastError) {
+        throw lastError
+      }
+
       setUploadProgress(100)
 
       if (response.data && response.data.model) {
-        const updatedModel = response.data.model
+        let updatedModel = response.data.model
+
+        if (!updatedModel?.versions?.length || !updatedModel.versions[updatedModel.versions.length - 1]?.image) {
+          const modelId = updatedModel?._id || currentProjectId
+          if (modelId) {
+            try {
+              const refreshed = await api.get(`/3d/projects/${modelId}`)
+              if (refreshed.data?.data) updatedModel = refreshed.data.data
+            } catch (refreshErr) {
+              console.error('Failed to refresh model:', refreshErr)
+            }
+          }
+        }
+
         setVersions(updatedModel.versions || [])
         setCurrentVersionIndex((updatedModel.versions?.length || 1) - 1)
-        if (!currentProjectId) setCurrentProjectId(updatedModel._id)
+        if (updatedModel?._id) {
+          if (!currentProjectId) setCurrentProjectId(updatedModel._id)
+          if (!id || id !== updatedModel._id) {
+            navigate(`/visualizer/${updatedModel._id}`, { replace: true })
+          }
+        }
         
-        if (isIteration) {
+        if (isIteration && currentPrompt.trim() && step === 'result') {
           setChatHistory(prev => [...prev, { role: 'assistant', content: 'Design updated based on your request.' }])
         } else {
           setStep('result')
@@ -222,25 +283,48 @@ const ThreedGenerator = () => {
     }
   }
 
-  const handleLoadFromHistory = (item) => {
-    setVersions(item.versions || [])
-    setCurrentVersionIndex((item.versions?.length || 0) - 1)
-    setSourceImage(item.sourceImage)
-    setCurrentProjectId(item._id)
-    setChatHistory(item.chatHistory || [])
+  const handleLoadFromHistory = async (item) => {
+    let resolved = item
+    let resolvedSource = item?.sourceImage
+      || item?.versions?.[0]?.image?.url
+      || (item?.versions?.[0]?.image?.data
+        ? `data:${item?.versions?.[0]?.image?.mimeType || 'image/png'};base64,${item?.versions?.[0]?.image?.data}`
+        : null)
+
+    if (!resolvedSource && item?._id) {
+      try {
+        const response = await api.get(`/3d/projects/${item._id}`)
+        if (response.data?.data) {
+          resolved = response.data.data
+          resolvedSource = resolved?.sourceImage
+            || resolved?.versions?.[0]?.image?.url
+            || (resolved?.versions?.[0]?.image?.data
+              ? `data:${resolved?.versions?.[0]?.image?.mimeType || 'image/png'};base64,${resolved?.versions?.[0]?.image?.data}`
+              : null)
+        }
+      } catch (err) {
+        console.error('Failed to refresh project:', err)
+      }
+    }
+
+    setVersions(resolved?.versions || [])
+    setCurrentVersionIndex((resolved?.versions?.length || 0) - 1)
+    setSourceImage(resolvedSource || null)
+    setCurrentProjectId(resolved?._id || null)
+    setChatHistory(resolved?.chatHistory || [])
     setStep('result')
-    setMeshyModelUrl(item.glbUrl || null)
+    setMeshyModelUrl(buildProxyUrl(resolved?.glbUrl) || null)
     
     // Check if we need to resume polling
-    if (item.meshyStatus === 'pending' && item.meshyTaskId) {
+    if (resolved?.meshyStatus === 'pending' && resolved?.meshyTaskId) {
       setMeshyModelUrl(null)
       setMeshyProgress(0)
       setResultTab('image')
       setIsConvertingTo3D(false)
-      startPolling(item.meshyTaskId, item._id)
-    } else if (item.meshyStatus === 'succeeded' && item.glbUrl) {
+      startPolling(resolved.meshyTaskId, resolved._id)
+    } else if (resolved?.meshyStatus === 'succeeded' && resolved?.glbUrl) {
       setMeshyProgress(100)
-      setMeshyModelUrl(item.glbUrl)
+      setMeshyModelUrl(resolved.glbUrl)
       setResultTab('3d')
     } else {
       setMeshyProgress(0)
@@ -263,19 +347,41 @@ const ThreedGenerator = () => {
 
         if (taskData.status === 'SUCCEEDED') {
           clearInterval(pollingRef.current)
-          // Fetch the updated model to get the Cloudinary GLB URL
-          const modelResponse = await api.get(`/3d/my-models`)
-          const updatedModel = modelResponse.data.data.find(m => m._id === pId)
-          if (updatedModel?.glbUrl) {
-            setMeshyModelUrl(updatedModel.glbUrl)
-            setResultTab('3d')
+          const meshyGlbUrl =
+            taskData?.model_urls?.glb ||
+            taskData?.model_urls?.glb_url ||
+            taskData?.model_urls?.glbUrl
+
+          let resolvedGlbUrl = meshyGlbUrl
+
+          if (!resolvedGlbUrl && pId) {
+            try {
+              const modelResponse = await api.get(`/3d/projects/${pId}`)
+              resolvedGlbUrl = modelResponse.data?.data?.glbUrl || null
+            } catch (fetchErr) {
+              console.error('Failed to refresh project GLB URL:', fetchErr)
+            }
           }
-          setIsConvertingTo3D(false)
-          toast.success('3D object ready!', { id: 'meshy-success' })
+
+          if (resolvedGlbUrl) {
+            setMeshyModelUrl(buildProxyUrl(resolvedGlbUrl))
+            setResultTab('3d')
+            setIsConvertingTo3D(false)
+            modelUrlWaitRef.current = 0
+            toast.success('3D object ready!', { id: 'meshy-success' })
+          } else {
+            modelUrlWaitRef.current += 1
+            if (modelUrlWaitRef.current >= 5) {
+              clearInterval(pollingRef.current)
+              setIsConvertingTo3D(false)
+              modelUrlWaitRef.current = 0
+              toast.error('3D model URL is not available yet. Please try again shortly.', { id: 'meshy-url-missing' })
+            }
+          }
         } else if (taskData.status === 'FAILED' || taskData.status === 'EXPIRED') {
           clearInterval(pollingRef.current)
           setIsConvertingTo3D(false)
-          toast.error('3D conversion failed on Meshy', { id: 'meshy-fail' })
+          toast.error('3D conversion failed', { id: 'meshy-fail' })
         }
       } catch (err) {
         console.error('Polling error:', err)
@@ -299,6 +405,7 @@ const ThreedGenerator = () => {
 
     setIsConvertingTo3D(true)
     setMeshyProgress(0)
+    setMeshyModelUrl(null)
     setResultTab('3d')
     
     try {
@@ -322,8 +429,10 @@ const ThreedGenerator = () => {
 
   const handleDownload = async () => {
     const currentRender = versions[currentVersionIndex]?.image
-    if (!currentRender) return
-    const imageUrl = currentRender.url || `data:${currentRender.mimeType || 'image/png'};base64,${currentRender.data}`
+    const imageUrl = currentRender?.url
+      || (currentRender?.data ? `data:${currentRender.mimeType || 'image/png'};base64,${currentRender.data}` : null)
+      || sourceImage
+    if (!imageUrl) return
 
     const toastId = toast.loading("Preparing download...")
     const success = await downloadImage(imageUrl, `manara-3d-${Date.now()}`)
@@ -336,10 +445,10 @@ const ThreedGenerator = () => {
   }
 
   const handleDownloadGLB = async () => {
-    if (!meshyModelUrl) return
+    if (!proxiedModelUrl) return
     try {
       toast.loading('Preparing 3D model...', { id: 'download-glb' })
-      const response = await fetch(meshyModelUrl)
+      const response = await fetch(proxiedModelUrl)
       const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
@@ -354,7 +463,7 @@ const ThreedGenerator = () => {
       console.error('Download error:', err)
       // Fallback
       const link = document.createElement('a')
-      link.href = meshyModelUrl
+      link.href = meshyModelUrl || proxiedModelUrl
       link.download = `manara-design-${Date.now()}.glb`
       link.target = "_blank"
       link.click()
@@ -440,6 +549,19 @@ const ThreedGenerator = () => {
   const toggleMobileView = () => setStep(step === 'config' ? 'result' : 'config')
 
   const currentVersion = versions[currentVersionIndex]
+  const currentRenderImage = currentVersion?.image
+  const displayImageSrc = currentRenderImage?.url
+    || (currentRenderImage?.data ? `data:${currentRenderImage?.mimeType};base64,${currentRenderImage?.data}` : null)
+    || sourceImage
+
+  const buildProxyUrl = (rawUrl) => {
+    if (!rawUrl) return null
+    if (rawUrl.includes('/3d/meshy/proxy?url=')) return rawUrl
+    const base = api?.defaults?.baseURL?.replace(/\/+$/, '') || ''
+    return `${base}/3d/meshy/proxy?url=${encodeURIComponent(rawUrl)}`
+  }
+
+  const proxiedModelUrl = buildProxyUrl(meshyModelUrl)
 
   return (
     <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
@@ -491,6 +613,20 @@ const ThreedGenerator = () => {
                       {sourceImage ? <img src={sourceImage} className='h-full object-contain p-2' /> : <div className='text-center text-gray-400'><Plus size={24} className='mx-auto mb-2 opacity-50'/><span className='text-[10px] font-bold uppercase'>Upload Plan</span></div>}
                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
                     </div>
+                    {isGenerating && step === 'config' && (
+                      <div className='space-y-2'>
+                        <div className='flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-gray-400'>
+                          <span>Uploading image</span>
+                          <span>{uploadProgress}%</span>
+                        </div>
+                        <div className='h-2 w-full rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden'>
+                          <div
+                            className='h-full bg-[#8d775e] transition-all duration-300'
+                            style={{ width: `${uploadProgress}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </section>
 
                   <section className='space-y-3'>
@@ -610,6 +746,18 @@ const ThreedGenerator = () => {
                   </motion.button>
                 )}
                 <motion.button 
+                  onClick={() => handleGenerate(null, { forceRegenerate: true })}
+                  disabled={isGenerating || !currentVersion}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className='flex items-center gap-2.5 px-5 py-2 bg-[#8d775e] text-white rounded-xl text-[10px] font-black hover:bg-[#7a6650] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed'
+                >
+                  <div className='p-1 bg-white/20 rounded-lg'>
+                    <RotateCcw size={14} /> 
+                  </div>
+                  <span className='tracking-[0.1em]'>REGENERATE RENDER</span>
+                </motion.button>
+                <motion.button 
                   onClick={handleDownload} 
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -627,14 +775,14 @@ const ThreedGenerator = () => {
           <div className='flex-1 relative flex flex-col overflow-hidden'>
             <AnimatePresence mode='wait'>
               {isGenerating ? (
-                <motion.div key='loading' className='text-center space-y-4'>
+                <motion.div key='loading' className='flex-1 flex flex-col items-center justify-center text-center space-y-4'>
                   <div className='relative w-16 h-16 mx-auto flex items-center justify-center'>
                     <div className='absolute inset-0 border-t-2 border-[#8d775e] rounded-full animate-spin' />
                     <Box size={24} className='text-[#8d775e] animate-pulse' />
                   </div>
                   <p className='text-[10px] font-black uppercase tracking-widest animate-pulse'>{LOADING_PHASES[Math.floor(uploadProgress/20)]}</p>
                 </motion.div>
-              ) : currentVersion ? (
+              ) : displayImageSrc ? (
                 <motion.div key='content' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className='flex-1 w-full flex flex-col p-3 md:p-5 overflow-hidden'>
                   
                   {(meshyModelUrl || isConvertingTo3D) && (
@@ -656,18 +804,33 @@ const ThreedGenerator = () => {
                     </div>
                   )}
 
+                  {isConvertingTo3D && (
+                    <div className='mb-4 px-4'>
+                      <div className='flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-gray-400 mb-2'>
+                        <span>Conversion progress</span>
+                        <span>{meshyProgress}%</span>
+                      </div>
+                      <div className='h-2 w-full rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden'>
+                        <div
+                          className='h-full bg-[#8d775e] transition-all duration-300'
+                          style={{ width: `${meshyProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className='flex-1 relative w-full overflow-hidden'>
                     <div className='absolute inset-0'>
-                      {(!meshyModelUrl || resultTab === 'image') && (
+                      {(resultTab === 'image' || (!meshyModelUrl && !isConvertingTo3D)) && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full bg-white dark:bg-white/5 rounded-3xl overflow-hidden border border-[#E5E5E7] dark:border-white/5 flex flex-col items-center justify-center relative'>
                           <img 
-                            src={currentVersion.image?.url || `data:${currentVersion.image?.mimeType};base64,${currentVersion.image?.data}`} 
+                            src={displayImageSrc}
                             className='max-h-full max-w-full object-contain p-4' 
                           />
                         </motion.div>
                       )}
                       
-                      {meshyModelUrl && resultTab === '3d' && (
+                      {proxiedModelUrl && resultTab === '3d' && (
                         <motion.div ref={viewerContainerRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full relative bg-gradient-to-br from-gray-50 to-gray-100 dark:from-[#0a0a0a] dark:to-[#1a1a1a] rounded-3xl overflow-hidden border border-[#E5E5E7] dark:border-white/5 shadow-2xl'>
                           {/* Right Side Controls */}
                           <div className='absolute top-4 right-4 z-20 flex flex-col gap-2'>
@@ -923,7 +1086,7 @@ const ThreedGenerator = () => {
 
                           <model-viewer
                             ref={modelRef}
-                            src={meshyModelUrl}
+                            src={proxiedModelUrl}
                             alt="3D generated model"
                             ar
                             ar-modes="webxr scene-viewer quick-look"
@@ -960,6 +1123,22 @@ const ThreedGenerator = () => {
                           </div>
                           <h4 className='font-bold text-xs uppercase tracking-widest'>Generating 3D Object...</h4>
                           <p className='text-[10px] text-gray-400 mt-2 max-w-[200px]'>You can safely close this page or check other projects; we'll keep building it for you in the background.</p>
+                        </motion.div>
+                      )}
+
+                      {!proxiedModelUrl && !isConvertingTo3D && resultTab === '3d' && (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full bg-white dark:bg-white/5 rounded-3xl overflow-hidden border border-[#E5E5E7] dark:border-white/5 flex flex-col items-center justify-center p-8 text-center'>
+                          <div className='w-12 h-12 rounded-full bg-[#8d775e]/10 flex items-center justify-center text-[#8d775e] mb-4'>
+                            <Box size={18} />
+                          </div>
+                          <h4 className='font-bold text-xs uppercase tracking-widest'>3D model not ready</h4>
+                          <p className='text-[10px] text-gray-400 mt-2 max-w-[220px]'>We could not load the 3D model yet. Please try again in a moment.</p>
+                          <button
+                            onClick={() => setResultTab('image')}
+                            className='mt-4 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider bg-[#8d775e] text-white'
+                          >
+                            Back to Render
+                          </button>
                         </motion.div>
                       )}
                     </div>

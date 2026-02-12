@@ -159,7 +159,12 @@ const ProjectsPage = () => {
     if (project.type === "moodboard") {
       navigate(`/moodboards/${project.id}`, { state: { project: project.raw } });
     } else if (project.type === "threed") {
-      navigate(`/visualizer/${project.id}`, { state: { project: project.raw } });
+      navigate(`/visualizer/${project.id}`, { 
+        state: { 
+          project: project.raw,
+          sourceImage: project.raw?.sourceImage || project.thumbnail || null
+        } 
+      });
     } else {
       navigate(`/floorplans/${project.id}`, { state: { project: project.raw } });
     }

@@ -279,11 +279,19 @@ export const getMeshyStatus = async (req, res, next) => {
       const model = await ThreeDModel.findById(projectId);
       if (model) {
         model.meshyProgress = taskData.progress;
+        const latestGlbUrl =
+          taskData?.model_urls?.glb ||
+          taskData?.model_urls?.glb_url ||
+          taskData?.model_urls?.glbUrl;
+
+        if (latestGlbUrl) {
+          model.glbUrl = latestGlbUrl;
+        }
         
         if (taskData.status === 'SUCCEEDED' && model.meshyStatus !== 'succeeded') {
           const result = await processMeshyResult(taskId, taskData.model_urls);
-          model.glbUrl = result.url;
-          model.glbPath = result.path;
+          model.glbUrl = result.url || model.glbUrl;
+          model.glbPath = null;
           model.meshyStatus = 'succeeded';
         } else if (taskData.status === 'FAILED' || taskData.status === 'EXPIRED') {
           model.meshyStatus = 'failed';
@@ -302,6 +310,38 @@ export const getMeshyStatus = async (req, res, next) => {
     next(createError(500, 'Failed to check 3D conversion status'));
   }
 };
+
+export const proxyMeshyModel = async (req, res, next) => {
+  try {
+    const { url } = req.query
+    if (!url) {
+      return next(createError(400, 'url is required'))
+    }
+
+    let parsed
+    try {
+      parsed = new URL(url)
+    } catch {
+      return next(createError(400, 'Invalid URL'))
+    }
+
+    if (!parsed.hostname.endsWith('.meshy.ai')) {
+      return next(createError(403, 'URL not allowed'))
+    }
+
+    const response = await axios.get(url, { responseType: 'arraybuffer' })
+
+    res.set('Content-Type', response.headers['content-type'] || 'model/gltf-binary')
+    if (response.headers['content-length']) {
+      res.set('Content-Length', response.headers['content-length'])
+    }
+    res.set('Cache-Control', 'public, max-age=300')
+    res.status(200).send(Buffer.from(response.data))
+  } catch (error) {
+    console.error('Error in proxyMeshyModel:', error)
+    next(createError(500, 'Failed to fetch 3D model'))
+  }
+}
 
 export const updateThreeDModel = async (req, res, next) => {
   try {

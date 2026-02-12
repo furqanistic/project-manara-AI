@@ -7,6 +7,7 @@ import {
     generateVisualization,
     getMeshyStatus,
     getMyThreeDModels,
+    proxyMeshyModel,
     getThreeDModel,
     updateThreeDModel,
 } from '../controllers/threeDController.js'
@@ -32,6 +33,9 @@ const upload = multer({
 })
 
 // All routes are protected
+// Public proxy (locked to *.meshy.ai in controller)
+router.get('/meshy/proxy', proxyMeshyModel)
+
 router.use(verifyToken)
 
 router.post('/generate', upload.single('image'), generate3D)

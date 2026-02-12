@@ -1,9 +1,5 @@
 import axios from 'axios'
 import dotenv from 'dotenv'
-import fs from 'fs'
-import path from 'path'
-import { v4 as uuidv4 } from 'uuid'
-import { uploadRaw } from './cloudinaryService.js'
 
 dotenv.config()
 
@@ -57,35 +53,8 @@ export const getMeshyTaskStatus = async (taskId) => {
  * Step 3: Handle the successful result
  */
 export const processMeshyResult = async (taskId, modelUrls) => {
-  return await downloadAndSaveModel(modelUrls.glb, taskId)
-}
-
-/**
- * Download GLB file and save locally
- */
-const downloadAndSaveModel = async (glbUrl, taskId) => {
-    console.log(`⬇️ Downloading GLB from: ${glbUrl}`)
-    
-    const response = await axios.get(glbUrl, { responseType: 'arraybuffer' })
-    const buffer = Buffer.from(response.data)
-    
-    const filename = `meshy-${taskId}.glb`
-    const uploadsDir = path.join(process.cwd(), 'uploads/3d')
-    
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true })
-    }
-    
-    const filePath = path.join(uploadsDir, filename)
-    fs.writeFileSync(filePath, buffer)
-    
-    // Upload to Cloudinary
-    const cloudinaryResult = await uploadRaw(buffer, 'manara-ai/3d-models')
-    
-    return {
-        url: cloudinaryResult.secure_url,
-        localUrl: `/uploads/3d/${filename}`,
-        path: filePath,
-        meshyId: taskId
-    }
+  return {
+    url: modelUrls?.glb || modelUrls?.glb_url || modelUrls?.glbUrl || null,
+    meshyId: taskId
+  }
 }
