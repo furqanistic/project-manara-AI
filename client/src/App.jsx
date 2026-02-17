@@ -11,6 +11,7 @@ import {
     useLocation,
 } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
+import AvatarCreationModal from './components/Auth/AvatarCreationModal'
 import OnboardingModal from './components/Auth/OnboardingModal'
 import ScrollToTop from './components/Layout/ScrollToTop'
 import { MoodboardHistoryDetails } from './components/Moodboard/MoodboardHistoryDetails'
@@ -67,40 +68,54 @@ const RequireAuth = ({ children, requireAdmin = false }) => {
 }
 
 const OnboardingWrapper = () => {
-    const { currentUser } = useSelector((state) => state.user);
-    const location = useLocation();
-    
-    // Check if the user has completed the NEW 10-step onboarding
-    // We check for the 'identity' field which is unique to the new form
-    const isNewOnboardingComplete = currentUser?.isOnboarded && currentUser?.onboardingData?.identity;
-    
-    // Debug logging for troubleshooting
-    useEffect(() => {
-        if (currentUser) {
-            console.log('Onboarding Check:', {
-                user: currentUser.email,
-                isOnboarded: currentUser.isOnboarded,
-                hasNewData: !!currentUser?.onboardingData?.identity,
-                path: location.pathname
-            });
-        }
-    }, [currentUser, location.pathname]);
-    
-    // Don't show if not logged in or already fully onboarded with the new data
-    if (!currentUser || isNewOnboardingComplete) {
-        return null;
-    }
+  const { currentUser } = useSelector((state) => state.user);
+  const location = useLocation();
 
-    // Don't show on auth page
-    if (location.pathname === '/auth') {
-        return null;
+  const hasSimplifiedOnboarding = !!currentUser?.onboardingData?.flow?.basicComplete;
+  const hasLegacyOnboarding = !!currentUser?.onboardingData?.identity;
+  const hasAvatar = !!currentUser?.onboardingData?.avatar?.completed;
+
+  // Debug logging for troubleshooting
+  useEffect(() => {
+    if (currentUser) {
+      console.log('Onboarding Check:', {
+        user: currentUser.email,
+        isOnboarded: currentUser.isOnboarded,
+        hasSimplifiedOnboarding,
+        hasLegacyOnboarding,
+        hasAvatar,
+        path: location.pathname,
+      });
     }
-    
+  }, [currentUser, location.pathname, hasSimplifiedOnboarding, hasLegacyOnboarding, hasAvatar]);
+
+  // Don't show if not logged in
+  if (!currentUser) {
+    return null;
+  }
+
+  // Don't show on auth page
+  if (location.pathname === '/auth') {
+    return null;
+  }
+
+  if (!hasSimplifiedOnboarding && !hasLegacyOnboarding) {
     return (
-        <React.Suspense fallback={null}>
-            <OnboardingModal />
-        </React.Suspense>
+      <React.Suspense fallback={null}>
+        <OnboardingModal />
+      </React.Suspense>
     );
+  }
+
+  if (!hasAvatar) {
+    return (
+      <React.Suspense fallback={null}>
+        <AvatarCreationModal />
+      </React.Suspense>
+    );
+  }
+
+  return null;
 };
 
 const AppRoutes = () => {
@@ -113,46 +128,11 @@ const AppRoutes = () => {
         <Route path="/auth" element={<AuthPage />} />
 
         {/* Protected routes - wrap with RequireAuth */}
-        <Route
-          path="/visualizer"
-          element={
-            <RequireAuth>
-              <ThreedGenerator />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/visualizer/:id"
-          element={
-            <RequireAuth>
-              <ThreedGenerator />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/moodboard"
-          element={
-            <RequireAuth>
-              <MoodboardGenerator />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/floorplans"
-          element={
-            <RequireAuth>
-              <FloorPlanGenerator />
-            </RequireAuth>
-          }
-        />
-        <Route
-          path="/floorplans/:id"
-          element={
-            <RequireAuth>
-              <FloorPlanGenerator />
-            </RequireAuth>
-          }
-        />
+        <Route path="/visualizer" element={<ThreedGenerator />} />
+        <Route path="/visualizer/:id" element={<ThreedGenerator />} />
+        <Route path="/moodboard" element={<MoodboardGenerator />} />
+        <Route path="/floorplans" element={<FloorPlanGenerator />} />
+        <Route path="/floorplans/:id" element={<FloorPlanGenerator />} />
         <Route
           path="/projects"
           element={

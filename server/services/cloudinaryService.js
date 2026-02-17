@@ -94,6 +94,27 @@ export const uploadRaw = (fileData, folder = 'manara-ai/3d-models') => {
 }
 
 /**
+ * Upload an SVG avatar to Cloudinary
+ * @param {String} svgString - Raw SVG markup
+ * @param {String} folder - Optional folder name
+ * @returns {Promise<Object>} - Cloudinary upload result
+ */
+export const uploadAvatarSvg = (svgString, folder = 'manara-ai/avatars') => {
+  return new Promise((resolve, reject) => {
+    try {
+      if (!svgString || typeof svgString !== 'string') {
+        return reject(new Error('Invalid SVG payload'))
+      }
+      const base64Svg = Buffer.from(svgString).toString('base64')
+      const dataUri = `data:image/svg+xml;base64,${base64Svg}`
+      uploadImage(dataUri, folder).then(resolve).catch(reject)
+    } catch (error) {
+      reject(error)
+    }
+  })
+}
+
+/**
  * Delete an asset from Cloudinary
  * @param {String} url - The URL of the asset to delete
  * @param {String} resourceType - The resource type ('image', 'video', or 'raw')
@@ -137,5 +158,6 @@ export default {
     uploadImage,
     uploadVideo,
     uploadRaw,
+    uploadAvatarSvg,
     deleteAsset
 }

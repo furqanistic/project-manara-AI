@@ -89,6 +89,16 @@ const SubscriptionPage = () => {
           </h1>
         </motion.div>
 
+        {creditBalance === 0 && (
+          <div className='mb-8 p-4 rounded-2xl bg-amber-50 text-amber-900 border border-amber-200 flex items-start gap-3'>
+            <CreditCard size={18} className='mt-0.5' />
+            <div>
+              <p className='font-semibold'>Credits required</p>
+              <p className='text-xs mt-1'>Your balance is 0. AI tools are locked until you add credits.</p>
+            </div>
+          </div>
+        )}
+
         <div className='grid grid-cols-1 xl:grid-cols-12 gap-12'>
           {/* Plan Selection Grid */}
           <div className='xl:col-span-9'>

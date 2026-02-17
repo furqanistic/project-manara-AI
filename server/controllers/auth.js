@@ -8,6 +8,7 @@ import jwt from "jsonwebtoken";
 import mongoose from "mongoose";
 import { createError } from "../error.js";
 import User from "../models/User.js";
+import { uploadAvatarSvg } from "../services/cloudinaryService.js";
 
 const signToken = (id) => {
   const jwtSecret = process.env.JWT_SECRET;
@@ -384,6 +385,64 @@ export const completeOnboarding = async (req, res, next) => {
     });
   } catch (error) {
     console.error("Error in completeOnboarding:", error);
+    next(error);
+  }
+};
+
+export const uploadAvatar = async (req, res, next) => {
+  try {
+    const userId = req.user._id;
+    const { svg, meta = {} } = req.body;
+
+    if (!svg || typeof svg !== "string") {
+      return next(createError(400, "Avatar SVG is required"));
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return next(createError(404, "User not found"));
+    }
+
+    const cloudinaryResult = await uploadAvatarSvg(svg, "manara-ai/avatars");
+    const existingOnboarding = user.onboardingData || {};
+
+    const avatarPayload = {
+      name: meta.name || "",
+      style: meta.style || "",
+      seed: meta.seed || "",
+      palette: meta.palette || "",
+      url: cloudinaryResult.secure_url,
+      publicId: cloudinaryResult.public_id,
+      completed: true,
+    };
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        isOnboarded: true,
+        onboardingData: {
+          ...existingOnboarding,
+          avatar: avatarPayload,
+          flow: {
+            ...(existingOnboarding.flow || {}),
+            avatarComplete: true,
+            basicComplete: true,
+            version: "simplified-v1",
+          },
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
+      status: "success",
+      data: {
+        user: updatedUser,
+        avatar: avatarPayload,
+      },
+    });
+  } catch (error) {
+    console.error("Error in uploadAvatar:", error);
     next(error);
   }
 };

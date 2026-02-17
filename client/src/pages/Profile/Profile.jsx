@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useChangePassword, useCurrentUser, useUpdateProfile } from "@/hooks/useAuth";
 import { AlertCircle, CheckCircle2, Edit2, Lock, Mail, Save, User } from "lucide-react";
-import { getCreditLedger } from "@/lib/credits";
+import { getCreditLedger, getCreditsBalance } from "@/lib/credits";
 import {
   Bar,
   BarChart,
@@ -80,12 +80,15 @@ function Profile() {
   const currentUser = useCurrentUser();
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
+  const avatarUrl = currentUser?.onboardingData?.avatar?.url;
+  const avatarName = currentUser?.onboardingData?.avatar?.name;
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [activeTab, setActiveTab] = useState("profile");
   const [creditLedger, setCreditLedger] = useState(() => getCreditLedger());
+  const [creditBalance, setCreditBalance] = useState(() => getCreditsBalance());
 
   const {
     register: registerProfile,
@@ -138,7 +141,22 @@ function Profile() {
   }, [errorMessage]);
 
   useEffect(() => {
-    setCreditLedger(getCreditLedger());
+    const refreshCredits = () => {
+      setCreditLedger(getCreditLedger());
+      setCreditBalance(getCreditsBalance());
+    };
+    refreshCredits();
+    const handleStorage = (event) => {
+      if (event.key === "manara_credits_balance" || event.key === "manara_credits_ledger") {
+        refreshCredits();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("manara:credits-updated", refreshCredits);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("manara:credits-updated", refreshCredits);
+    };
   }, []);
 
   const onProfileSubmit = async (data) => {
@@ -216,15 +234,24 @@ function Profile() {
         <div className="flex items-center justify-between gap-6 mb-6">
           <div className="flex items-center gap-4">
             <div
-              className="w-14 h-14 rounded-2xl text-white flex items-center justify-center text-xl font-bold"
+              className="w-14 h-14 rounded-2xl text-white flex items-center justify-center text-xl font-bold overflow-hidden"
               style={{ background: `linear-gradient(135deg, ${BRAND_COLOR}, #6b5d50)` }}
             >
-              {getInitials(currentUser?.name)}
+              {avatarUrl ? (
+                <img src={avatarUrl} alt="Profile avatar" className="w-full h-full object-cover" />
+              ) : (
+                getInitials(currentUser?.name)
+              )}
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                 {currentUser?.name || "Your profile"}
               </h1>
+              {avatarName && (
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-1">
+                  Avatar: {avatarName}
+                </p>
+              )}
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {currentUser?.email || "No email"}
               </p>
@@ -262,6 +289,18 @@ function Profile() {
           ))}
         </div>
 
+        {creditBalance === 0 && (
+          <div className="mb-6 p-4 bg-amber-50 text-amber-900 rounded-2xl border border-amber-200 flex gap-3 items-start">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Credits needed</p>
+              <p className="text-xs mt-0.5">
+                Your balance is 0. You will not be able to use the AI tools until you add credits.
+              </p>
+            </div>
+          </div>
+        )}
+
         {successMessage && (
           <div className="mb-6 p-4 bg-emerald-50 text-emerald-900 rounded-2xl border border-emerald-200 flex gap-3 items-start">
             <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5" />
@@ -290,6 +329,11 @@ function Profile() {
                 <p className="text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase">
                   Profile
                 </p>
+              </div>
+
+              <div className="flex items-center justify-between mb-6">
+                <div className="text-xs font-bold uppercase tracking-widest text-gray-400">Credits Balance</div>
+                <div className="text-sm font-bold text-gray-900 dark:text-white">{creditBalance} credits</div>
               </div>
 
               <form onSubmit={handleProfileSubmit(onProfileSubmit)} className="space-y-5">

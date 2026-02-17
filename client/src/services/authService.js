@@ -187,4 +187,18 @@ export const authService = {
       throw error.response?.data || error;
     }
   },
+
+  /**
+   * Upload avatar SVG and save to user onboarding profile
+   * @param {Object} payload - { svg, meta }
+   * @returns {Promise} Updated user data
+   */
+  uploadAvatar: async (payload) => {
+    try {
+      const response = await axiosInstance.post("/auth/avatar", payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 };

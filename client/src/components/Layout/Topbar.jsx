@@ -30,6 +30,8 @@ const TopBar = () => {
   const logoutMutation = useLogout();
   const navigate = useNavigate();
   const location = useLocation();
+  const avatarUrl = currentUser?.onboardingData?.avatar?.url;
+  const avatarName = currentUser?.onboardingData?.avatar?.name;
 
   const dropdownRefs = useRef({});
   const mobileMenuRef = useRef(null);
@@ -222,8 +224,16 @@ const TopBar = () => {
                   onClick={() => toggleDropdown("user")}
                   className="flex items-center gap-2 p-1 pr-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full hover:border-[#8d775e]/30 dark:hover:border-white/20 transition-all shadow-sm group"
                 >
-                  <div className="w-8 h-8 rounded-full bg-[#8d775e] flex items-center justify-center border border-white dark:border-gray-800 shadow-sm text-white">
-                    <User size={16} />
+                  <div className="w-8 h-8 rounded-full bg-[#8d775e] flex items-center justify-center border border-white dark:border-gray-800 shadow-sm text-white overflow-hidden">
+                    {avatarUrl ? (
+                      <img
+                        src={avatarUrl}
+                        alt="User avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <User size={16} />
+                    )}
                   </div>
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white hidden md:block">
                     {currentUser.name?.split(" ")[0]}
@@ -243,6 +253,11 @@ const TopBar = () => {
                         <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
                           {currentUser.name}
                         </p>
+                        {avatarName && (
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 truncate">
+                            Avatar: {avatarName}
+                          </p>
+                        )}
                         <p className="text-[11px] text-[#8d775e] font-bold uppercase tracking-wider mt-0.5">
                           Pro Member
                         </p>

@@ -1350,6 +1350,9 @@ export const generateThreeDScene = async (imageBuffer, mimeType) => {
  * @returns {Promise<Object>} - The generated image data
  */
 export const generateThreeDVisualization = async (imageBuffer, mimeType, options = {}) => {
+  if (!imageBuffer || !mimeType) {
+    throw new Error('Missing image buffer or mime type for 3D visualization')
+  }
   const { style = 'architectural', prompt: customPrompt } = options
 
   let styleInstruction = ''

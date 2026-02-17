@@ -9,6 +9,7 @@ import {
     logout,
     signin,
     signup,
+    uploadAvatar,
     updateUser,
 } from "../controllers/auth.js";
 import { restrictTo, verifyToken } from "../middleware/authMiddleware.js";
@@ -82,6 +83,13 @@ router.put(
  * Body: { ...onboardingData }
  */
 router.post("/onboarding", completeOnboarding);
+
+/**
+ * POST /api/auth/avatar
+ * Upload avatar SVG to Cloudinary and save to user profile
+ * Body: { svg, meta }
+ */
+router.post("/avatar", uploadAvatar);
 
 /**
  * PUT /api/auth/users/:id

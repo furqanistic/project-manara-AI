@@ -32,6 +32,8 @@ import { FloorPlanHistory } from '../../components/FloorPlan/FloorPlanHistory'
 import TopBar from '../../components/Layout/Topbar'
 import api from '../../config/config'
 import { getCreditLedger, getCreditsBalance, spendCredits } from '@/lib/credits'
+import { useSelector } from 'react-redux'
+import CreditConfirmModal from '@/components/Common/CreditConfirmModal'
 
 const BUILDING_TYPES = [
   { id: 'apartment', label: 'Apartment', icon: Layout },
@@ -73,6 +75,7 @@ const STYLES = [
 ]
 
 const FloorPlanGenerator = () => {
+  const { currentUser } = useSelector((state) => state.user)
   const [step, setStep] = useState('config') // 'config' | 'result'
   const [config, setConfig] = useState({
     buildingType: 'apartment',
@@ -88,6 +91,8 @@ const FloorPlanGenerator = () => {
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
   const [creditsBalance, setCreditsBalance] = useState(() => getCreditsBalance())
   const [creditsLedger, setCreditsLedger] = useState(() => getCreditLedger())
+  const [confirmState, setConfirmState] = useState(null)
+  const confirmResolverRef = useRef(null)
   const location = useLocation()
   const { id } = useParams()
   
@@ -116,15 +121,22 @@ const FloorPlanGenerator = () => {
     refreshCredits()
   }, [])
 
-  const confirmCreditSpend = (cost, actionLabel) => {
+  const confirmCreditSpend = async (cost, actionLabel) => {
+    if (!currentUser) {
+      toast.error('Please sign up or log in to use this tool.')
+      navigate('/auth?type=signup', { state: { from: location.pathname } })
+      return false
+    }
     const balance = getCreditsBalance()
     if (balance < cost) {
       toast.error('Not enough credits. Please add more credits to continue.')
+      navigate('/subscription')
       return false
     }
-    const confirmed = window.confirm(
-      `${actionLabel} will use ${cost} credits. You have ${balance} credits. Continue?`
-    )
+    const confirmed = await new Promise((resolve) => {
+      confirmResolverRef.current = resolve
+      setConfirmState({ cost, actionLabel, balance })
+    })
     if (!confirmed) return false
     const result = spendCredits(cost, { action: actionLabel, tool: 'floorplan' })
     if (!result.ok) {
@@ -209,7 +221,7 @@ const FloorPlanGenerator = () => {
 
     const cost = generatedImage ? revisionCost : initialGenerationCost
     const actionLabel = generatedImage ? 'Floor plan revision' : 'Floor plan generation'
-    if (!confirmCreditSpend(cost, actionLabel)) return
+    if (!(await confirmCreditSpend(cost, actionLabel))) return
 
     setIsGenerating(true)
     if (step === 'config') setStep('result')
@@ -253,8 +265,19 @@ const FloorPlanGenerator = () => {
     if (!generatedImage) return
     const imageUrl = generatedImage.url || `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
 
+    const buildingLabel = BUILDING_TYPES.find((item) => item.id === config.buildingType)?.label || 'Plan'
+    const scaleLabel =
+      SCALES_BY_TYPE[config.buildingType]?.find((item) => item.id === config.scale)?.label || ''
+    const rawLabel = `${buildingLabel} ${scaleLabel}`.trim()
+    const safeLabel = rawLabel
+      .toString()
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+    const filename = `Manara_2D_Plan_${safeLabel || "Plan"}`
+
     const toastId = toast.loading("Preparing download...")
-    const success = await downloadImage(imageUrl, `manara-plan-${Date.now()}`)
+    const success = await downloadImage(imageUrl, filename)
     
     if (success) {
       toast.success("Download started", { id: toastId })
@@ -290,7 +313,22 @@ const FloorPlanGenerator = () => {
   }
 
   return (
-    <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
+    <>
+      <CreditConfirmModal
+        isOpen={!!confirmState}
+        cost={confirmState?.cost}
+        balance={confirmState?.balance}
+        actionLabel={confirmState?.actionLabel}
+        onCancel={() => {
+          setConfirmState(null)
+          if (confirmResolverRef.current) confirmResolverRef.current(false)
+        }}
+        onConfirm={() => {
+          setConfirmState(null)
+          if (confirmResolverRef.current) confirmResolverRef.current(true)
+        }}
+      />
+      <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
       <TopBar />
       <div className='w-full bg-white/90 dark:bg-[#0a0a0a] border-b border-[#E5E5E7] dark:border-[#2D2D2F] mt-16'>
         <div className='max-w-6xl mx-auto px-4 sm:px-6 py-2 flex flex-col gap-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300'>
@@ -313,7 +351,7 @@ const FloorPlanGenerator = () => {
       />
 
       {/* Main Container */}
-      <main className='flex-1 relative flex flex-col md:flex-row pt-16 h-full overflow-hidden'>
+      <main className='flex-1 relative flex flex-col md:flex-row pt-0 h-full overflow-hidden'>
         
         {/* Left Section: Controls & Config (Compact Sidebar) */}
         <aside className={`
@@ -642,7 +680,8 @@ const FloorPlanGenerator = () => {
           )}
         </section>
       </main>
-    </div>
+      </div>
+    </>
   )
 }
 

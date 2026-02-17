@@ -38,6 +38,9 @@ export const setCreditsBalance = (nextBalance) => {
   if (typeof window === 'undefined') return DEFAULT_BALANCE
   const safeBalance = Number.isFinite(nextBalance) ? Math.max(0, nextBalance) : DEFAULT_BALANCE
   localStorage.setItem(BALANCE_KEY, String(safeBalance))
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('manara:credits-updated'))
+  }
   return safeBalance
 }
 
@@ -52,6 +55,9 @@ const pushLedgerEntry = (entry) => {
   const ledger = getCreditLedger()
   const nextLedger = [entry, ...ledger].slice(0, 50)
   localStorage.setItem(LEDGER_KEY, JSON.stringify(nextLedger))
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('manara:credits-updated'))
+  }
   return nextLedger
 }
 

@@ -32,8 +32,18 @@ export const generate3D = async (req, res, next) => {
       
       const sourceUpload = await uploadImage(req.body.image, 'manara-ai/source-images')
       sourceImageUrl = sourceUpload.secure_url
-    } else {
-        // Already a URL or handled elsewhere
+    } else if (req.body.image && typeof req.body.image === 'string') {
+      if (!/^https?:\/\//i.test(req.body.image)) {
+        return next(createError(400, 'Image must be a valid URL or base64 data'))
+      }
+      try {
+        const remote = await axios.get(req.body.image, { responseType: 'arraybuffer' })
+        imageBuffer = Buffer.from(remote.data)
+        mimeType = remote.headers['content-type'] || 'image/png'
+      } catch (error) {
+        console.error('Failed to fetch remote image:', error)
+        return next(createError(400, 'Failed to fetch remote image'))
+      }
     }
 
     console.log(`Starting Hunyuan3D-2.1 generation for user ${req.user.id}...`)
@@ -90,8 +100,18 @@ export const generateVisualization = async (req, res, next) => {
 
       const sourceUpload = await uploadImage(req.body.image, 'manara-ai/source-images')
       sourceImageUrl = sourceUpload.secure_url
-    } else {
-        // Fallback for non-base64 image strings if necessary
+    } else if (req.body.image && typeof req.body.image === 'string') {
+      if (!/^https?:\/\//i.test(req.body.image)) {
+        return next(createError(400, 'Image must be a valid URL or base64 data'))
+      }
+      try {
+        const remote = await axios.get(req.body.image, { responseType: 'arraybuffer' })
+        imageBuffer = Buffer.from(remote.data)
+        mimeType = remote.headers['content-type'] || 'image/png'
+      } catch (error) {
+        console.error('Failed to fetch remote image:', error)
+        return next(createError(400, 'Failed to fetch remote image'))
+      }
     }
 
     console.log(`Starting 3D visualization generation for user ${req.user.id}...`)

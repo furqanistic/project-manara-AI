@@ -28,8 +28,10 @@ import {
 } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { getCreditLedger, getCreditsBalance, spendCredits } from "@/lib/credits";
+import { useSelector } from "react-redux";
+import CreditConfirmModal from "@/components/Common/CreditConfirmModal";
 import {
     BRAND_COLOR,
     BRAND_COLOR_DARK,
@@ -55,10 +57,14 @@ const MoodboardGenerator = () => {
   const [showHistory, setShowHistory] = useState(false); // NEW: History modal state
   const [creditsBalance, setCreditsBalance] = useState(() => getCreditsBalance());
   const [creditsLedger, setCreditsLedger] = useState(() => getCreditLedger());
+  const [confirmState, setConfirmState] = useState(null);
+  const confirmResolverRef = React.useRef(null);
   const createMutation = useCreateMoodboard();
   const generateMutation = useGenerateMoodboard();
   const generateDescriptionsMutation = useGenerateMoodboardDescriptions();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { currentUser } = useSelector((state) => state.user);
   const generationCost = 1;
   const revisionCost = 1;
 
@@ -71,15 +77,22 @@ const MoodboardGenerator = () => {
     refreshCredits();
   }, []);
 
-  const confirmCreditSpend = (cost, actionLabel) => {
+  const confirmCreditSpend = async (cost, actionLabel) => {
+    if (!currentUser) {
+      toast.error("Please sign up or log in to use this tool.");
+      navigate("/auth?type=signup", { state: { from: location.pathname } });
+      return false;
+    }
     const balance = getCreditsBalance();
     if (balance < cost) {
       toast.error("Not enough credits. Please add more credits to continue.");
+      navigate("/subscription");
       return false;
     }
-    const confirmed = window.confirm(
-      `${actionLabel} will use ${cost} credits. You have ${balance} credits. Continue?`
-    );
+    const confirmed = await new Promise((resolve) => {
+      confirmResolverRef.current = resolve;
+      setConfirmState({ cost, actionLabel, balance });
+    });
     if (!confirmed) return false;
     const result = spendCredits(cost, {
       action: actionLabel,
@@ -98,7 +111,7 @@ const MoodboardGenerator = () => {
       toast.error("Please describe your design requirements", { id: 'missing-requirements' });
       return;
     }
-    if (!confirmCreditSpend(generationCost, "Moodboard generation")) return;
+    if (!(await confirmCreditSpend(generationCost, "Moodboard generation"))) return;
 
     try {
       // ========== PHASE 1: Generate Image (Fast) ==========
@@ -206,7 +219,7 @@ const MoodboardGenerator = () => {
       toast.error("No moodboard to regenerate", { id: 'no-moodboard' });
       return;
     }
-    if (!confirmCreditSpend(revisionCost, "Moodboard revision")) return;
+    if (!(await confirmCreditSpend(revisionCost, "Moodboard revision"))) return;
 
     try {
       setLoadingState("generating");
@@ -240,9 +253,16 @@ const MoodboardGenerator = () => {
   const downloadMoodboardImage = async () => {
     if (!currentMoodboard?.compositeMoodboard?.url) return;
     const imageUrl = currentMoodboard.compositeMoodboard.url;
+    const rawLabel = selectedSpace || currentMoodboard?.title || "Project";
+    const safeLabel = rawLabel
+      .toString()
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+    const filename = `Manara_Moodboard_${safeLabel || "Project"}`;
 
     const toastId = toast.loading("Preparing download...", { id: 'moodboard-download' });
-    const success = await downloadImage(imageUrl, `moodboard-${currentMoodboard._id}`);
+    const success = await downloadImage(imageUrl, filename);
     
     if (success) {
       toast.success("Image downloaded successfully!", { id: toastId });
@@ -426,7 +446,13 @@ const MoodboardGenerator = () => {
         });
       }
 
-      pdf.save(`moodboard-${currentMoodboard._id}.pdf`);
+      const rawLabel = selectedSpace || currentMoodboard?.title || "Project";
+      const safeLabel = rawLabel
+        .toString()
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+      pdf.save(`Manara_Project_${safeLabel || "Project"}.pdf`);
       toast.success("PDF downloaded successfully!", { id: "pdf-generation" });
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -511,6 +537,20 @@ const MoodboardGenerator = () => {
 
   return (
     <>
+      <CreditConfirmModal
+        isOpen={!!confirmState}
+        cost={confirmState?.cost}
+        balance={confirmState?.balance}
+        actionLabel={confirmState?.actionLabel}
+        onCancel={() => {
+          setConfirmState(null);
+          if (confirmResolverRef.current) confirmResolverRef.current(false);
+        }}
+        onConfirm={() => {
+          setConfirmState(null);
+          if (confirmResolverRef.current) confirmResolverRef.current(true);
+        }}
+      />
       <TopBar />
       <div className="w-full bg-white/90 dark:bg-[#0a0a0a] border-b border-gray-100 dark:border-white/5 mt-16">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-col gap-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300">

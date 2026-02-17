@@ -2,7 +2,7 @@ import TopBar from '@/components/Layout/Topbar'
 import { ThreeDRenderHistory } from '@/components/ThreeDRender/ThreeDRenderHistory'
 import api from '@/config/config'
 import { downloadImage } from '@/lib/downloadUtils'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import {
     ArrowRight,
     Box,
@@ -38,6 +38,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getCreditLedger, getCreditsBalance, spendCredits } from '@/lib/credits'
+import { useSelector } from 'react-redux'
+import CreditConfirmModal from '@/components/Common/CreditConfirmModal'
 
 const STYLES = [
   { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors', color: '#de7c7c' },
@@ -66,6 +68,7 @@ const LOADING_PHASES = [
 ]
 
 const ThreedGenerator = () => {
+  const { currentUser } = useSelector((state) => state.user)
   const [step, setStep] = useState('config') // 'config' | 'result'
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
@@ -75,6 +78,7 @@ const ThreedGenerator = () => {
   const [meshyModelUrl, setMeshyModelUrl] = useState(null)
   const [meshyProgress, setMeshyProgress] = useState(0)
   const [resultTab, setResultTab] = useState('image') // 'image' or '3d'
+  const [comparisonEnabled, setComparisonEnabled] = useState(true)
   const modelRef = useRef(null)
   const viewerContainerRef = useRef(null)
   const pollingRef = useRef(null)
@@ -105,9 +109,17 @@ const ThreedGenerator = () => {
   const [viewerRotateSpeed, setViewerRotateSpeed] = useState(30)
   const [creditsBalance, setCreditsBalance] = useState(() => getCreditsBalance())
   const [creditsLedger, setCreditsLedger] = useState(() => getCreditLedger())
+  const [confirmState, setConfirmState] = useState(null)
+  const confirmResolverRef = useRef(null)
   
   const fileInputRef = useRef(null)
   const chatContainerRef = useRef(null)
+  const comparisonRef = useRef(null)
+  const comparisonPosition = useMotionValue(50)
+  const springComparisonPosition = useSpring(comparisonPosition, {
+    damping: 25,
+    stiffness: 250,
+  })
   const initialRenderCost = 3
   const revisionCost = 1
 
@@ -116,19 +128,34 @@ const ThreedGenerator = () => {
     setCreditsLedger(getCreditLedger())
   }
 
+  const handleComparisonUpdate = (clientX) => {
+    if (!comparisonRef.current) return
+    const rect = comparisonRef.current.getBoundingClientRect()
+    const x = clientX - rect.left
+    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100))
+    comparisonPosition.set(percentage)
+  }
+
   useEffect(() => {
     refreshCredits()
   }, [])
 
-  const confirmCreditSpend = (cost, actionLabel) => {
+  const confirmCreditSpend = async (cost, actionLabel) => {
+    if (!currentUser) {
+      toast.error('Please sign up or log in to use this tool.')
+      navigate('/auth?type=signup', { state: { from: location.pathname } })
+      return false
+    }
     const balance = getCreditsBalance()
     if (balance < cost) {
       toast.error('Not enough credits. Please add more credits to continue.')
+      navigate('/subscription')
       return false
     }
-    const confirmed = window.confirm(
-      `${actionLabel} will use ${cost} credits. You have ${balance} credits. Continue?`
-    )
+    const confirmed = await new Promise((resolve) => {
+      confirmResolverRef.current = resolve
+      setConfirmState({ cost, actionLabel, balance })
+    })
     if (!confirmed) return false
     const result = spendCredits(cost, { action: actionLabel, tool: 'threed' })
     if (!result.ok) {
@@ -228,7 +255,7 @@ const ThreedGenerator = () => {
     const isNewRender = versions.length === 0
     const cost = isNewRender ? initialRenderCost : revisionCost
     const actionLabel = isNewRender ? '3D render generation' : '3D render revision'
-    if (!confirmCreditSpend(cost, actionLabel)) return
+    if (!(await confirmCreditSpend(cost, actionLabel))) return
 
     setIsGenerating(true)
     setUploadProgress(0)
@@ -472,8 +499,16 @@ const ThreedGenerator = () => {
       || sourceImage
     if (!imageUrl) return
 
+    const styleLabel = STYLES.find((style) => style.id === selectedStyle)?.label || "3D Render"
+    const safeLabel = styleLabel
+      .toString()
+      .trim()
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+    const filename = `Manara_3D_Render_${safeLabel || "Render"}`
+
     const toastId = toast.loading("Preparing download...")
-    const success = await downloadImage(imageUrl, `manara-3d-${Date.now()}`)
+    const success = await downloadImage(imageUrl, filename)
     
     if (success) {
       toast.success("Download started", { id: toastId })
@@ -491,7 +526,13 @@ const ThreedGenerator = () => {
       const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.setAttribute('download', `manara-design-${Date.now()}.glb`)
+      const styleLabel = STYLES.find((style) => style.id === selectedStyle)?.label || "3D_Model"
+      const safeLabel = styleLabel
+        .toString()
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+      link.setAttribute('download', `Manara_3D_Model_${safeLabel || "Model"}.glb`)
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -502,7 +543,13 @@ const ThreedGenerator = () => {
       // Fallback
       const link = document.createElement('a')
       link.href = meshyModelUrl || proxiedModelUrl
-      link.download = `manara-design-${Date.now()}.glb`
+      const styleLabel = STYLES.find((style) => style.id === selectedStyle)?.label || "3D_Model"
+      const safeLabel = styleLabel
+        .toString()
+        .trim()
+        .replace(/[^a-zA-Z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "")
+      link.download = `Manara_3D_Model_${safeLabel || "Model"}.glb`
       link.target = "_blank"
       link.click()
       toast.success('Download opened in new tab', { id: 'download-glb' })
@@ -602,7 +649,22 @@ const ThreedGenerator = () => {
   const proxiedModelUrl = buildProxyUrl(meshyModelUrl)
 
   return (
-    <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
+    <>
+      <CreditConfirmModal
+        isOpen={!!confirmState}
+        cost={confirmState?.cost}
+        balance={confirmState?.balance}
+        actionLabel={confirmState?.actionLabel}
+        onCancel={() => {
+          setConfirmState(null)
+          if (confirmResolverRef.current) confirmResolverRef.current(false)
+        }}
+        onConfirm={() => {
+          setConfirmState(null)
+          if (confirmResolverRef.current) confirmResolverRef.current(true)
+        }}
+      />
+      <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
       <TopBar />
       <div className='w-full bg-white/90 dark:bg-[#0a0a0a] border-b border-[#E5E5E7] dark:border-[#2D2D2F] mt-16'>
         <div className='max-w-6xl mx-auto px-4 sm:px-6 py-2 flex flex-col gap-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300'>
@@ -624,7 +686,7 @@ const ThreedGenerator = () => {
         onLoadItem={handleLoadFromHistory}
       />
 
-      <main className='flex-1 relative flex flex-col md:flex-row pt-16 h-full overflow-hidden'>
+      <main className='flex-1 relative flex flex-col md:flex-row pt-0 h-full overflow-hidden'>
         
         {/* Sidebar Controls */}
         <aside className={`
@@ -877,10 +939,68 @@ const ThreedGenerator = () => {
                     <div className='absolute inset-0'>
                       {(resultTab === 'image' || (!meshyModelUrl && !isConvertingTo3D)) && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full bg-white dark:bg-white/5 rounded-3xl overflow-hidden border border-[#E5E5E7] dark:border-white/5 flex flex-col items-center justify-center relative'>
-                          <img 
-                            src={displayImageSrc}
-                            className='max-h-full max-w-full object-contain p-4' 
-                          />
+                          <div className='absolute top-4 right-4 z-20'>
+                            <button
+                              onClick={() => setComparisonEnabled((prev) => !prev)}
+                              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+                                comparisonEnabled
+                                  ? 'bg-[#8d775e] text-white shadow-lg'
+                                  : 'bg-white/90 dark:bg-black/70 text-gray-500 dark:text-gray-300'
+                              }`}
+                            >
+                              {comparisonEnabled ? 'Comparison On' : 'Comparison Off'}
+                            </button>
+                          </div>
+
+                          {comparisonEnabled && sourceImage ? (
+                            <div
+                              ref={comparisonRef}
+                              className='relative w-full h-full overflow-hidden cursor-none'
+                              onMouseMove={(event) => handleComparisonUpdate(event.clientX)}
+                              onTouchMove={(event) => {
+                                if (event.touches && event.touches[0]) {
+                                  handleComparisonUpdate(event.touches[0].clientX)
+                                }
+                              }}
+                            >
+                              <img
+                                src={sourceImage}
+                                className='absolute inset-0 w-full h-full object-contain p-4 opacity-70'
+                              />
+
+                              <motion.div
+                                className='absolute inset-0 z-10'
+                                style={{
+                                  clipPath: useTransform(
+                                    springComparisonPosition,
+                                    (pos) => `inset(0 ${100 - pos}% 0 0)`
+                                  ),
+                                }}
+                              >
+                                <img
+                                  src={displayImageSrc}
+                                  className='absolute inset-0 w-full h-full object-contain p-4'
+                                />
+                              </motion.div>
+
+                              <motion.div
+                                className='absolute top-0 bottom-0 w-[2px] bg-white/70 dark:bg-white/30 z-20 pointer-events-none'
+                                style={{
+                                  left: useTransform(springComparisonPosition, (pos) => `${pos}%`),
+                                }}
+                              >
+                                <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/70 dark:bg-black/60 border border-white/60 dark:border-white/10 flex items-center justify-center shadow-xl'>
+                                  <ChevronRight className='w-4 h-4 text-gray-700 dark:text-gray-200 rotate-180' />
+                                  <ChevronRight className='w-4 h-4 text-gray-700 dark:text-gray-200 -ml-1' />
+                                </div>
+                              </motion.div>
+                            </div>
+                          ) : (
+                            <img 
+                              src={displayImageSrc}
+                              className='max-h-full max-w-full object-contain p-4' 
+                            />
+                          )}
                         </motion.div>
                       )}
                       
@@ -1224,7 +1344,8 @@ const ThreedGenerator = () => {
           )}
         </section>
       </main>
-    </div>
+      </div>
+    </>
   )
 }
 

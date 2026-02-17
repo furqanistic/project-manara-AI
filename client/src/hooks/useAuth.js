@@ -273,6 +273,32 @@ export const useOnboarding = () => {
 };
 
 /**
+ * useAvatarUpload - Upload avatar SVG and save to profile
+ * @returns {Object} Mutation object
+ */
+export const useAvatarUpload = () => {
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload) => authService.uploadAvatar(payload),
+    onSuccess: (data) => {
+      console.log("✅ Avatar uploaded successfully");
+      const updatedUser = data?.data?.user;
+      dispatch(updateProfileAction(updatedUser));
+      queryClient.setQueryData(authQueryKeys.currentUser(), updatedUser);
+      queryClient.invalidateQueries({ queryKey: authQueryKeys.user() });
+    },
+    onError: (error) => {
+      console.error("❌ Avatar upload error:", error);
+      const errorMessage =
+        error?.data?.message || error?.message || "Failed to upload avatar";
+      throw new Error(errorMessage);
+    },
+  });
+};
+
+/**
  * useAuthGuard - Check authentication and redirect if needed
  * @param {Boolean} requireAdmin - Require admin role
  * @returns {Object} { currentUser, isAuthenticated }
@@ -304,5 +330,6 @@ export default {
   useDeleteUser,
   useUpdateUserAsAdmin,
   useOnboarding,
+  useAvatarUpload,
   useAuthGuard,
 };
