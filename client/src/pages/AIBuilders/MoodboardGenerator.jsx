@@ -29,6 +29,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { getCreditLedger, getCreditsBalance, spendCredits } from "@/lib/credits";
 import {
     BRAND_COLOR,
     BRAND_COLOR_DARK,
@@ -52,16 +53,52 @@ const MoodboardGenerator = () => {
   const [progressSteps, setProgressSteps] = useState([]);
   const [generationPhase, setGenerationPhase] = useState(null); // 'image' or 'descriptions'
   const [showHistory, setShowHistory] = useState(false); // NEW: History modal state
+  const [creditsBalance, setCreditsBalance] = useState(() => getCreditsBalance());
+  const [creditsLedger, setCreditsLedger] = useState(() => getCreditLedger());
   const createMutation = useCreateMoodboard();
   const generateMutation = useGenerateMoodboard();
   const generateDescriptionsMutation = useGenerateMoodboardDescriptions();
   const navigate = useNavigate();
+  const generationCost = 1;
+  const revisionCost = 1;
+
+  const refreshCredits = () => {
+    setCreditsBalance(getCreditsBalance());
+    setCreditsLedger(getCreditLedger());
+  };
+
+  useEffect(() => {
+    refreshCredits();
+  }, []);
+
+  const confirmCreditSpend = (cost, actionLabel) => {
+    const balance = getCreditsBalance();
+    if (balance < cost) {
+      toast.error("Not enough credits. Please add more credits to continue.");
+      return false;
+    }
+    const confirmed = window.confirm(
+      `${actionLabel} will use ${cost} credits. You have ${balance} credits. Continue?`
+    );
+    if (!confirmed) return false;
+    const result = spendCredits(cost, {
+      action: actionLabel,
+      tool: "moodboard",
+    });
+    if (!result.ok) {
+      toast.error("Not enough credits. Please add more credits to continue.");
+      return false;
+    }
+    refreshCredits();
+    return true;
+  };
 
   const handleGenerate = async () => {
     if (!changes.trim()) {
       toast.error("Please describe your design requirements", { id: 'missing-requirements' });
       return;
     }
+    if (!confirmCreditSpend(generationCost, "Moodboard generation")) return;
 
     try {
       // ========== PHASE 1: Generate Image (Fast) ==========
@@ -169,6 +206,7 @@ const MoodboardGenerator = () => {
       toast.error("No moodboard to regenerate", { id: 'no-moodboard' });
       return;
     }
+    if (!confirmCreditSpend(revisionCost, "Moodboard revision")) return;
 
     try {
       setLoadingState("generating");
@@ -474,6 +512,19 @@ const MoodboardGenerator = () => {
   return (
     <>
       <TopBar />
+      <div className="w-full bg-white/90 dark:bg-[#0a0a0a] border-b border-gray-100 dark:border-white/5 mt-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-col gap-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>Credits balance: {creditsBalance}</span>
+            <span>Generation cost: {generationCost} credit • Revision: {revisionCost} credit</span>
+          </div>
+          {creditsLedger.some((entry) => entry.tool === "moodboard") && (
+            <div className="text-[10px] text-gray-400">
+              Recent usage: {creditsLedger.filter((entry) => entry.tool === "moodboard").slice(0, 3).map((entry) => `${entry.action || entry.label || entry.type} (${entry.type === "credit" ? "+" : "-"}${entry.amount})`).join(" • ")}
+            </div>
+          )}
+        </div>
+      </div>
       {loadingState === "generating" && (
         <BeautifulLoader
           progressSteps={progressSteps}
@@ -505,6 +556,8 @@ const MoodboardGenerator = () => {
             setChanges={setChanges}
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
+            creditsBalance={creditsBalance}
+            generationCost={generationCost}
           />
         ) : (
           <ResultView
@@ -564,6 +617,8 @@ const WizardFlow = ({
   setChanges,
   onGenerate,
   isGenerating,
+  creditsBalance,
+  generationCost,
 }) => {
   const canProceed = () => {
     switch (currentStep) {
@@ -623,6 +678,9 @@ const WizardFlow = ({
                       </>
                     )}
                   </button>
+                  <div className="mt-2 text-[10px] text-gray-400 text-right">
+                    Cost: {generationCost} credit • Balance: {creditsBalance}
+                  </div>
                 </div>
               )}
 

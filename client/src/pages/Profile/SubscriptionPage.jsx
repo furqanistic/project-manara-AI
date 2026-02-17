@@ -1,103 +1,76 @@
 import { motion } from 'framer-motion';
-import {
-    Check,
-    ChevronRight,
-    CreditCard,
-    Crown,
-    ExternalLink,
-    Sparkles,
-    Star,
-    Zap
-} from 'lucide-react';
+import { Check, ChevronRight, CreditCard, Crown, Sparkles, Star } from 'lucide-react';
 import React, { useState } from 'react';
 import toast from 'react-hot-toast';
-import { useSelector } from 'react-redux';
 import TopBar from '../../components/Layout/Topbar';
 import { Button } from '../../components/ui/button';
-import { stripeService } from '../../services/stripeService';
+import { addCredits, getCreditLedger, getCreditsBalance } from '../../lib/credits';
 
-const PLANS = [
+const CREDIT_DEFINITIONS = [
+  { label: '3D Render Set (1 room)', credits: 3 },
+  { label: 'Extra style / variation', credits: 1 },
+  { label: '2D Floor Plan / Cut', credits: 4 },
+  { label: 'Shopping List + Supplier Suggestions', credits: 2 },
+  { label: 'Small revision', credits: 1 },
+  { label: 'Full Room Package (all of the above)', credits: 8 },
+];
+
+const CREDIT_PACKAGES = [
   {
-    id: 'essential',
-    name: 'Essential',
+    id: 'starter',
+    name: 'Starter',
     icon: Star,
-    price: '8,999',
-    priceId: 'price_1Qpsm7F9uY9uY9uY9uY9uY9u', // Replace with real ID
-    features: ['1 Room Design', 'AI Mood Boards', 'Standard Support'],
+    price: '199',
+    credits: 20,
+    features: ['Best for testing', 'Mix and match outputs', 'Credits do not expire'],
   },
   {
-    id: 'premium',
-    name: 'Premium',
+    id: 'home',
+    name: 'Home',
     icon: Sparkles,
-    price: '15,999',
-    priceId: 'price_1Qpsm7F9uY9uY9uY9uY9uY9v', // Replace with real ID
+    price: '449',
+    credits: 50,
     popular: true,
-    features: ['2-3 Rooms Design', 'HD 3D Renders', 'Priority Support'],
+    features: ['Great for multi-room projects', 'Enough for full packages', 'Credits do not expire'],
   },
   {
-    id: 'luxury',
-    name: 'Luxury',
+    id: 'plus',
+    name: 'Plus',
     icon: Crown,
-    price: '24,999',
-    priceId: 'price_1Qpsm7F9uY9uY9uY9uY9uY9w', // Replace with real ID
-    features: ['Whole Home Design', 'Dedicated Manager', '24/7 VIP Support'],
+    price: '799',
+    credits: 100,
+    features: ['Best value', 'Ideal for teams', 'Credits do not expire'],
   },
 ];
 
 const SubscriptionPage = () => {
-  const { currentUser } = useSelector((state) => state.user);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Derive current status
-  const currentPriceId = currentUser?.stripePriceId;
-  const isActive = currentUser?.subscriptionStatus === 'active' || currentUser?.subscriptionStatus === 'trialing';
+  const [creditBalance, setCreditBalance] = useState(() => getCreditsBalance());
+  const [creditLedger, setCreditLedger] = useState(() => getCreditLedger());
 
   const handlePlanOperation = async (plan) => {
-    if (plan.priceId === currentPriceId && isActive) return;
-    
     setIsProcessing(true);
-    const loadingToast = toast.loading(isActive ? 'Preperating plan switch...' : 'Initiating checkout...');
-    
     try {
-      const response = await stripeService.createCheckoutSession(plan.priceId);
-      if (response.url) {
-        window.location.href = response.url;
-      }
+      const result = addCredits(plan.credits, {
+        action: 'credit-package',
+        packageId: plan.id,
+        label: plan.name,
+      });
+      setCreditBalance(result.balance);
+      setCreditLedger(result.ledger);
+      toast.success(`${plan.credits} credits added to your balance.`);
     } catch (error) {
-      console.error('Stripe error:', error);
+      console.error('Credit add error:', error);
       toast.error('Operation failed. Please try again.');
     } finally {
       setIsProcessing(false);
-      toast.dismiss(loadingToast);
     }
   };
 
-  const handleManageBilling = async () => {
-    setIsProcessing(true);
-    try {
-      const response = await stripeService.createPortalSession();
-      if (response.url) {
-        window.location.href = response.url;
-      }
-    } catch (error) {
-      console.error('Portal error:', error);
-      toast.error('Could not load billing portal');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
+  const recentEntries = creditLedger.slice(0, 5);
 
   return (
-    <div className='min-h-screen bg-[#faf8f6] font-["Poppins"] selection:bg-[#937c60]/10'>
+    <div className='min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] font-["Poppins"] selection:bg-[#937c60]/10'>
       <TopBar />
       
       <main className='max-w-[1400px] mx-auto pt-40 pb-24 px-8 md:px-16 relative z-10'>
@@ -111,8 +84,8 @@ const SubscriptionPage = () => {
             <div className='w-10 h-[1px] bg-[#937c60] opacity-40'></div>
             <span className='text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase'>Account Management</span>
           </div>
-          <h1 className='text-5xl md:text-6xl font-bold text-gray-900 tracking-tight'>
-            Select your <span className='text-[#937c60]'>plan</span>
+          <h1 className='text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight'>
+            Manage <span className='text-[#937c60]'>credits</span>
           </h1>
         </motion.div>
 
@@ -120,39 +93,39 @@ const SubscriptionPage = () => {
           {/* Plan Selection Grid */}
           <div className='xl:col-span-9'>
             <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-              {PLANS.map((plan) => {
-                const isCurrent = plan.priceId === currentPriceId && isActive;
+              {CREDIT_PACKAGES.map((plan) => {
                 return (
                   <motion.div
                     key={plan.id}
                     whileHover={{ y: -5 }}
-                    className={`relative p-8 rounded-[40px] bg-white border transition-all duration-300 flex flex-col ${
-                      isCurrent 
-                        ? 'border-[#937c60] shadow-[0_20px_50px_rgba(147,124,96,0.1)]' 
-                        : 'border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.02)] hover:border-gray-200'
+                    className={`relative p-8 rounded-[40px] bg-white dark:bg-[#111] border transition-all duration-300 flex flex-col ${
+                      plan.popular
+                        ? 'border-[#937c60] shadow-[0_20px_50px_rgba(147,124,96,0.1)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)]' 
+                        : 'border-gray-100 dark:border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.02)] hover:border-gray-200 dark:hover:border-white/20'
                     }`}
                   >
-                    {isCurrent && (
+                    {plan.popular && (
                       <div className='absolute -top-3 left-1/2 -translate-x-1/2 bg-[#937c60] text-white text-[9px] font-bold px-3 py-1 rounded-full uppercase tracking-widest'>
-                        Current Plan
+                        Most Popular
                       </div>
                     )}
                     
                     <div className='mb-8'>
-                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 ${isCurrent ? 'bg-[#937c60] text-white' : 'bg-gray-100 text-gray-400'}`}>
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 ${plan.popular ? 'bg-[#937c60] text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-300'}`}>
                         <plan.icon size={24} />
                       </div>
-                      <h3 className='text-xl font-bold text-gray-900 mb-1'>{plan.name}</h3>
+                      <h3 className='text-xl font-bold text-gray-900 dark:text-white mb-1'>{plan.name}</h3>
                       <div className='flex items-baseline gap-1'>
-                        <span className='text-3xl font-bold text-gray-900'>{plan.price}</span>
-                        <span className='text-xs font-bold text-gray-400 uppercase'>AED</span>
+                        <span className='text-3xl font-bold text-gray-900 dark:text-white'>{plan.price}</span>
+                        <span className='text-xs font-bold text-gray-400 dark:text-gray-500 uppercase'>AED</span>
                       </div>
+                      <p className='text-xs font-bold text-[#937c60] mt-2'>{plan.credits} credits</p>
                     </div>
 
                     <ul className='space-y-4 mb-10 flex-grow'>
                       {plan.features.map((f, i) => (
-                        <li key={i} className='flex items-center gap-3 text-sm text-gray-500 font-medium'>
-                          <Check size={14} className={isCurrent ? 'text-[#937c60]' : 'text-gray-300'} />
+                        <li key={i} className='flex items-center gap-3 text-sm text-gray-500 dark:text-gray-300 font-medium'>
+                          <Check size={14} className={plan.popular ? 'text-[#937c60]' : 'text-gray-300'} />
                           {f}
                         </li>
                       ))}
@@ -160,55 +133,128 @@ const SubscriptionPage = () => {
 
                     <Button
                       onClick={() => handlePlanOperation(plan)}
-                      disabled={isCurrent || isProcessing}
+                      disabled={isProcessing}
                       className={`w-full py-6 rounded-2xl font-bold text-sm transition-all ${
-                        isCurrent 
-                          ? 'bg-gray-50 text-gray-400 border-none cursor-default' 
+                        plan.popular
+                          ? 'bg-gray-900 hover:bg-black text-white' 
                           : 'bg-gray-900 hover:bg-black text-white'
                       }`}
                     >
-                      {isCurrent ? 'Active Now' : 'Select Plan'}
+                      Add Credits
                     </Button>
                   </motion.div>
                 );
               })}
             </div>
+
+            <div className='mt-10 bg-white dark:bg-[#111] rounded-[32px] p-8 border border-gray-100 dark:border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]'>
+              <div className='flex items-center gap-3 mb-6'>
+                <div className='w-10 h-[1px] bg-[#937c60] opacity-40'></div>
+                <span className='text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase'>Credit Definitions</span>
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                {CREDIT_DEFINITIONS.map((item) => (
+                  <div key={item.label} className='flex items-center justify-between px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 text-sm font-semibold text-gray-700 dark:text-gray-200'>
+                    <span>{item.label}</span>
+                    <span className='text-[#937c60]'>{item.credits} credits</span>
+                  </div>
+                ))}
+              </div>
+              <p className='mt-6 text-xs text-gray-400 dark:text-gray-500'>Credits are always shown before you confirm an action.</p>
+            </div>
           </div>
 
           {/* Billing Sidebar */}
           <div className='xl:col-span-3 space-y-6'>
-            <div className='bg-white rounded-[40px] p-8 border border-gray-100 shadow-[0_10px_40px_rgba(0,0,0,0.02)]'>
-              <h4 className='text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 pb-2 border-b border-gray-50'>Billing Overview</h4>
+            <div className='bg-white dark:bg-[#111] rounded-[40px] p-8 border border-gray-100 dark:border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]'>
+              <h4 className='text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 pb-2 border-b border-gray-50'>Credits Overview</h4>
               
               <div className='space-y-6'>
                 <div className='space-y-1'>
-                  <p className='text-[10px] font-bold text-gray-400 uppercase'>Next Payment</p>
-                  <p className='text-sm font-bold text-gray-900'>{isActive ? formatDate(currentUser.subscriptionCurrentPeriodEnd) : 'No pending'}</p>
+                  <p className='text-[10px] font-bold text-gray-400 uppercase'>Current Balance</p>
+                  <p className='text-sm font-bold text-gray-900 dark:text-white'>{creditBalance} credits</p>
                 </div>
 
                 <div className='space-y-1'>
-                  <p className='text-[10px] font-bold text-gray-400 uppercase'>Saved Method</p>
+                  <p className='text-[10px] font-bold text-gray-400 uppercase'>Credits Expiration</p>
                   <div className='flex items-center gap-2'>
                     <CreditCard size={14} className='text-gray-400' />
-                    <p className='text-sm font-bold text-gray-900'>Stored Securely</p>
+                    <p className='text-sm font-bold text-gray-900 dark:text-white'>No expiration (for now)</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className='bg-white dark:bg-[#111] rounded-[40px] p-8 border border-gray-100 dark:border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]'>
+              <h4 className='text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 pb-2 border-b border-gray-50'>Payment Method</h4>
+
+              <div className='space-y-4'>
+                <div className='flex items-center gap-3'>
+                  <div className='w-10 h-10 rounded-2xl bg-gray-50 dark:bg-white/5 flex items-center justify-center text-gray-500 dark:text-gray-300'>
+                    <CreditCard size={18} />
+                  </div>
+                  <div>
+                    <p className='text-sm font-bold text-gray-900 dark:text-white'>Card on file</p>
+                    <p className='text-xs text-gray-400'>No card added yet</p>
+                  </div>
+                </div>
+
+                <div className='grid grid-cols-2 gap-3'>
+                  <div className='col-span-2'>
+                    <label className='text-[10px] font-bold text-gray-400 uppercase tracking-widest'>Card Number</label>
+                    <input
+                      type='text'
+                      placeholder='1234 5678 9012 3456'
+                      className='mt-2 w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#937c60]/30'
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <label className='text-[10px] font-bold text-gray-400 uppercase tracking-widest'>Expiry</label>
+                    <input
+                      type='text'
+                      placeholder='MM/YY'
+                      className='mt-2 w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#937c60]/30'
+                      disabled
+                    />
+                  </div>
+                  <div>
+                    <label className='text-[10px] font-bold text-gray-400 uppercase tracking-widest'>CVC</label>
+                    <input
+                      type='text'
+                      placeholder='CVC'
+                      className='mt-2 w-full bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl px-3 py-2 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#937c60]/30'
+                      disabled
+                    />
                   </div>
                 </div>
 
                 <Button
-                  onClick={handleManageBilling}
-                  disabled={isProcessing}
-                  className='w-full bg-white border border-gray-100 hover:bg-gray-50 text-gray-900 py-4 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-sm'
+                  disabled
+                  className='w-full bg-gray-900 text-white py-4 rounded-xl font-bold text-xs opacity-60 cursor-not-allowed'
                 >
-                  Billing Portal
-                  <ExternalLink size={14} className='opacity-30' />
+                  Add Card (Coming Soon)
                 </Button>
               </div>
             </div>
 
-            <div className='bg-gray-900 rounded-[40px] p-8 text-white relative overflow-hidden'>
+            <div className='bg-gray-900 dark:bg-black rounded-[40px] p-8 text-white relative overflow-hidden'>
               <div className='relative z-10'>
-                <h4 className='text-xs font-bold text-[#937c60] uppercase tracking-widest mb-4'>Expert Support</h4>
-                <p className='text-sm text-gray-400 leading-relaxed mb-6'>Need help with your enterprise setup or bulk licenses?</p>
+                <h4 className='text-xs font-bold text-[#937c60] uppercase tracking-widest mb-4'>Recent Activity</h4>
+                <div className='space-y-3 text-[11px] text-gray-300'>
+                  {recentEntries.length === 0 ? (
+                    <p>No credit activity yet.</p>
+                  ) : (
+                    recentEntries.map((entry) => (
+                      <div key={entry.id} className='flex items-center justify-between'>
+                        <span className='truncate'>{entry.action || entry.label || entry.type}</span>
+                        <span className={entry.type === 'credit' ? 'text-emerald-300' : 'text-amber-300'}>
+                          {entry.type === 'credit' ? '+' : '-'}{entry.amount}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
                 <a 
                   href="mailto:billing@manaradesign.ai"
                   className='text-xs font-bold flex items-center gap-2 hover:text-[#937c60] transition-colors'

@@ -1,62 +1,21 @@
-// File: project-manara-AI/client/src/pages/Profile/Profile.jsx
 import TopBar from "@/components/Layout/Topbar";
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useChangePassword, useCurrentUser, useUpdateProfile } from "@/hooks/useAuth";
+import { AlertCircle, CheckCircle2, Edit2, Lock, Mail, Save, User } from "lucide-react";
+import { getCreditLedger } from "@/lib/credits";
 import {
-  useCurrentUser,
-  useChangePassword,
-  useUpdateProfile,
-} from "@/hooks/useAuth";
-import {
-  User,
-  Mail,
-  CheckCircle2,
-  Lock,
-  Fingerprint,
-  Crown,
-  Calendar,
-  RefreshCw,
-  Clock,
-  TrendingUp,
-  Shield,
-  Activity,
-  Eye,
-  EyeOff,
-  AlertCircle,
-  Edit2,
-  Save,
-  X,
-} from "lucide-react";
+  Bar,
+  BarChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
-// ============ Constants ============
 const BRAND_COLOR = "#937c60";
 
-const TAB_CONFIG = [
-  { id: "profile", label: "Profile", icon: User },
-  { id: "security", label: "Security", icon: Lock },
-  { id: "activity", label: "Activity", icon: Activity },
-];
-
-const CLASS_CARD =
-  "flex flex-col p-3 bg-[#faf8f5] rounded-lg border border-[#937c6013]";
-const CLASS_INPUT_BASE =
-  "w-full px-3 py-2.5 rounded-lg text-xs md:text-sm font-inherit transition-all focus:outline-none border";
-const CLASS_INPUT_ERROR =
-  "border-red-300 bg-red-50 focus:border-[#937c60] focus:ring-2 focus:ring-[#937c6024]";
-const CLASS_INPUT_NORMAL =
-  "border-[#937c6032] bg-[#faf8f5] focus:border-[#937c60] focus:ring-2 focus:ring-[#937c6024]";
-const CLASS_BUTTON_PRIMARY =
-  "px-4 md:px-6 py-2.5 bg-[#937c60] hover:bg-[#6b5d50] disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1.5 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0";
-const CLASS_BUTTON_SECONDARY =
-  "px-4 md:px-6 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-[#937c6024] rounded-lg text-xs md:text-sm font-semibold flex items-center gap-1.5 transition-all duration-300";
-const CLASS_STATUS_BADGE =
-  "text-xs md:text-sm font-semibold text-white bg-[#937c60] rounded px-2.5 py-1.5 w-fit flex items-center gap-1.5";
-const CLASS_LABEL =
-  "block text-xs md:text-sm font-semibold mb-1.5 md:mb-2 text-[#1a1a1a]";
-const CLASS_SECTION_HEADER =
-  "flex items-center gap-3 mb-4 md:mb-5 pb-3 border-b border-[#937c6013]";
-
-// ============ Validation Rules ============
 const PROFILE_VALIDATION = {
   name: {
     required: "Full name is required",
@@ -76,8 +35,7 @@ const PASSWORD_VALIDATION = {
   newPassword: {
     required: "New password required",
     validate: {
-      minLength: (v) =>
-        v.length >= 8 || "Password must be at least 8 characters",
+      minLength: (v) => v.length >= 8 || "Password must be at least 8 characters",
       hasUppercase: (v) => /[A-Z]/.test(v) || "Need uppercase letter",
       hasLowercase: (v) => /[a-z]/.test(v) || "Need lowercase letter",
       hasNumber: (v) => /[0-9]/.test(v) || "Need a number",
@@ -85,123 +43,50 @@ const PASSWORD_VALIDATION = {
   },
   confirmPassword: {
     required: "Please confirm password",
-    validate: (v, { newPassword }) =>
-      v === newPassword || "Passwords do not match",
+    validate: (v, { newPassword }) => v === newPassword || "Passwords do not match",
   },
 };
 
-// ============ Reusable Components ============
-const FormInput = ({ label, error, required = false, ...props }) => (
-  <div className="mb-4 md:mb-5">
-    <label className={CLASS_LABEL}>
-      {label} {required && <span className="text-red-600">*</span>}
+const TextInput = ({ label, icon: Icon, error, ...props }) => (
+  <div className="space-y-2">
+    <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400">
+      {label}
     </label>
-    <input
-      className={`${CLASS_INPUT_BASE} ${
-        error ? CLASS_INPUT_ERROR : CLASS_INPUT_NORMAL
-      }`}
-      {...props}
-    />
-    {error && (
-      <p className="text-xs text-red-700 mt-1 flex items-center gap-1">
-        <AlertCircle size={12} />
-        {error.message}
-      </p>
-    )}
-  </div>
-);
-
-const PasswordInput = ({
-  label,
-  hint,
-  value,
-  error,
-  fieldName,
-  showPassword,
-  onToggle,
-  required = false,
-  ...props
-}) => (
-  <div className="mb-4 md:mb-5">
-    <label className={CLASS_LABEL}>
-      {label} {required && <span className="text-red-600">*</span>}
-    </label>
-    {hint && <p className="text-xs text-gray-600 mb-2 font-medium">{hint}</p>}
-    <div className="relative flex items-center">
+    <div className="relative">
+      {Icon && (
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+          <Icon size={14} />
+        </div>
+      )}
       <input
-        type={showPassword ? "text" : "password"}
-        className={`${CLASS_INPUT_BASE} pr-10 ${
-          error ? CLASS_INPUT_ERROR : CLASS_INPUT_NORMAL
+        className={`w-full rounded-2xl border px-10 py-3 text-sm bg-white dark:bg-[#111] text-gray-900 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#937c60]/30 transition-all ${
+          error
+            ? "border-red-300 focus:border-red-400"
+            : "border-gray-100 dark:border-white/10 focus:border-[#937c60]"
         }`}
         {...props}
       />
-      <button
-        type="button"
-        onClick={() => onToggle(fieldName)}
-        className="absolute right-3 text-gray-500 hover:text-gray-700 p-1 flex items-center justify-center"
-      >
-        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-      </button>
     </div>
     {error && (
-      <p className="text-xs text-red-700 mt-1 flex items-center gap-1">
+      <p className="text-xs text-red-600 flex items-center gap-1">
         <AlertCircle size={12} />
         {error.message}
       </p>
     )}
-    {value && !error && (
-      <p className="text-xs text-green-700 mt-1 flex items-center gap-1">
-        <CheckCircle2 size={12} />
-        {fieldName === "confirmPassword" ? "Match" : "Password OK"}
-      </p>
-    )}
   </div>
 );
 
-const InfoCard = ({ icon: Icon, label, value, isStatus = false }) => (
-  <div className={CLASS_CARD}>
-    <p className="text-xs font-bold text-gray-500 uppercase mb-1.5 md:mb-2 flex items-center gap-1">
-      <Icon size={12} /> {label}
-    </p>
-    {isStatus ? (
-      <p className={CLASS_STATUS_BADGE}>
-        <CheckCircle2 size={12} />
-        {value}
-      </p>
-    ) : (
-      <p className="text-sm md:text-base font-semibold text-[#1a1a1a]">
-        {value}
-      </p>
-    )}
-  </div>
-);
-
-const SectionHeader = ({ icon: Icon, title }) => (
-  <div className={CLASS_SECTION_HEADER}>
-    <Icon size={18} style={{ color: BRAND_COLOR }} />
-    <h3 className="text-xs md:text-sm font-bold text-[#1a1a1a] uppercase tracking-wide">
-      {title}
-    </h3>
-  </div>
-);
-
-// ============ Main Component ============
 function Profile() {
   const currentUser = useCurrentUser();
   const updateProfileMutation = useUpdateProfile();
   const changePasswordMutation = useChangePassword();
 
-  const [activeTab, setActiveTab] = useState("profile");
   const [isEditMode, setIsEditMode] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false,
-  });
+  const [activeTab, setActiveTab] = useState("profile");
+  const [creditLedger, setCreditLedger] = useState(() => getCreditLedger());
 
-  // Profile Form
   const {
     register: registerProfile,
     handleSubmit: handleProfileSubmit,
@@ -215,13 +100,11 @@ function Profile() {
     },
   });
 
-  // Password Form
   const {
     register: registerPassword,
     handleSubmit: handlePasswordSubmit,
     formState: { errors: passwordErrors, isSubmitting: isPasswordSubmitting },
     reset: resetPassword,
-    watch: watchPassword,
   } = useForm({
     mode: "onChange",
     defaultValues: {
@@ -231,7 +114,6 @@ function Profile() {
     },
   });
 
-  // ============ Effects ============
   useEffect(() => {
     if (currentUser) {
       resetProfile({
@@ -255,7 +137,10 @@ function Profile() {
     }
   }, [errorMessage]);
 
-  // ============ Event Handlers ============
+  useEffect(() => {
+    setCreditLedger(getCreditLedger());
+  }, []);
+
   const onProfileSubmit = async (data) => {
     try {
       setErrorMessage("");
@@ -294,383 +179,236 @@ function Profile() {
     }
   };
 
-  const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
-    setErrorMessage("");
-    setSuccessMessage("");
-  };
+  const getInitials = (name) =>
+    name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "U";
 
-  const handleEditCancel = () => {
-    setIsEditMode(false);
-    resetProfile();
-    setErrorMessage("");
-  };
+  const usageData = useMemo(() => {
+    const days = [];
+    const now = new Date();
+    for (let i = 29; i >= 0; i -= 1) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      days.push({ key, label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }), credits: 0 });
+    }
 
-  const togglePasswordVisibility = (field) => {
-    setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  // ============ Utility Functions ============
-  const getInitials = (name) => {
-    return (
-      name
-        ?.split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2) || "U"
-    );
-  };
-
-  const formatDate = (date) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+    const ledger = creditLedger || [];
+    ledger.forEach((entry) => {
+      if (entry.type !== "debit") return;
+      const dayKey = entry.timestamp?.slice(0, 10);
+      const bucket = days.find((d) => d.key === dayKey);
+      if (bucket) bucket.credits += Number(entry.amount) || 0;
     });
-  };
 
-  // ============ Render ============
+    return days.map(({ label, credits }) => ({ label, credits }));
+  }, [creditLedger]);
+
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-br from-[#faf8f5] to-[#f5f1ed]">
-      {/* Topbar */}
-      <div className="sticky top-0 z-1000 w-full bg-white border-b border-[#937c6033]">
-        <TopBar />
-      </div>
+    <div className="min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a]">
+      <TopBar />
 
-      {/* Main Content */}
-      <div className="flex-1 pt-[70px] md:pt-[75px] lg:pt-[80px] pb-8">
-        <div className="max-w-4xl mx-auto px-4 md:px-5 lg:px-6 w-full">
-          {/* Header */}
-          <div className="mb-5 md:mb-7 lg:mb-7 flex items-end gap-3 md:gap-4 lg:gap-4 p-3 md:p-3 lg:p-5 bg-white rounded-lg border border-[#937c6014]">
-            <div className="w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-br from-[#937c60] to-[#6b5d50] text-white flex items-center justify-center text-2xl md:text-3xl lg:text-5xl font-bold flex-shrink-0">
+      <main className="max-w-4xl mx-auto pt-36 pb-20 px-6">
+        <div className="flex items-center justify-between gap-6 mb-6">
+          <div className="flex items-center gap-4">
+            <div
+              className="w-14 h-14 rounded-2xl text-white flex items-center justify-center text-xl font-bold"
+              style={{ background: `linear-gradient(135deg, ${BRAND_COLOR}, #6b5d50)` }}
+            >
               {getInitials(currentUser?.name)}
             </div>
-            <div className="flex-1">
-              <h1 className="text-lg md:text-2xl lg:text-2xl font-bold text-[#1a1a1a] mb-1">
-                {currentUser?.name || "User Profile"}
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+                {currentUser?.name || "Your profile"}
               </h1>
-              <p className="text-xs md:text-sm text-gray-500 font-medium">
-                {currentUser?.email}
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {currentUser?.email || "No email"}
               </p>
-              <div
-                className="inline-flex items-center gap-1 mt-1.5 px-3 py-1.5 bg-[#937c6024] rounded-md text-xs font-semibold border border-[#937c6030]"
-                style={{ color: BRAND_COLOR }}
-              >
-                <CheckCircle2 size={12} />
-                <span>
-                  {currentUser?.role === "admin" ? "Administrator" : "User"}
-                </span>
-              </div>
             </div>
           </div>
-
-          {/* Alerts */}
-          {successMessage && (
-            <div className="mb-4 p-3 md:p-4 bg-green-50 text-green-900 rounded-lg border border-green-200 flex gap-3 items-start animate-slideIn">
-              <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold">Success!</p>
-                <p className="text-xs md:text-sm mt-0.5">{successMessage}</p>
-              </div>
-            </div>
+          {!isEditMode && activeTab === "profile" && (
+            <button
+              onClick={() => setIsEditMode(true)}
+              className="px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-widest bg-gray-900 text-white hover:bg-black transition-all"
+            >
+              <span className="flex items-center gap-2">
+                <Edit2 size={14} /> Edit
+              </span>
+            </button>
           )}
+        </div>
 
-          {errorMessage && (
-            <div className="mb-4 p-3 md:p-4 bg-red-50 text-red-900 rounded-lg border border-red-200 flex gap-3 items-start animate-slideIn">
-              <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold">Error!</p>
-                <p className="text-xs md:text-sm mt-0.5">{errorMessage}</p>
-              </div>
+        <div className="flex flex-wrap gap-2 mb-10">
+          {[
+            { id: "profile", label: "Profile" },
+            { id: "password", label: "Password" },
+            { id: "usage", label: "Usage" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-2xl text-xs font-bold uppercase tracking-widest border transition-all ${
+                activeTab === tab.id
+                  ? "bg-[#937c60] text-white border-[#937c60]"
+                  : "bg-white dark:bg-[#111] text-gray-500 dark:text-gray-300 border-gray-100 dark:border-white/10 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {successMessage && (
+          <div className="mb-6 p-4 bg-emerald-50 text-emerald-900 rounded-2xl border border-emerald-200 flex gap-3 items-start">
+            <CheckCircle2 size={16} className="flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Success</p>
+              <p className="text-xs mt-0.5">{successMessage}</p>
             </div>
-          )}
-
-          {/* Tabs */}
-          <div className="flex gap-0 md:gap-1 mb-5 border-b border-[#937c6014] overflow-x-auto">
-            {TAB_CONFIG.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => handleTabChange(id)}
-                className={`px-3 md:px-4 lg:px-5 py-3 text-xs md:text-sm font-medium whitespace-nowrap flex items-center gap-1.5 transition-all border-b-2 -mb-px ${
-                  activeTab === id
-                    ? "text-[#937c60] border-b-2 border-[#937c60] font-semibold"
-                    : "text-gray-500 border-b-2 border-transparent"
-                }`}
-              >
-                <Icon size={14} />
-                {label}
-              </button>
-            ))}
           </div>
+        )}
 
-          {/* Profile Tab */}
+        {errorMessage && (
+          <div className="mb-6 p-4 bg-red-50 text-red-900 rounded-2xl border border-red-200 flex gap-3 items-start">
+            <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold">Error</p>
+              <p className="text-xs mt-0.5">{errorMessage}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-6">
           {activeTab === "profile" && (
-            <div className="bg-white p-4 md:p-6 rounded-lg border border-[#937c6014]">
-              {!isEditMode ? (
-                <>
-                  {/* Basic Information */}
-                  <div className="mb-6 md:mb-8 pb-6 md:pb-8 border-b border-[#937c6013]">
-                    <SectionHeader icon={User} title="Basic Info" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                      <InfoCard
-                        icon={User}
-                        label="Full Name"
-                        value={currentUser?.name || "Not set"}
-                      />
-                      <InfoCard
-                        icon={Mail}
-                        label="Email"
-                        value={currentUser?.email || "Not set"}
-                      />
-                      <InfoCard
-                        icon={CheckCircle2}
-                        label="Status"
-                        value={currentUser?.isActive ? "Active" : "Inactive"}
-                        isStatus={true}
-                      />
-                    </div>
-                  </div>
+            <section className="bg-white dark:bg-[#111] border border-gray-100 dark:border-white/10 rounded-[32px] p-6 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-[1px] bg-[#937c60] opacity-40" />
+                <p className="text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase">
+                  Profile
+                </p>
+              </div>
 
-                  {/* Account Details */}
-                  <div className="mb-0 pb-0">
-                    <SectionHeader icon={Lock} title="Account Details" />
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                      <InfoCard
-                        icon={Fingerprint}
-                        label="User ID"
-                        value={currentUser?._id?.slice(0, 16) || "N/A"}
-                      />
-                      <InfoCard
-                        icon={Crown}
-                        label="Role"
-                        value={currentUser?.role === "admin" ? "Admin" : "User"}
-                        isStatus={true}
-                      />
-                      <InfoCard
-                        icon={Calendar}
-                        label="Member Since"
-                        value={formatDate(currentUser?.createdAt)}
-                      />
-                      <InfoCard
-                        icon={RefreshCw}
-                        label="Last Updated"
-                        value={formatDate(currentUser?.updatedAt)}
-                      />
-                      <InfoCard
-                        icon={CheckCircle2}
-                        label="Email Verified"
-                        value="Verified"
-                        isStatus={true}
-                      />
-                      <InfoCard
-                        icon={Clock}
-                        label="Last Login"
-                        value={formatDate(currentUser?.lastLogin)}
-                      />
-                    </div>
-                  </div>
+              <form onSubmit={handleProfileSubmit(onProfileSubmit)} className="space-y-5">
+                <TextInput
+                  label="Full Name"
+                  icon={User}
+                  placeholder="Enter your full name"
+                  disabled={!isEditMode}
+                  error={profileErrors.name}
+                  {...registerProfile("name", PROFILE_VALIDATION.name)}
+                />
+                <TextInput
+                  label="Email"
+                  icon={Mail}
+                  type="email"
+                  placeholder="Enter your email"
+                  disabled={!isEditMode}
+                  error={profileErrors.email}
+                  {...registerProfile("email", PROFILE_VALIDATION.email)}
+                />
 
-                  {/* Edit Button */}
-                  <div className="flex gap-2.5 md:gap-3 mt-5 md:mt-6 flex-wrap">
-                    <button
-                      onClick={() => setIsEditMode(true)}
-                      className={`${CLASS_BUTTON_PRIMARY}  md:w-auto`}
-                    >
-                      <Edit2 size={14} />
-                      Edit Profile
-                    </button>
-                  </div>
-                </>
-              ) : (
-                /* Edit Mode */
-                <form onSubmit={handleProfileSubmit(onProfileSubmit)}>
-                  <FormInput
-                    label="Full Name"
-                    placeholder="Enter your full name"
-                    required
-                    error={profileErrors.name}
-                    {...registerProfile("name", PROFILE_VALIDATION.name)}
-                  />
-                  <FormInput
-                    label="Email Address"
-                    type="email"
-                    placeholder="Enter your email address"
-                    required
-                    error={profileErrors.email}
-                    {...registerProfile("email", PROFILE_VALIDATION.email)}
-                  />
-
-                  <div className="flex gap-2.5 md:gap-3 mt-5 md:mt-6 flex-wrap">
+                {isEditMode && (
+                  <div className="flex flex-wrap gap-3">
                     <button
                       type="submit"
-                      disabled={
-                        isProfileSubmitting || updateProfileMutation.isPending
-                      }
-                      className={`${CLASS_BUTTON_PRIMARY} w-full md:w-auto`}
+                      disabled={isProfileSubmitting || updateProfileMutation.isPending}
+                      className="px-5 py-2.5 rounded-2xl bg-gray-900 text-white text-xs font-bold uppercase tracking-widest hover:bg-black transition-all disabled:opacity-60"
                     >
-                      <Save size={14} />
-                      {isProfileSubmitting || updateProfileMutation.isPending
-                        ? "Saving..."
-                        : "Save"}
+                      <span className="flex items-center gap-2">
+                        <Save size={14} />
+                        {isProfileSubmitting || updateProfileMutation.isPending ? "Saving..." : "Save"}
+                      </span>
                     </button>
                     <button
                       type="button"
-                      onClick={handleEditCancel}
-                      className={`${CLASS_BUTTON_SECONDARY} w-full md:w-auto`}
+                      onClick={() => {
+                        setIsEditMode(false);
+                        resetProfile();
+                      }}
+                      className="px-5 py-2.5 rounded-2xl bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-200 text-xs font-bold uppercase tracking-widest hover:bg-gray-200 dark:hover:bg-white/10 transition-all"
                     >
-                      <X size={14} />
                       Cancel
                     </button>
                   </div>
-                </form>
-              )}
-            </div>
-          )}
-
-          {/* Security Tab */}
-          {activeTab === "security" && (
-            <div className="bg-white p-4 md:p-6 rounded-lg border border-[#937c6014]">
-              <form onSubmit={handlePasswordSubmit(onPasswordSubmit)}>
-                <SectionHeader icon={Lock} title="Change Password" />
-
-                <PasswordInput
-                  label="Current Password"
-                  placeholder="Enter current password"
-                  fieldName="current"
-                  showPassword={showPasswords.current}
-                  onToggle={togglePasswordVisibility}
-                  value={watchPassword("currentPassword")}
-                  error={passwordErrors.currentPassword}
-                  required
-                  {...registerPassword(
-                    "currentPassword",
-                    PASSWORD_VALIDATION.currentPassword
-                  )}
-                />
-
-                <PasswordInput
-                  label="New Password"
-                  hint="8+ chars, uppercase, lowercase, number"
-                  placeholder="Enter new password"
-                  fieldName="new"
-                  showPassword={showPasswords.new}
-                  onToggle={togglePasswordVisibility}
-                  value={watchPassword("newPassword")}
-                  error={passwordErrors.newPassword}
-                  required
-                  {...registerPassword(
-                    "newPassword",
-                    PASSWORD_VALIDATION.newPassword
-                  )}
-                />
-
-                <PasswordInput
-                  label="Confirm Password"
-                  placeholder="Confirm new password"
-                  fieldName="confirm"
-                  showPassword={showPasswords.confirm}
-                  onToggle={togglePasswordVisibility}
-                  value={watchPassword("confirmPassword")}
-                  error={passwordErrors.confirmPassword}
-                  required
-                  {...registerPassword(
-                    "confirmPassword",
-                    PASSWORD_VALIDATION.confirmPassword
-                  )}
-                />
-
-                <div className="flex gap-2.5 md:gap-3 mt-5 md:mt-6 flex-wrap">
-                  <button
-                    type="submit"
-                    disabled={
-                      isPasswordSubmitting || changePasswordMutation.isPending
-                    }
-                    className={`${CLASS_BUTTON_PRIMARY} w-full md:w-auto`}
-                  >
-                    <Lock size={14} />
-                    {isPasswordSubmitting || changePasswordMutation.isPending
-                      ? "Changing..."
-                      : "Change Password"}
-                  </button>
-                </div>
+                )}
               </form>
-
-              {/* Security Info */}
-              <div className="mt-6 md:mt-7 pt-5 md:pt-6 border-t border-[#937c6013]">
-                <SectionHeader icon={Shield} title="Security Info" />
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
-                  <InfoCard
-                    icon={Lock}
-                    label="Active Sessions"
-                    value="1 Session"
-                  />
-                  <InfoCard
-                    icon={CheckCircle2}
-                    label="Login Alerts"
-                    value="Enabled"
-                    isStatus={true}
-                  />
-                </div>
-              </div>
-            </div>
+            </section>
           )}
 
-          {/* Activity Tab */}
-          {activeTab === "activity" && (
-            <div className="bg-white p-4 md:p-6 rounded-lg border border-[#937c6014]">
-              <SectionHeader icon={Activity} title="Activity" />
-
-              <div className="mb-6 md:mb-8">
-                <h4 className="text-xs font-bold text-gray-600 uppercase mb-3 md:mb-3.5 tracking-wide">
-                  Recent Events
-                </h4>
-                <div className="border-l-4 border-[#937c60] bg-[#faf8f5] rounded p-3">
-                  <p className="text-xs md:text-sm font-semibold text-[#1a1a1a] flex items-center gap-2 mb-1">
-                    <CheckCircle2 size={14} /> Account Created
-                  </p>
-                  <p className="text-xs text-gray-600">
-                    {formatDate(currentUser?.createdAt)}
-                  </p>
-                </div>
+          {activeTab === "password" && (
+            <section className="bg-white dark:bg-[#111] border border-gray-100 dark:border-white/10 rounded-[32px] p-6 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-8 h-[1px] bg-[#937c60] opacity-40" />
+                <p className="text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase">
+                  Password
+                </p>
               </div>
 
-              <div className="pt-5 md:pt-6 border-t border-[#937c6013]">
-                <h4 className="text-xs font-bold text-gray-600 uppercase mb-3 md:mb-3.5 tracking-wide">
-                  Login Stats
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                  <InfoCard
-                    icon={Clock}
-                    label="Last Login"
-                    value={formatDate(currentUser?.lastLogin)}
-                  />
-                  <InfoCard icon={TrendingUp} label="Total Logins" value="—" />
-                  <InfoCard
-                    icon={AlertCircle}
-                    label="Failed Attempts"
-                    value="—"
-                  />
-                </div>
+              <form onSubmit={handlePasswordSubmit(onPasswordSubmit)} className="space-y-5">
+                <TextInput
+                  label="Current Password"
+                  icon={Lock}
+                  type="password"
+                  placeholder="Enter current password"
+                  error={passwordErrors.currentPassword}
+                  {...registerPassword("currentPassword", PASSWORD_VALIDATION.currentPassword)}
+                />
+                <TextInput
+                  label="New Password"
+                  icon={Lock}
+                  type="password"
+                  placeholder="Enter new password"
+                  error={passwordErrors.newPassword}
+                  {...registerPassword("newPassword", PASSWORD_VALIDATION.newPassword)}
+                />
+                <TextInput
+                  label="Confirm Password"
+                  icon={Lock}
+                  type="password"
+                  placeholder="Confirm new password"
+                  error={passwordErrors.confirmPassword}
+                  {...registerPassword("confirmPassword", PASSWORD_VALIDATION.confirmPassword)}
+                />
+
+                <button
+                  type="submit"
+                  disabled={isPasswordSubmitting || changePasswordMutation.isPending}
+                  className="px-5 py-2.5 rounded-2xl bg-[#937c60] text-white text-xs font-bold uppercase tracking-widest hover:bg-[#7a6650] transition-all disabled:opacity-60"
+                >
+                  {isPasswordSubmitting || changePasswordMutation.isPending ? "Updating..." : "Update password"}
+                </button>
+              </form>
+            </section>
+          )}
+
+          {activeTab === "usage" && (
+            <section className="bg-white dark:bg-[#111] border border-gray-100 dark:border-white/10 rounded-[32px] p-6 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-8 h-[1px] bg-[#937c60] opacity-40" />
+                <p className="text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase">
+                  Usage
+                </p>
               </div>
-            </div>
+              <p className="text-xs text-gray-400 mb-6">Credits used over the last 30 days.</p>
+              <div className="w-full h-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={usageData} margin={{ left: -10, right: 10 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={4} />
+                    <YAxis tick={{ fontSize: 10 }} />
+                    <Tooltip contentStyle={{ borderRadius: 12 }} />
+                    <Bar dataKey="credits" fill={BRAND_COLOR} radius={[8, 8, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </section>
           )}
         </div>
-      </div>
-
-      <style>{`
-        @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
+      </main>
     </div>
   );
 }

@@ -37,6 +37,7 @@ import {
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { getCreditLedger, getCreditsBalance, spendCredits } from '@/lib/credits'
 
 const STYLES = [
   { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors', color: '#de7c7c' },
@@ -102,9 +103,41 @@ const ThreedGenerator = () => {
   const [viewerExposure, setViewerExposure] = useState(1.2)
   const [viewerShadow, setViewerShadow] = useState(1)
   const [viewerRotateSpeed, setViewerRotateSpeed] = useState(30)
+  const [creditsBalance, setCreditsBalance] = useState(() => getCreditsBalance())
+  const [creditsLedger, setCreditsLedger] = useState(() => getCreditLedger())
   
   const fileInputRef = useRef(null)
   const chatContainerRef = useRef(null)
+  const initialRenderCost = 3
+  const revisionCost = 1
+
+  const refreshCredits = () => {
+    setCreditsBalance(getCreditsBalance())
+    setCreditsLedger(getCreditLedger())
+  }
+
+  useEffect(() => {
+    refreshCredits()
+  }, [])
+
+  const confirmCreditSpend = (cost, actionLabel) => {
+    const balance = getCreditsBalance()
+    if (balance < cost) {
+      toast.error('Not enough credits. Please add more credits to continue.')
+      return false
+    }
+    const confirmed = window.confirm(
+      `${actionLabel} will use ${cost} credits. You have ${balance} credits. Continue?`
+    )
+    if (!confirmed) return false
+    const result = spendCredits(cost, { action: actionLabel, tool: 'threed' })
+    if (!result.ok) {
+      toast.error('Not enough credits. Please add more credits to continue.')
+      return false
+    }
+    refreshCredits()
+    return true
+  }
 
   // Sync theme
   useEffect(() => {
@@ -191,6 +224,11 @@ const ThreedGenerator = () => {
       toast.error("Please describe your changes", { id: 'missing-prompt' })
       return
     }
+
+    const isNewRender = versions.length === 0
+    const cost = isNewRender ? initialRenderCost : revisionCost
+    const actionLabel = isNewRender ? '3D render generation' : '3D render revision'
+    if (!confirmCreditSpend(cost, actionLabel)) return
 
     setIsGenerating(true)
     setUploadProgress(0)
@@ -566,6 +604,19 @@ const ThreedGenerator = () => {
   return (
     <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
       <TopBar />
+      <div className='w-full bg-white/90 dark:bg-[#0a0a0a] border-b border-[#E5E5E7] dark:border-[#2D2D2F] mt-16'>
+        <div className='max-w-6xl mx-auto px-4 sm:px-6 py-2 flex flex-col gap-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300'>
+          <div className='flex flex-wrap items-center justify-between gap-2'>
+            <span>Credits balance: {creditsBalance}</span>
+            <span>3D Render Set: {initialRenderCost} credits • Revision: {revisionCost} credit</span>
+          </div>
+          {creditsLedger.some((entry) => entry.tool === 'threed') && (
+            <div className='text-[10px] text-gray-400'>
+              Recent usage: {creditsLedger.filter((entry) => entry.tool === 'threed').slice(0, 3).map((entry) => `${entry.action || entry.label || entry.type} (${entry.type === 'credit' ? '+' : '-'}${entry.amount})`).join(' • ')}
+            </div>
+          )}
+        </div>
+      </div>
       
       <ThreeDRenderHistory 
         isOpen={historyOpen} 
@@ -690,6 +741,9 @@ const ThreedGenerator = () => {
               >
                 {isGenerating ? <Loader2 size={14} className='animate-spin' /> : <ArrowRight size={16} />}
               </button>
+            </div>
+            <div className='mt-2 text-[10px] text-gray-400 font-semibold'>
+              Cost: {versions.length === 0 ? initialRenderCost : revisionCost} credit{versions.length === 0 ? 's' : ''} • Balance: {creditsBalance}
             </div>
           </div>
         </aside>

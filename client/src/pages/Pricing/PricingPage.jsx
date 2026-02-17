@@ -2,79 +2,75 @@ import AvatarOnboardingPopup from '@/components/AddOns/AvatarOnboardingPopup'
 import TopBar from '@/components/Layout/Topbar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { stripeService } from '@/services/stripeService'
-import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Check, Crown, Info, Shield, Sparkles, Star, Zap } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { Crown, Sparkles, Star } from 'lucide-react'
 import { useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
+import { addCredits, getCreditsBalance } from '@/lib/credits'
 
-// Enhanced Pricing data
-const PLANS = [
+const CREDIT_DEFINITIONS = [
+  { label: '3D Render Set (1 room)', credits: 3 },
+  { label: 'Extra style / variation', credits: 1 },
+  { label: '2D Floor Plan / Cut', credits: 4 },
+  { label: 'Shopping List + Supplier Suggestions', credits: 2 },
+  { label: 'Small revision', credits: 1 },
+  { label: 'Full Room Package (all of the above)', credits: 8 },
+]
+
+const CREDIT_PACKAGES = [
   {
-    id: 'essential',
-    name: 'Essential',
+    id: 'starter',
+    name: 'Starter',
     icon: Star,
-    tagline: 'Ideal for single room focus',
-    price: '8,999',
+    tagline: 'Great for quick tests',
+    price: '199',
     unit: 'AED',
-    originalPrice: '12,999',
     color: '#b8a58c',
-    description: 'Perfect for transforming a single living space with expert AI guidance.',
+    description: 'Starter credits to explore the builders.',
+    credits: 20,
     features: [
-      '1 Room Complete Design',
-      'AI Mood Boards & 3D Renders',
-      'Material Lists with UAE Suppliers',
-      'Installation Professional Contacts',
-      'Budget Optimization (Up to 15K)',
-      'Standard Email Support',
+      'Best for single room experiments',
+      'Mix and match outputs',
+      'Credits never expire (for now)',
     ],
-    cta: 'Start Transformation',
+    cta: 'Add 20 Credits',
   },
   {
-    id: 'luxury',
-    name: 'Luxury',
-    icon: Crown,
-    tagline: 'The ultimate design experience',
-    price: '24,999',
+    id: 'home',
+    name: 'Home',
+    icon: Sparkles,
+    tagline: 'Most popular for homeowners',
+    price: '449',
     unit: 'AED',
-    originalPrice: '34,999',
     color: '#937c60',
     popular: true,
-    description: 'Our most comprehensive package for full home transformations and VIP service.',
+    description: 'Balanced package for multi-room projects.',
+    credits: 50,
     features: [
-      'Whole Home Design (4+ Rooms)',
-      'Premium AI Features & HD 3D Renders',
-      'Curated Material Lists with UAE Suppliers',
-      'Dedicated Installation Professional Network',
-      'High-End Budgeting (up to 40K)',
-      '24/7 VIP Support',
-      'Dedicated Project Manager',
+      'Enough for full room packages',
+      'Great for multiple iterations',
+      'Credits never expire (for now)',
     ],
-    cta: 'Get The VIP Treatment',
+    cta: 'Add 50 Credits',
   },
   {
-    id: 'premium',
-    name: 'Premium',
-    icon: Sparkles,
-    tagline: 'Elevated multi-room design',
-    price: '15,999',
+    id: 'plus',
+    name: 'Plus',
+    icon: Crown,
+    tagline: 'For larger projects',
+    price: '799',
     unit: 'AED',
-    originalPrice: '22,999',
     color: '#7a654f',
-    description: 'Balanced features for those looking to redesign multiple primary living areas.',
+    description: 'Best value for big renovations.',
+    credits: 100,
     features: [
-      '2-3 Rooms Complete Design',
-      'Advanced AI Mood Boards & 3D Renders',
-      'Material Lists with UAE Suppliers',
-      'Installation Professional Contacts',
-      'Medium Budgeting (Up to 25K)',
-      '24/7 Priority Support',
+      'Best value per credit',
+      'Ideal for teams',
+      'Credits never expire (for now)',
     ],
-    cta: 'Upgrade Your Home',
-    priceId: 'price_1Qpsm7F9uY9uY9uY9uY9uY9u', // Placeholder - actual price IDs needed
+    cta: 'Add 100 Credits',
   },
 ]
 
@@ -128,14 +124,11 @@ const PricingCard = ({ plan, onSelect }) => {
               {plan.price}
             </span>
           </div>
-          {plan.originalPrice && (
-            <div className='flex items-center gap-2 mt-2'>
-              <span className='text-sm text-gray-400 dark:text-gray-600 line-through'>{plan.unit} {plan.originalPrice}</span>
-              <span className='text-[10px] font-bold text-[#937c60] bg-[#937c60]/5 dark:bg-[#937c60]/10 px-2 py-0.5 rounded'>
-                SAVE AED {parseInt(plan.originalPrice.replace(',','')) - parseInt(plan.price.replace(',',''))}
-              </span>
-            </div>
-          )}
+          <div className='flex items-center gap-2 mt-2'>
+            <span className='text-[10px] font-bold text-[#937c60] bg-[#937c60]/5 dark:bg-[#937c60]/10 px-2 py-0.5 rounded'>
+              {plan.credits} Credits
+            </span>
+          </div>
         </div>
 
         <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-8'>
@@ -177,6 +170,7 @@ const PricingPage = () => {
   const [isAvatarOpen, setIsAvatarOpen] = useState(false)
   const { currentUser } = useSelector((state) => state.user)
   const navigate = useNavigate()
+  const [creditBalance, setCreditBalance] = useState(() => getCreditsBalance())
 
   const handleSelectPlan = async (plan) => {
     if (!currentUser) {
@@ -185,17 +179,13 @@ const PricingPage = () => {
     }
 
     if (currentUser?.isOnboarded) {
-      // If already onboarded, initiate Stripe Checkout
-      try {
-        const loadingToast = toast.loading('Opening secure checkout...')
-        const response = await stripeService.createCheckoutSession(plan.priceId || 'default')
-        if (response.url) {
-          window.location.href = response.url
-        }
-      } catch (error) {
-        console.error('Stripe error:', error)
-        toast.error('Failed to initiate checkout. Please try again.')
-      }
+      const result = addCredits(plan.credits, {
+        action: 'credit-package',
+        packageId: plan.id,
+        label: plan.name,
+      })
+      setCreditBalance(result.balance)
+      toast.success(`${plan.credits} credits added to your balance.`)
     } else {
       setIsAvatarOpen(true)
     }
@@ -217,7 +207,7 @@ const PricingPage = () => {
               transition={{ duration: 0.5 }}
               className='inline-flex items-center px-4 py-1 rounded-full bg-[#937c60]/10 dark:bg-[#937c60]/20 text-[#937c60] text-[11px] font-bold mb-6 tracking-wider'
             >
-              LIMITED TIME LAUNCH OFFER
+              CREDIT PACKAGES (TEST MODE)
             </motion.div>
             
             <motion.h1 
@@ -226,7 +216,7 @@ const PricingPage = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
               className='text-5xl md:text-7xl font-black text-gray-900 dark:text-white mb-6 tracking-tight leading-[1.05]'
             >
-              Premium Design, <br />
+              Simple Credits, <br />
               <span className='text-[#937c60]'>Transparent</span> Pricing.
             </motion.h1>
             
@@ -236,13 +226,18 @@ const PricingPage = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
               className='text-lg text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto'
             >
-              Experience the future of interior design. Flexible plans tailored to the scale of your vision, from single rooms to luxury villas.
+              Buy credit packages and spend them on outputs. Credits represent deliverables, not technical usage.
             </motion.p>
+
+            <div className='mt-8 flex flex-wrap justify-center gap-3 text-[11px] font-bold uppercase tracking-widest text-gray-400'>
+              <span>Balance: {creditBalance} Credits</span>
+              <span>Credits Do Not Expire (for now)</span>
+            </div>
           </div>
 
           {/* Pricing Grid */}
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-24 items-center'>
-            {PLANS.map((plan, index) => (
+            {CREDIT_PACKAGES.map((plan) => (
               <div 
                 key={plan.id} 
                 className={plan.popular ? 'lg:scale-105 z-10' : 'lg:scale-95'}
@@ -255,6 +250,26 @@ const PricingPage = () => {
             ))}
           </div>
 
+          <div className='max-w-5xl mx-auto mb-24'>
+            <div className='bg-white/80 dark:bg-[#111] border border-gray-100 dark:border-white/5 rounded-[32px] p-8 md:p-12 shadow-xl'>
+              <div className='flex items-center gap-3 mb-6'>
+                <div className='w-10 h-[1px] bg-[#937c60] opacity-40'></div>
+                <span className='text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase'>Credit Definitions</span>
+              </div>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                {CREDIT_DEFINITIONS.map((item) => (
+                  <div key={item.label} className='flex items-center justify-between px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 text-sm font-semibold text-gray-700 dark:text-gray-200'>
+                    <span>{item.label}</span>
+                    <span className='text-[#937c60]'>{item.credits} credits</span>
+                  </div>
+                ))}
+              </div>
+              <p className='mt-6 text-xs text-gray-400'>
+                Credits are applied per output and shown before you confirm an action.
+              </p>
+            </div>
+          </div>
+
           {/* Trust Section Simplified */}
           <motion.div 
             initial={{ opacity: 0 }}
@@ -262,9 +277,9 @@ const PricingPage = () => {
             viewport={{ once: true }}
             className='flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-40 font-bold text-xs uppercase tracking-[0.2em] text-gray-600 dark:text-gray-400'
           >
-            <span>Secure Payments</span>
-            <span>AI-Powered Accuracy</span>
-            <span>UAE Licensed Experts</span>
+            <span>Clear Credit Costs</span>
+            <span>Track Generations</span>
+            <span>Credits Never Expire</span>
           </motion.div>
 
           {/* Help/CTA Banner */}
@@ -282,13 +297,13 @@ const PricingPage = () => {
                   Still not sure about the perfect fit?
                 </h2>
                 <p className='text-gray-400 text-lg md:text-xl'>
-                  Our consultants offer a free 15-minute session to help you choose the right path for your renovation.
+                  Not sure how many credits you need? We can help estimate your project.
                 </p>
               </div>
 
               <div className='relative z-10 shrink-0 w-full lg:w-auto'>
                 <Button 
-                  onClick={handleSelectPlan}
+                  onClick={() => setIsAvatarOpen(true)}
                   className='bg-[#937c60] hover:bg-[#a68d6f] text-white px-12 py-8 rounded-2xl text-lg font-bold w-full lg:w-auto transition-all hover:scale-105 active:scale-95'
                 >
                   Book Free Consultation

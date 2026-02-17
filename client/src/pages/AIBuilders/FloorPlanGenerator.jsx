@@ -31,6 +31,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FloorPlanHistory } from '../../components/FloorPlan/FloorPlanHistory'
 import TopBar from '../../components/Layout/Topbar'
 import api from '../../config/config'
+import { getCreditLedger, getCreditsBalance, spendCredits } from '@/lib/credits'
 
 const BUILDING_TYPES = [
   { id: 'apartment', label: 'Apartment', icon: Layout },
@@ -85,6 +86,8 @@ const FloorPlanGenerator = () => {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [showHistoryMobile, setShowHistoryMobile] = useState(false)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
+  const [creditsBalance, setCreditsBalance] = useState(() => getCreditsBalance())
+  const [creditsLedger, setCreditsLedger] = useState(() => getCreditLedger())
   const location = useLocation()
   const { id } = useParams()
   
@@ -101,6 +104,36 @@ const FloorPlanGenerator = () => {
   })
   
   const chatContainerRef = useRef(null)
+  const initialGenerationCost = 4
+  const revisionCost = 1
+
+  const refreshCredits = () => {
+    setCreditsBalance(getCreditsBalance())
+    setCreditsLedger(getCreditLedger())
+  }
+
+  useEffect(() => {
+    refreshCredits()
+  }, [])
+
+  const confirmCreditSpend = (cost, actionLabel) => {
+    const balance = getCreditsBalance()
+    if (balance < cost) {
+      toast.error('Not enough credits. Please add more credits to continue.')
+      return false
+    }
+    const confirmed = window.confirm(
+      `${actionLabel} will use ${cost} credits. You have ${balance} credits. Continue?`
+    )
+    if (!confirmed) return false
+    const result = spendCredits(cost, { action: actionLabel, tool: 'floorplan' })
+    if (!result.ok) {
+      toast.error('Not enough credits. Please add more credits to continue.')
+      return false
+    }
+    refreshCredits()
+    return true
+  }
 
   // Sync theme
   useEffect(() => {
@@ -173,6 +206,10 @@ const FloorPlanGenerator = () => {
       toast.error("Please describe your vision", { id: 'missing-prompt' })
       return
     }
+
+    const cost = generatedImage ? revisionCost : initialGenerationCost
+    const actionLabel = generatedImage ? 'Floor plan revision' : 'Floor plan generation'
+    if (!confirmCreditSpend(cost, actionLabel)) return
 
     setIsGenerating(true)
     if (step === 'config') setStep('result')
@@ -255,6 +292,19 @@ const FloorPlanGenerator = () => {
   return (
     <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
       <TopBar />
+      <div className='w-full bg-white/90 dark:bg-[#0a0a0a] border-b border-[#E5E5E7] dark:border-[#2D2D2F] mt-16'>
+        <div className='max-w-6xl mx-auto px-4 sm:px-6 py-2 flex flex-col gap-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300'>
+          <div className='flex flex-wrap items-center justify-between gap-2'>
+            <span>Credits balance: {creditsBalance}</span>
+            <span>2D Floor Plan: {initialGenerationCost} credits • Revision: {revisionCost} credit</span>
+          </div>
+          {creditsLedger.some((entry) => entry.tool === 'floorplan') && (
+            <div className='text-[10px] text-gray-400'>
+              Recent usage: {creditsLedger.filter((entry) => entry.tool === 'floorplan').slice(0, 3).map((entry) => `${entry.action || entry.label || entry.type} (${entry.type === 'credit' ? '+' : '-'}${entry.amount})`).join(' • ')}
+            </div>
+          )}
+        </div>
+      </div>
       
       <FloorPlanHistory 
         isOpen={historyOpen} 
@@ -430,6 +480,9 @@ const FloorPlanGenerator = () => {
                 >
                   {isGenerating ? <Loader2 size={14} className='animate-spin' /> : <ArrowRight size={16} />}
                 </button>
+               </div>
+               <div className='text-[10px] text-gray-400 font-semibold'>
+                 Cost: {generatedImage ? revisionCost : initialGenerationCost} credit{generatedImage ? '' : 's'} • Balance: {creditsBalance}
                </div>
                
                {step === 'result' && (
