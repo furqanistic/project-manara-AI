@@ -1,4 +1,5 @@
 import TopBar from "@/components/Layout/Topbar";
+import AvatarCreationModal from "@/components/Auth/AvatarCreationModal";
 import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useChangePassword, useCurrentUser, useUpdateProfile } from "@/hooks/useAuth";
@@ -87,6 +88,7 @@ function Profile() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [activeTab, setActiveTab] = useState("profile");
+  const [isAvatarEditorOpen, setIsAvatarEditorOpen] = useState(false);
   const [creditLedger, setCreditLedger] = useState(() => getCreditLedger());
   const [creditBalance, setCreditBalance] = useState(() => getCreditsBalance());
 
@@ -233,15 +235,25 @@ function Profile() {
       <main className="max-w-4xl mx-auto pt-36 pb-20 px-6">
         <div className="flex items-center justify-between gap-6 mb-6">
           <div className="flex items-center gap-4">
-            <div
-              className="w-14 h-14 rounded-2xl text-white flex items-center justify-center text-xl font-bold overflow-hidden"
-              style={{ background: `linear-gradient(135deg, ${BRAND_COLOR}, #6b5d50)` }}
-            >
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Profile avatar" className="w-full h-full object-cover" />
-              ) : (
-                getInitials(currentUser?.name)
-              )}
+            <div className="relative">
+              <div
+                className="w-14 h-14 rounded-2xl text-white flex items-center justify-center text-xl font-bold overflow-hidden"
+                style={{ background: `linear-gradient(135deg, ${BRAND_COLOR}, #6b5d50)` }}
+              >
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="Profile avatar" className="w-full h-full object-cover" />
+                ) : (
+                  getInitials(currentUser?.name)
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAvatarEditorOpen(true)}
+                className="absolute -bottom-2 -right-2 w-7 h-7 rounded-full bg-gray-900 text-white flex items-center justify-center border-2 border-white dark:border-[#0a0a0a] hover:bg-black transition-all"
+                aria-label="Edit avatar"
+              >
+                <Edit2 size={12} />
+              </button>
             </div>
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
@@ -453,6 +465,18 @@ function Profile() {
           )}
         </div>
       </main>
+      {isAvatarEditorOpen && (
+        <AvatarCreationModal
+          allowClose
+          initialAvatar={currentUser?.onboardingData?.avatar}
+          onClose={() => setIsAvatarEditorOpen(false)}
+          onComplete={() => {
+            setIsAvatarEditorOpen(false);
+            setSuccessMessage("Avatar updated successfully!");
+            setErrorMessage("");
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -7,6 +7,8 @@ import {
     getAllUsers,
     getUserProfile,
     logout,
+    signinWithApple,
+    signinWithGoogle,
     signin,
     signup,
     uploadAvatar,
@@ -33,6 +35,8 @@ router.post("/signup", signup);
  * Body: { email, password }
  */
 router.post("/signin", signin);
+router.post("/signin/google", signinWithGoogle);
+router.post("/signin/apple", signinWithApple);
 
 // ============================================
 // PROTECTED ROUTES (Authentication required)

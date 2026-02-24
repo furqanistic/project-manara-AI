@@ -2,9 +2,8 @@ import { useAvatarUpload } from "@/hooks/useAuth";
 import { createAvatar } from "@dicebear/core";
 import { adventurer, avataaars, lorelei, notionists } from "@dicebear/collection";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, ChevronLeft, ChevronRight, RefreshCw, Sparkles, User } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, RefreshCw, Sparkles, User, X } from "lucide-react";
 import React, { useEffect, useMemo, useState } from "react";
-import { useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
 
 const svgToDataUri = (svg) => {
@@ -12,20 +11,28 @@ const svgToDataUri = (svg) => {
   try {
     const encoded = window.btoa(unescape(encodeURIComponent(svg)));
     return `data:image/svg+xml;base64,${encoded}`;
-  } catch (error) {
+  } catch {
     return "";
   }
 };
 
-const AvatarCreationModal = () => {
-  const { currentUser } = useSelector((state) => state.user);
+const AvatarCreationModal = ({
+  allowClose = false,
+  onClose,
+  onComplete,
+  initialAvatar = null,
+}) => {
+  const MotionDiv = motion.div;
   const avatarMutation = useAvatarUpload();
   const [step, setStep] = useState(1);
   const [errors, setErrors] = useState({});
-  const [avatarName, setAvatarName] = useState("");
-  const [selectedStyle, setSelectedStyle] = useState("lorelei");
-  const [selectedPalette, setSelectedPalette] = useState("sand");
-  const [seed, setSeed] = useState(() => Math.random().toString(36).slice(2, 10));
+  const [avatarName, setAvatarName] = useState(initialAvatar?.name || "");
+  const [selectedStyle, setSelectedStyle] = useState(initialAvatar?.style || "lorelei");
+  const [selectedPalette, setSelectedPalette] = useState(initialAvatar?.palette || "sand");
+  const [saveProgress, setSaveProgress] = useState(0);
+  const [seed, setSeed] = useState(
+    () => initialAvatar?.seed || Math.random().toString(36).slice(2, 10)
+  );
 
   const totalSteps = 3;
 
@@ -69,10 +76,10 @@ const AvatarCreationModal = () => {
         backgroundColor: [currentPalette.color.replace("#", "")],
         radius: 16,
       }).toString();
-    } catch (error) {
+    } catch {
       return "";
     }
-  }, [currentStyle, seed, currentPalette]);
+  }, [currentStyle, seed, currentPalette, selectedStyle]);
   const avatarDataUri = useMemo(() => svgToDataUri(avatarSvg), [avatarSvg]);
 
   const validateStep = (currentStep) => {
@@ -109,10 +116,40 @@ const AvatarCreationModal = () => {
         },
       });
       toast.success("Avatar created! Your style is ready.");
-    } catch (error) {
+      onComplete?.();
+    } catch {
       toast.error("Failed to save your avatar. Please try again.");
     }
   };
+
+  useEffect(() => {
+    if (!initialAvatar) return;
+    setAvatarName(initialAvatar.name || "");
+    setSelectedStyle(initialAvatar.style || "lorelei");
+    setSelectedPalette(initialAvatar.palette || "sand");
+    setSeed(initialAvatar.seed || Math.random().toString(36).slice(2, 10));
+    setStep(1);
+  }, [initialAvatar]);
+
+  useEffect(() => {
+    if (!avatarMutation.isPending) {
+      if (saveProgress === 0) return;
+      setSaveProgress(100);
+      const resetTimer = setTimeout(() => setSaveProgress(0), 400);
+      return () => clearTimeout(resetTimer);
+    }
+
+    setSaveProgress((prev) => (prev > 10 ? prev : 12));
+    const interval = setInterval(() => {
+      setSaveProgress((prev) => {
+        if (prev >= 92) return prev;
+        const increment = Math.max(1, Math.floor(Math.random() * 8));
+        return Math.min(92, prev + increment);
+      });
+    }, 180);
+
+    return () => clearInterval(interval);
+  }, [avatarMutation.isPending, saveProgress]);
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -127,25 +164,36 @@ const AvatarCreationModal = () => {
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         className="absolute inset-0 bg-black/80 backdrop-blur-xl"
+        onClick={allowClose && !avatarMutation.isPending ? onClose : undefined}
         onWheel={(event) => event.preventDefault()}
         onTouchMove={(event) => event.preventDefault()}
       />
 
-      <motion.div
+      <MotionDiv
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         className="relative w-full max-w-3xl h-[680px] max-h-[90vh] bg-white dark:bg-[#0a0a0a] rounded-[40px] shadow-2xl shadow-black/50 overflow-hidden border border-gray-100 dark:border-white/5"
         onWheel={(event) => event.stopPropagation()}
         onTouchMove={(event) => event.stopPropagation()}
       >
+        {allowClose && (
+          <button
+            onClick={onClose}
+            disabled={avatarMutation.isPending}
+            className="absolute top-5 right-5 z-30 p-2 rounded-xl bg-white/80 dark:bg-black/40 hover:bg-white dark:hover:bg-black/70 border border-gray-100 dark:border-white/10 transition-all"
+            aria-label="Close avatar editor"
+          >
+            <X size={16} className="text-gray-500 dark:text-gray-300" />
+          </button>
+        )}
         {avatarMutation.isPending && (
           <div className="absolute left-0 right-0 top-0 z-20">
             <div className="h-1.5 bg-gray-100 dark:bg-white/5">
-              <motion.div
+              <MotionDiv
                 className="h-full bg-[#8d775e]"
                 initial={{ x: "-60%", width: "60%" }}
                 animate={{ x: "140%" }}
@@ -155,7 +203,7 @@ const AvatarCreationModal = () => {
           </div>
         )}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gray-100 dark:bg-white/5">
-          <motion.div
+          <MotionDiv
             className="h-full bg-[#8d775e]"
             initial={{ width: "0%" }}
             animate={{ width: `${(step / totalSteps) * 100}%` }}
@@ -214,7 +262,7 @@ const AvatarCreationModal = () => {
 
             <div className="flex-1 min-h-0 overflow-y-auto pr-2 custom-scrollbar overscroll-contain">
               <AnimatePresence mode="wait">
-                <motion.div
+                <MotionDiv
                   key={step}
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
@@ -326,14 +374,14 @@ const AvatarCreationModal = () => {
                       </div>
                     </div>
                   )}
-                </motion.div>
+                </MotionDiv>
               </AnimatePresence>
             </div>
 
             <div className="pt-8 mt-8 border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
               <button
                 onClick={handleBack}
-                disabled={step === 1}
+                disabled={step === 1 || avatarMutation.isPending}
                 className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all ${
                   step === 1 ? "opacity-0 pointer-events-none" : "hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500"
                 }`}
@@ -356,9 +404,23 @@ const AvatarCreationModal = () => {
                   (step === totalSteps ? <Check size={18} /> : <ChevronRight size={18} />)}
               </button>
             </div>
+            {saveProgress > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500 dark:text-gray-300 mb-1.5">
+                  <span>Saving avatar...</span>
+                  <span>{Math.round(saveProgress)}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden">
+                  <div
+                    className="h-full bg-[#8d775e] transition-all duration-300"
+                    style={{ width: `${saveProgress}%` }}
+                  />
+                </div>
+              </div>
+            )}
           </div>
         </div>
-      </motion.div>
+      </MotionDiv>
     </div>
   );
 };

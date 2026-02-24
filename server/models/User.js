@@ -19,8 +19,23 @@ const UserSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: true,
+      required: false,
       select: false, // Don't return password by default in queries
+    },
+    authProvider: {
+      type: String,
+      enum: ["local", "google", "apple"],
+      default: "local",
+    },
+    googleId: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+    appleId: {
+      type: String,
+      unique: true,
+      sparse: true,
     },
     role: {
       type: String,
@@ -103,6 +118,7 @@ UserSchema.index({ isDeleted: 1, isActive: 1 });
 UserSchema.pre("save", async function (next) {
   // Only hash the password if it has been modified (or is new)
   if (!this.isModified("password")) return next();
+  if (!this.password) return next();
 
   try {
     // Generate a salt and hash the password
@@ -125,6 +141,7 @@ UserSchema.methods.correctPassword = async function (
   candidatePassword,
   userPassword
 ) {
+  if (!candidatePassword || !userPassword) return false;
   return await bcrypt.compare(candidatePassword, userPassword);
 };
 

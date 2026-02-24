@@ -5,10 +5,18 @@
  */
 
 import jwt from "jsonwebtoken";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 import mongoose from "mongoose";
 import { createError } from "../error.js";
 import User from "../models/User.js";
 import { uploadAvatarSvg } from "../services/cloudinaryService.js";
+
+const googleJwks = createRemoteJWKSet(
+  new URL("https://www.googleapis.com/oauth2/v3/certs")
+);
+const appleJwks = createRemoteJWKSet(
+  new URL("https://appleid.apple.com/auth/keys")
+);
 
 const signToken = (id) => {
   const jwtSecret = process.env.JWT_SECRET;
@@ -53,6 +61,145 @@ const createSendToken = (user, statusCode, res) => {
     console.error("Error in createSendToken:", error);
     throw error;
   }
+};
+
+const getClientConfig = (provider) => {
+  if (provider === "google") {
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      throw createError(500, "GOOGLE_CLIENT_ID is not configured");
+    }
+    return process.env.GOOGLE_CLIENT_ID;
+  }
+
+  if (!process.env.APPLE_CLIENT_ID) {
+    throw createError(500, "APPLE_CLIENT_ID is not configured");
+  }
+  return process.env.APPLE_CLIENT_ID;
+};
+
+const getProviderName = (provider) => {
+  if (provider === "google") return "Google";
+  if (provider === "apple") return "Apple";
+  return "Social";
+};
+
+const normalizeName = ({ name, firstName, lastName, email }) => {
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+  if (fullName) return fullName;
+  if (name && String(name).trim()) return String(name).trim();
+  if (email && String(email).includes("@")) {
+    return String(email).split("@")[0];
+  }
+  return "Manara User";
+};
+
+const verifyGoogleIdToken = async (idToken) => {
+  const audience = getClientConfig("google");
+
+  const { payload } = await jwtVerify(idToken, googleJwks, {
+    issuer: ["https://accounts.google.com", "accounts.google.com"],
+    audience,
+  });
+
+  const emailVerified =
+    payload.email_verified === true || payload.email_verified === "true";
+
+  if (!payload.sub || !payload.email || !emailVerified) {
+    throw createError(401, "Invalid Google identity token");
+  }
+
+  return payload;
+};
+
+const verifyAppleIdToken = async (idToken) => {
+  const audience = getClientConfig("apple");
+
+  const { payload } = await jwtVerify(idToken, appleJwks, {
+    issuer: "https://appleid.apple.com",
+    audience,
+  });
+
+  const emailVerified =
+    payload.email_verified === true || payload.email_verified === "true";
+
+  if (!payload.sub || (payload.email && !emailVerified)) {
+    throw createError(401, "Invalid Apple identity token");
+  }
+
+  return payload;
+};
+
+const findOrCreateSocialUser = async ({
+  provider,
+  providerId,
+  email,
+  name,
+  avatarUrl,
+}) => {
+  const normalizedEmail = email ? email.toLowerCase().trim() : null;
+  const providerField = provider === "google" ? "googleId" : "appleId";
+
+  let user = await User.findOne({ [providerField]: providerId });
+
+  if (!user && normalizedEmail) {
+    user = await User.findOne({ email: normalizedEmail });
+  }
+
+  if (!user) {
+    user = await User.create({
+      name: normalizeName({ name, email: normalizedEmail }),
+      email: normalizedEmail,
+      authProvider: provider,
+      [providerField]: providerId,
+      onboardingData: avatarUrl
+        ? {
+            social: {
+              avatarUrl,
+              provider,
+            },
+          }
+        : undefined,
+      lastLogin: new Date(),
+    });
+
+    return user;
+  }
+
+  const updates = {
+    lastLogin: new Date(),
+  };
+
+  if (!user[providerField]) {
+    updates[providerField] = providerId;
+  }
+
+  if (!user.authProvider) {
+    updates.authProvider = provider;
+  }
+
+  if (!user.name && name) {
+    updates.name = normalizeName({ name, email: user.email });
+  }
+
+  if (
+    avatarUrl &&
+    (!user.onboardingData?.social || !user.onboardingData.social.avatarUrl)
+  ) {
+    updates.onboardingData = {
+      ...(user.onboardingData || {}),
+      social: {
+        avatarUrl,
+        provider,
+      },
+    };
+  }
+
+  user = await User.findByIdAndUpdate(user._id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  return user;
 };
 
 export const signup = async (req, res, next) => {
@@ -141,6 +288,16 @@ export const signin = async (req, res, next) => {
       isDeleted: false,
     }).select("+password");
 
+    if (user && !user.password) {
+      const providerLabel = getProviderName(user.authProvider);
+      return next(
+        createError(
+          400,
+          `This account uses ${providerLabel} sign-in. Please continue with ${providerLabel}.`
+        )
+      );
+    }
+
     if (!user || !(await user.correctPassword(password, user.password))) {
       return next(createError(401, "Incorrect email or password"));
     }
@@ -156,6 +313,85 @@ export const signin = async (req, res, next) => {
   } catch (err) {
     console.error("Error in signin:", err);
     next(createError(500, "An unexpected error occurred during login"));
+  }
+};
+
+export const signinWithGoogle = async (req, res, next) => {
+  try {
+    const { idToken } = req.body;
+
+    if (!idToken || typeof idToken !== "string") {
+      return next(createError(400, "Google identity token is required"));
+    }
+
+    const payload = await verifyGoogleIdToken(idToken);
+    const user = await findOrCreateSocialUser({
+      provider: "google",
+      providerId: payload.sub,
+      email: payload.email,
+      name: payload.name,
+      avatarUrl: payload.picture,
+    });
+
+    const populatedUser = await User.findById(user._id).select("-password");
+    createSendToken(populatedUser, 200, res);
+  } catch (error) {
+    console.error("Error in signinWithGoogle:", error);
+    if (
+      error?.code === "ERR_JWT_EXPIRED" ||
+      error?.code === "ERR_JWS_SIGNATURE_VERIFICATION_FAILED"
+    ) {
+      return next(createError(401, "Google sign-in failed. Please try again."));
+    }
+    next(error);
+  }
+};
+
+export const signinWithApple = async (req, res, next) => {
+  try {
+    const { idToken, firstName, lastName, name } = req.body;
+
+    if (!idToken || typeof idToken !== "string") {
+      return next(createError(400, "Apple identity token is required"));
+    }
+
+    const payload = await verifyAppleIdToken(idToken);
+    const providerId = payload.sub;
+    let user = await User.findOne({ appleId: providerId });
+
+    if (!user) {
+      const email = payload.email ? String(payload.email).toLowerCase() : null;
+      if (!email) {
+        return next(
+          createError(
+            400,
+            "Apple did not return an email address. Please use your first Apple sign-in attempt again."
+          )
+        );
+      }
+
+      user = await findOrCreateSocialUser({
+        provider: "apple",
+        providerId,
+        email,
+        name: normalizeName({ name, firstName, lastName, email }),
+      });
+    } else {
+      user.lastLogin = new Date();
+      await user.save({ validateBeforeSave: false });
+    }
+
+    const populatedUser = await User.findById(user._id).select("-password");
+    createSendToken(populatedUser, 200, res);
+  } catch (error) {
+    console.error("Error in signinWithApple:", error);
+    if (
+      error?.code === "ERR_JWT_EXPIRED" ||
+      error?.code === "ERR_JWS_SIGNATURE_VERIFICATION_FAILED"
+    ) {
+      return next(createError(401, "Apple sign-in failed. Please try again."));
+    }
+    next(error);
   }
 };
 

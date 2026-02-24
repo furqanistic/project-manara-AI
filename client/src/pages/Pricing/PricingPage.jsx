@@ -4,11 +4,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import { Crown, Sparkles, Star } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { addCredits, getCreditsBalance } from '@/lib/credits'
+import { stripeService } from '@/services/stripeService'
 
 const CREDIT_DEFINITIONS = [
   { label: '3D Render Set (1 room)', credits: 3 },
@@ -30,6 +30,7 @@ const CREDIT_PACKAGES = [
     color: '#b8a58c',
     description: 'Starter credits to explore the builders.',
     credits: 20,
+    priceId: import.meta.env.VITE_STRIPE_PRICE_ID_STARTER,
     features: [
       'Best for single room experiments',
       'Mix and match outputs',
@@ -48,6 +49,7 @@ const CREDIT_PACKAGES = [
     popular: true,
     description: 'Balanced package for multi-room projects.',
     credits: 50,
+    priceId: import.meta.env.VITE_STRIPE_PRICE_ID_HOME,
     features: [
       'Enough for full room packages',
       'Great for multiple iterations',
@@ -65,6 +67,7 @@ const CREDIT_PACKAGES = [
     color: '#7a654f',
     description: 'Best value for big renovations.',
     credits: 100,
+    priceId: import.meta.env.VITE_STRIPE_PRICE_ID_PLUS,
     features: [
       'Best value per credit',
       'Ideal for teams',
@@ -82,7 +85,7 @@ const Decorations = () => (
   </div>
 )
 
-const PricingCard = ({ plan, onSelect }) => {
+const PricingCard = ({ plan, onSelect, isLoading }) => {
   const isPopular = plan.popular
   const [isHovered, setIsHovered] = useState(false)
 
@@ -153,13 +156,14 @@ const PricingCard = ({ plan, onSelect }) => {
         {/* Action Button */}
         <Button
           onClick={onSelect}
+          disabled={isLoading}
           className={`w-full py-7 rounded-2xl font-bold text-base transition-all duration-300 border-2 shadow-none ${
             isPopular 
               ? 'bg-[#937c60] border-[#937c60] text-white hover:bg-[#867055] hover:border-[#867055]' 
               : 'bg-transparent border-gray-200 dark:border-white/10 text-[#937c60] hover:bg-[#937c60] hover:text-white hover:border-[#937c60]'
           }`}
         >
-          {plan.cta}
+          {isLoading ? 'Processing...' : plan.cta}
         </Button>
       </div>
     </motion.div>
@@ -168,9 +172,29 @@ const PricingCard = ({ plan, onSelect }) => {
 
 const PricingPage = () => {
   const [isAvatarOpen, setIsAvatarOpen] = useState(false)
+  const [isProcessingPlanId, setIsProcessingPlanId] = useState(null)
+  const [cardsCount, setCardsCount] = useState(0)
+  const [isCardsLoading, setIsCardsLoading] = useState(false)
   const { currentUser } = useSelector((state) => state.user)
   const navigate = useNavigate()
-  const [creditBalance, setCreditBalance] = useState(() => getCreditsBalance())
+
+  useEffect(() => {
+    if (!currentUser) return
+
+    const loadPaymentMethods = async () => {
+      setIsCardsLoading(true)
+      try {
+        const response = await stripeService.getPaymentMethods()
+        setCardsCount(response?.data?.cards?.length || 0)
+      } catch (error) {
+        console.error('Unable to load cards:', error)
+      } finally {
+        setIsCardsLoading(false)
+      }
+    }
+
+    loadPaymentMethods()
+  }, [currentUser])
 
   const handleSelectPlan = async (plan) => {
     if (!currentUser) {
@@ -179,13 +203,36 @@ const PricingPage = () => {
     }
 
     if (currentUser?.isOnboarded) {
-      const result = addCredits(plan.credits, {
-        action: 'credit-package',
-        packageId: plan.id,
-        label: plan.name,
-      })
-      setCreditBalance(result.balance)
-      toast.success(`${plan.credits} credits added to your balance.`)
+      if (isCardsLoading) {
+        toast.error('Loading your payment methods. Please wait a moment.')
+        return
+      }
+
+      if (cardsCount === 0) {
+        toast.error('Please link your card first from the subscription page.')
+        navigate('/subscription')
+        return
+      }
+
+      setIsProcessingPlanId(plan.id)
+      try {
+        const response = await stripeService.createCheckoutSession({
+          planId: plan.id,
+          priceId: plan.priceId,
+        })
+
+        if (response?.url) {
+          window.location.href = response.url
+          return
+        }
+
+        throw new Error('Stripe checkout URL is missing')
+      } catch (error) {
+        console.error('Stripe checkout error:', error)
+        toast.error(error?.response?.data?.message || 'Unable to start checkout.')
+      } finally {
+        setIsProcessingPlanId(null)
+      }
     } else {
       setIsAvatarOpen(true)
     }
@@ -230,8 +277,8 @@ const PricingPage = () => {
             </motion.p>
 
             <div className='mt-8 flex flex-wrap justify-center gap-3 text-[11px] font-bold uppercase tracking-widest text-gray-400'>
-              <span>Balance: {creditBalance} Credits</span>
-              <span>Credits Do Not Expire (for now)</span>
+              <span>{isCardsLoading ? 'Checking Card Status...' : `${cardsCount} Card(s) Linked`}</span>
+              <span>Card Required Before Purchase</span>
             </div>
           </div>
 
@@ -245,7 +292,11 @@ const PricingPage = () => {
                 <PricingCard 
                   plan={plan} 
                   onSelect={() => handleSelectPlan(plan)}
+                  isLoading={isProcessingPlanId === plan.id}
                 />
+                {isProcessingPlanId === plan.id && (
+                  <p className='text-center text-xs font-semibold text-[#937c60] mt-3'>Redirecting to secure checkout...</p>
+                )}
               </div>
             ))}
           </div>

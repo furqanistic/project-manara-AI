@@ -86,6 +86,64 @@ export const useSignin = () => {
 };
 
 /**
+ * useGoogleSignin - Sign in user via Google identity token
+ * @returns {Object} Mutation object
+ */
+export const useGoogleSignin = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: authService.signinWithGoogle,
+    onMutate: () => {
+      dispatch(loginStart());
+    },
+    onSuccess: (data) => {
+      console.log("✅ Google signin successful");
+      dispatch(loginSuccess(data));
+      queryClient.setQueryData(authQueryKeys.currentUser(), data?.data?.user);
+      navigate("/");
+    },
+    onError: (error) => {
+      console.error("❌ Google signin error:", error);
+      const errorMessage =
+        error?.data?.message || error?.message || "Google sign-in failed";
+      dispatch(loginFailure(errorMessage));
+    },
+  });
+};
+
+/**
+ * useAppleSignin - Sign in user via Apple identity token
+ * @returns {Object} Mutation object
+ */
+export const useAppleSignin = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: authService.signinWithApple,
+    onMutate: () => {
+      dispatch(loginStart());
+    },
+    onSuccess: (data) => {
+      console.log("✅ Apple signin successful");
+      dispatch(loginSuccess(data));
+      queryClient.setQueryData(authQueryKeys.currentUser(), data?.data?.user);
+      navigate("/");
+    },
+    onError: (error) => {
+      console.error("❌ Apple signin error:", error);
+      const errorMessage =
+        error?.data?.message || error?.message || "Apple sign-in failed";
+      dispatch(loginFailure(errorMessage));
+    },
+  });
+};
+
+/**
  * useLogout - Logout user
  * @returns {Object} Mutation object
  */
@@ -321,6 +379,8 @@ export const useAuthGuard = (requireAdmin = false) => {
 export default {
   useSignup,
   useSignin,
+  useGoogleSignin,
+  useAppleSignin,
   useLogout,
   useCurrentUser,
   useUserProfile,

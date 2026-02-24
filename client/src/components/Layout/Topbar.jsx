@@ -98,6 +98,18 @@ const TopBar = () => {
     setIsMenuOpen(false);
     setShowStudioAuthModal(true);
   };
+  const handleProtectedNavigation = (event, href) => {
+    if (href !== "/projects") return;
+    if (currentUser) {
+      setIsMenuOpen(false);
+      return;
+    }
+
+    event.preventDefault();
+    setActiveDropdown(null);
+    setIsMenuOpen(false);
+    setShowStudioAuthModal(true);
+  };
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync();
@@ -207,6 +219,7 @@ const TopBar = () => {
                 ) : (
                   <NavLink
                     to={item.href}
+                    onClick={(event) => handleProtectedNavigation(event, item.href)}
                     className={({ isActive }) =>
                       `px-4 py-2 text-[15px] font-medium transition-all duration-200 rounded-full ${
                         isActive 
@@ -388,7 +401,7 @@ const TopBar = () => {
                     ) : (
                       <NavLink
                         to={item.href}
-                        onClick={() => setIsMenuOpen(false)}
+                        onClick={(event) => handleProtectedNavigation(event, item.href)}
                         className="px-4 py-3.5 text-[16px] font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"
                       >
                         {item.name}
@@ -437,7 +450,7 @@ const TopBar = () => {
                   </div>
                   <div>
                     <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#8d775e]">
-                      Studio Access
+                      Account Access
                     </p>
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">
                       Account required
@@ -453,7 +466,7 @@ const TopBar = () => {
               </div>
 
               <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
-                To use these AI tools, you need an account. Create one or log in to continue.
+                To use these AI tools and access projects, you need an account. Create one or log in to continue.
               </p>
 
               <div className="mt-7 flex flex-col sm:flex-row gap-3">

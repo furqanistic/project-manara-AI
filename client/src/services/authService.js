@@ -44,6 +44,36 @@ export const authService = {
   },
 
   /**
+   * Sign in with Google ID token
+   * @param {Object} payload - { idToken }
+   * @returns {Promise} Response with user data and token
+   */
+  signinWithGoogle: async (payload) => {
+    try {
+      const response = await axiosInstance.post("/auth/signin/google", {
+        idToken: payload.idToken,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
+   * Sign in with Apple ID token
+   * @param {Object} payload - { idToken, firstName?, lastName?, name? }
+   * @returns {Promise} Response with user data and token
+   */
+  signinWithApple: async (payload) => {
+    try {
+      const response = await axiosInstance.post("/auth/signin/apple", payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
    * Logout user
    * @returns {Promise}
    */
