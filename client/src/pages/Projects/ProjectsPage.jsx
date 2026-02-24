@@ -305,8 +305,16 @@ const ProjectsPage = () => {
                   <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-gray-500'>Recent Floor Plans</p>
                   {assets.floorplans.slice(0, 3).map((item) => (
                     <button
-                      key={item._id}
-                      onClick={() => navigate(`/floorplans/${item._id}`)}
+                      key={item._id || item.id}
+                      onClick={() =>
+                        navigate(`/floorplans?projectId=${activeProjectId}`, {
+                          state: {
+                            project: item,
+                            workspaceProjectId: activeProjectId,
+                            workspaceProjectName: activeProject?.name,
+                          },
+                        })
+                      }
                       className='block w-full truncate py-1 text-left text-sm text-[#8d775e] hover:underline'
                     >
                       {item.name || 'Untitled Floor Plan'}
