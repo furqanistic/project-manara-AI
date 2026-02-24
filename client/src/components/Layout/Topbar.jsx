@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import {
+    AlertCircle,
     Banknote,
     ChevronDown,
     LogOut,
@@ -11,13 +12,15 @@ import {
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useLogout } from "../../hooks/useAuth";
 
 const TopBar = () => {
+  const MotionDiv = motion.div;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [showStudioAuthModal, setShowStudioAuthModal] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("theme");
@@ -29,7 +32,6 @@ const TopBar = () => {
   const { currentUser } = useSelector((state) => state.user);
   const logoutMutation = useLogout();
   const navigate = useNavigate();
-  const location = useLocation();
   const avatarUrl = currentUser?.onboardingData?.avatar?.url;
   const avatarName = currentUser?.onboardingData?.avatar?.name;
 
@@ -80,6 +82,22 @@ const TopBar = () => {
   const toggleTheme = () => setIsDarkMode(!isDarkMode);
 
   const handleAuthRedirect = (type) => navigate(`/auth?type=${type}`);
+  const handleStudioAuthAction = (type) => {
+    setShowStudioAuthModal(false);
+    navigate(`/auth?type=${type}`);
+  };
+  const handleStudioNavigation = (event) => {
+    if (currentUser) {
+      setActiveDropdown(null);
+      setIsMenuOpen(false);
+      return;
+    }
+
+    event.preventDefault();
+    setActiveDropdown(null);
+    setIsMenuOpen(false);
+    setShowStudioAuthModal(true);
+  };
   const handleLogout = async () => {
     try {
       await logoutMutation.mutateAsync();
@@ -175,7 +193,7 @@ const TopBar = () => {
                                   key={i}
                                   to={subItem.href}
                                   state={subItem.state}
-                                  onClick={() => setActiveDropdown(null)}
+                                  onClick={handleStudioNavigation}
                                   className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition-all"
                                 >
                                   {subItem.name}
@@ -359,7 +377,7 @@ const TopBar = () => {
                               key={j}
                               to={sub.href}
                               state={sub.state}
-                              onClick={() => setIsMenuOpen(false)}
+                              onClick={handleStudioNavigation}
                               className="flex items-center gap-3 px-4 py-3 text-[15px] font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"
                             >
                               {sub.name}
@@ -392,6 +410,69 @@ const TopBar = () => {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showStudioAuthModal && (
+          <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            <MotionDiv
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowStudioAuthModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            <MotionDiv
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="relative w-full max-w-md rounded-3xl bg-white dark:bg-[#0f0f0f] border border-gray-100 dark:border-white/10 shadow-2xl p-6 sm:p-7"
+            >
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-[#8d775e]/15 text-[#8d775e] flex items-center justify-center">
+                    <AlertCircle size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#8d775e]">
+                      Studio Access
+                    </p>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                      Account required
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowStudioAuthModal(false)}
+                  className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 transition-all"
+                >
+                  <X size={16} className="text-gray-400" />
+                </button>
+              </div>
+
+              <p className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+                To use these AI tools, you need an account. Create one or log in to continue.
+              </p>
+
+              <div className="mt-7 flex flex-col sm:flex-row gap-3">
+                <button
+                  onClick={() => handleStudioAuthAction("signup")}
+                  style={{ backgroundColor: primaryColor }}
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold text-white hover:brightness-110 transition-all"
+                >
+                  Create Account
+                </button>
+                <button
+                  onClick={() => handleStudioAuthAction("login")}
+                  className="flex-1 py-3 rounded-2xl text-sm font-bold bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-white hover:bg-gray-200 dark:hover:bg-white/20 transition-all"
+                >
+                  Log In
+                </button>
+              </div>
+            </MotionDiv>
+          </div>
         )}
       </AnimatePresence>
     </header>

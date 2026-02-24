@@ -19,6 +19,7 @@ import { useSelector } from 'react-redux'
 import { useSignin, useSignup } from '../../hooks/useAuth'
 
 const AuthPage = () => {
+  const MotionDiv = motion.div
   const [isLogin, setIsLogin] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const type = urlParams.get('type')
@@ -133,18 +134,6 @@ const AuthPage = () => {
     }
   }
 
-  const switchMode = () => {
-    setIsLogin(!isLogin)
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      password: '',
-      confirmPassword: '',
-      agreeToTerms: false,
-    })
-    setFormErrors({})
-  }
   const reduxLoading = useSelector((state) => state.user.loading)
   const currentMutation = isLogin ? signinMutation : signupMutation
   const isLoading = reduxLoading || currentMutation.isPending
@@ -177,7 +166,7 @@ const AuthPage = () => {
   return (
     <>
       <TopBar />
-      <div className='min-h-screen bg-black overflow-hidden relative'>
+      <div className='min-h-screen bg-stone-100 dark:bg-black overflow-hidden relative'>
         {/* Background Elements */}
         <div className='absolute inset-0'>
           <div
@@ -194,7 +183,7 @@ const AuthPage = () => {
           {floatingElements.map((element, index) => {
             const IconComponent = element.icon
             return (
-              <motion.div
+              <MotionDiv
                 key={index}
                 className={`absolute ${element.size} rounded-full opacity-20 flex items-center justify-center`}
                 style={{
@@ -214,7 +203,7 @@ const AuthPage = () => {
                 }}
               >
                 <IconComponent className='w-3 h-3 text-white' />
-              </motion.div>
+              </MotionDiv>
             )
           })}
         </div>
@@ -227,11 +216,11 @@ const AuthPage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <div className='bg-black/40 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden'>
+            <div className='bg-white/80 dark:bg-black/40 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-3xl shadow-2xl overflow-hidden'>
               <div className='grid lg:grid-cols-2 min-h-[600px]'>
                 {/* Left Panel - Hero Content */}
                 <motion.div
-                  className='relative overflow-hidden bg-gradient-to-br from-gray-900/50 to-black/50 p-8 lg:p-12 flex flex-col justify-center items-center text-center lg:text-left hidden lg:flex'
+                  className='relative overflow-hidden bg-gradient-to-br from-stone-200/70 to-stone-100/70 dark:from-gray-900/50 dark:to-black/50 p-8 lg:p-12 flex flex-col justify-center items-center text-center lg:text-left hidden lg:flex'
                   initial={{ x: -50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ duration: 0.8, delay: 0.2 }}
@@ -242,7 +231,7 @@ const AuthPage = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.4, duration: 0.8 }}
                     >
-                      <h2 className='text-4xl md:text-5xl font-bold text-white mb-4'>
+                      <h2 className='text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4'>
                         Design Your
                         <span
                           className='block text-transparent bg-clip-text bg-gradient-to-r'
@@ -253,7 +242,7 @@ const AuthPage = () => {
                           Dream Space
                         </span>
                       </h2>
-                      <p className='text-gray-300 text-lg leading-relaxed'>
+                      <p className='text-gray-600 dark:text-gray-300 text-lg leading-relaxed'>
                         Join thousands of designers creating beautiful interiors
                         with AI-powered tools.
                       </p>
@@ -286,7 +275,7 @@ const AuthPage = () => {
                         return (
                           <motion.div
                             key={index}
-                            className='flex items-center gap-3 text-gray-300'
+                            className='flex items-center gap-3 text-gray-600 dark:text-gray-300'
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{
@@ -325,10 +314,10 @@ const AuthPage = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.5, duration: 0.6 }}
                     >
-                      <h1 className='text-3xl lg:text-4xl font-bold text-white mb-2'>
+                      <h1 className='text-3xl lg:text-4xl font-bold text-gray-900 dark:text-white mb-2'>
                         {isLogin ? 'Welcome Back' : 'Create Account'}
                       </h1>
-                      <p className='text-gray-400'>
+                      <p className='text-gray-600 dark:text-gray-400'>
                         {isLogin
                           ? 'Sign in to your account'
                           : 'Join the design revolution'}
@@ -355,7 +344,7 @@ const AuthPage = () => {
 
                     {/* Toggle Buttons */}
                     <motion.div
-                      className='flex bg-white/5 rounded-2xl p-1 mb-8'
+                      className='flex bg-black/[0.04] dark:bg-white/5 rounded-2xl p-1 mb-8'
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.6, duration: 0.6 }}
@@ -367,7 +356,7 @@ const AuthPage = () => {
                         className={`flex-1 py-2 px-4 rounded-xl transition-all duration-300 font-medium text-sm ${
                           isLogin
                             ? 'text-white shadow-lg'
-                            : 'text-gray-400 hover:text-gray-300'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
                         } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         style={
                           isLogin
@@ -387,7 +376,7 @@ const AuthPage = () => {
                         className={`flex-1 py-2 px-4 rounded-xl transition-all duration-300 font-medium text-sm ${
                           !isLogin
                             ? 'text-white shadow-lg'
-                            : 'text-gray-400 hover:text-gray-300'
+                            : 'text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300'
                         } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         style={
                           !isLogin
@@ -425,11 +414,11 @@ const AuthPage = () => {
                                 value={formData.firstName}
                                 onChange={handleInputChange}
                                 disabled={isLoading}
-                                className={`w-full pl-12 pr-4 py-3 bg-white/5 border ${
+                                className={`w-full pl-12 pr-4 py-3 bg-black/[0.03] dark:bg-white/5 border ${
                                   formErrors.firstName
                                     ? 'border-red-500/50'
-                                    : 'border-white/10'
-                                } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
+                                    : 'border-black/10 dark:border-white/10'
+                                } rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
                                   isLoading
                                     ? 'opacity-50 cursor-not-allowed'
                                     : ''
@@ -451,11 +440,11 @@ const AuthPage = () => {
                                 value={formData.lastName}
                                 onChange={handleInputChange}
                                 disabled={isLoading}
-                                className={`w-full pl-12 pr-4 py-3 bg-white/5 border ${
+                                className={`w-full pl-12 pr-4 py-3 bg-black/[0.03] dark:bg-white/5 border ${
                                   formErrors.lastName
                                     ? 'border-red-500/50'
-                                    : 'border-white/10'
-                                } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
+                                    : 'border-black/10 dark:border-white/10'
+                                } rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
                                   isLoading
                                     ? 'opacity-50 cursor-not-allowed'
                                     : ''
@@ -481,11 +470,11 @@ const AuthPage = () => {
                             value={formData.email}
                             onChange={handleInputChange}
                             disabled={isLoading}
-                            className={`w-full pl-12 pr-4 py-3 bg-white/5 border ${
+                            className={`w-full pl-12 pr-4 py-3 bg-black/[0.03] dark:bg-white/5 border ${
                               formErrors.email
                                 ? 'border-red-500/50'
-                                : 'border-white/10'
-                            } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
+                                : 'border-black/10 dark:border-white/10'
+                            } rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
                               isLoading ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                             required
@@ -507,11 +496,11 @@ const AuthPage = () => {
                             value={formData.password}
                             onChange={handleInputChange}
                             disabled={isLoading}
-                            className={`w-full pl-12 pr-12 py-3 bg-white/5 border ${
+                            className={`w-full pl-12 pr-12 py-3 bg-black/[0.03] dark:bg-white/5 border ${
                               formErrors.password
                                 ? 'border-red-500/50'
-                                : 'border-white/10'
-                            } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
+                                : 'border-black/10 dark:border-white/10'
+                            } rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
                               isLoading ? 'opacity-50 cursor-not-allowed' : ''
                             }`}
                             required
@@ -520,7 +509,7 @@ const AuthPage = () => {
                             type='button'
                             onClick={() => setShowPassword(!showPassword)}
                             disabled={isLoading}
-                            className='absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors'
+                            className='absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors'
                           >
                             {showPassword ? (
                               <EyeOff className='w-5 h-5' />
@@ -546,11 +535,11 @@ const AuthPage = () => {
                               value={formData.confirmPassword}
                               onChange={handleInputChange}
                               disabled={isLoading}
-                              className={`w-full pl-12 pr-12 py-3 bg-white/5 border ${
+                              className={`w-full pl-12 pr-12 py-3 bg-black/[0.03] dark:bg-white/5 border ${
                                 formErrors.confirmPassword
                                   ? 'border-red-500/50'
-                                  : 'border-white/10'
-                              } rounded-2xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
+                                  : 'border-black/10 dark:border-white/10'
+                              } rounded-2xl text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#947d61]/50 focus:border-transparent transition-all duration-300 ${
                                 isLoading ? 'opacity-50 cursor-not-allowed' : ''
                               }`}
                               required={!isLogin}
@@ -561,7 +550,7 @@ const AuthPage = () => {
                                 setShowConfirmPassword(!showConfirmPassword)
                               }
                               disabled={isLoading}
-                              className='absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors'
+                              className='absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors'
                             >
                               {showConfirmPassword ? (
                                 <EyeOff className='w-5 h-5' />
@@ -581,11 +570,11 @@ const AuthPage = () => {
                         <div className='flex items-center justify-between text-sm'>
                           {isLogin ? (
                             <>
-                              <label className='flex items-center text-gray-300 cursor-pointer'>
+                              <label className='flex items-center text-gray-700 dark:text-gray-300 cursor-pointer'>
                                 <input
                                   type='checkbox'
                                   disabled={isLoading}
-                                  className='mr-2 rounded bg-white/5 border-white/10 text-[#947d61] focus:ring-[#947d61]'
+                                  className='mr-2 rounded bg-black/[0.04] dark:bg-white/5 border-black/10 dark:border-white/10 text-[#947d61] focus:ring-[#947d61]'
                                 />
                                 Remember me
                               </label>
@@ -597,14 +586,14 @@ const AuthPage = () => {
                               </a>
                             </>
                           ) : (
-                            <label className='flex items-start gap-3 text-gray-300 cursor-pointer'>
+                            <label className='flex items-start gap-3 text-gray-700 dark:text-gray-300 cursor-pointer'>
                               <input
                                 type='checkbox'
                                 name='agreeToTerms'
                                 checked={formData.agreeToTerms}
                                 onChange={handleInputChange}
                                 disabled={isLoading}
-                                className='mt-0.5 rounded bg-white/5 border-white/10 text-[#947d61] focus:ring-[#947d61]'
+                                className='mt-0.5 rounded bg-black/[0.04] dark:bg-white/5 border-black/10 dark:border-white/10 text-[#947d61] focus:ring-[#947d61]'
                                 required={!isLogin}
                               />
                               <span className='text-sm'>
