@@ -121,10 +121,14 @@ export const editMoodboardImage = async ({ moodboardId, data }) => {
  * @param {Number} limit - Items per page
  * @returns {Promise}
  */
-export const getUserMoodboards = async ({ page = 1, limit = 10 }) => {
+export const getUserMoodboards = async ({
+  page = 1,
+  limit = 10,
+  projectId = null,
+}) => {
   try {
     const response = await axiosInstance.get('/moodboards/', {
-      params: { page, limit },
+      params: { page, limit, projectId },
     })
     return response.data
   } catch (error) {

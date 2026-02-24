@@ -96,8 +96,8 @@ const TopBar = () => {
       href: "#",
       hasDropdown: true,
       dropdownItems: [
-        { name: "3D Renders", href: "/visualizer", state: { reset: true } },
-        { name: "Floor Plans", href: "/floorplans", state: { reset: true } },
+        { name: "3D Renders", href: "/visualizer" },
+        { name: "Floor Plans", href: "/floorplans" },
         { name: "AI Designs", href: "/moodboard" },
       ],
     },

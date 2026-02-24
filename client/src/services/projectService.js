@@ -1,16 +1,26 @@
 import axiosInstance from '../config/config'
 
-/**
- * Get aggregated user projects with pagination
- * @param {Object} params - Query parameters (page, limit, type, sortBy, search)
- * @returns {Promise}
- */
-export const getUserProjects = async (params) => {
-  try {
-    const response = await axiosInstance.get('/projects', { params })
-    return response.data
-  } catch (error) {
-    console.error('❌ Error fetching aggregated projects:', error)
-    throw error
-  }
+export const getUserProjects = async (params = {}) => {
+  const response = await axiosInstance.get('/projects', { params })
+  return response.data
+}
+
+export const createProject = async (payload) => {
+  const response = await axiosInstance.post('/projects', payload)
+  return response.data
+}
+
+export const getProjectWorkspace = async (id) => {
+  const response = await axiosInstance.get(`/projects/${id}`)
+  return response.data
+}
+
+export const updateProject = async ({ id, data }) => {
+  const response = await axiosInstance.put(`/projects/${id}`, data)
+  return response.data
+}
+
+export const deleteProject = async (id) => {
+  const response = await axiosInstance.delete(`/projects/${id}`)
+  return response.data
 }

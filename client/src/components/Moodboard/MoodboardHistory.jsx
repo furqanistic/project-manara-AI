@@ -202,7 +202,7 @@ const DeleteConfirmationDialog = ({
   );
 };
 
-export const MoodboardHistory = ({ isOpen, onClose }) => {
+export const MoodboardHistory = ({ isOpen, onClose, projectId = null }) => {
   const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
@@ -212,7 +212,7 @@ export const MoodboardHistory = ({ isOpen, onClose }) => {
   const [filterOpen, setFilterOpen] = useState(false);
 
   // Use React Query for fetching
-  const { data, isLoading } = useUserMoodboards(page, 12);
+  const { data, isLoading } = useUserMoodboards(page, 12, projectId);
   const deleteMutation = useDeleteMoodboard();
 
   const moodboards = data?.data?.moodboards || [];

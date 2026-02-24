@@ -7,6 +7,11 @@ const threeDSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    workspaceProjectId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Project',
+      index: true,
+    },
     name: {
       type: String,
       default: 'Generated 3D Model',
@@ -67,6 +72,8 @@ const threeDSchema = new mongoose.Schema(
   },
   { timestamps: true }
 )
+
+threeDSchema.index({ userId: 1, workspaceProjectId: 1, createdAt: -1 })
 
 // Add methods to check permissions if needed
 threeDSchema.methods.canUserView = function (userId) {

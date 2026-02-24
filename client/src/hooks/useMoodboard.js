@@ -24,10 +24,10 @@ export const moodboardKeys = {
 /**
  * Get all user moodboards
  */
-export const useUserMoodboards = (page = 1, limit = 10) => {
+export const useUserMoodboards = (page = 1, limit = 10, projectId = null) => {
   return useQuery({
-    queryKey: moodboardKeys.list({ page, limit }),
-    queryFn: () => getUserMoodboards({ page, limit }),
+    queryKey: moodboardKeys.list({ page, limit, projectId }),
+    queryFn: () => getUserMoodboards({ page, limit, projectId }),
     staleTime: 1000 * 60 * 5, // 5 minutes
     retry: 2,
     retryDelay: 1000,

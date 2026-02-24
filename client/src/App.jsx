@@ -142,6 +142,14 @@ const AppRoutes = () => {
           }
         />
         <Route
+          path="/projects/:id"
+          element={
+            <RequireAuth>
+              <ProjectsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <RequireAuth>

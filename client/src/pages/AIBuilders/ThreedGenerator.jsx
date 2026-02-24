@@ -1,5 +1,6 @@
 import TopBar from '@/components/Layout/Topbar'
 import { ThreeDRenderHistory } from '@/components/ThreeDRender/ThreeDRenderHistory'
+import ProjectSelectionModal from '@/components/Common/ProjectSelectionModal'
 import api from '@/config/config'
 import { downloadImage } from '@/lib/downloadUtils'
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
@@ -34,7 +35,7 @@ import {
     Wand2,
     X
 } from 'lucide-react'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getCreditLedger, getCreditsBalance, spendCredits } from '@/lib/credits'
@@ -78,7 +79,7 @@ const ThreedGenerator = () => {
   const [meshyModelUrl, setMeshyModelUrl] = useState(null)
   const [meshyProgress, setMeshyProgress] = useState(0)
   const [resultTab, setResultTab] = useState('image') // 'image' or '3d'
-  const [comparisonEnabled, setComparisonEnabled] = useState(true)
+  const [comparisonEnabled, setComparisonEnabled] = useState(false)
   const modelRef = useRef(null)
   const viewerContainerRef = useRef(null)
   const pollingRef = useRef(null)
@@ -86,6 +87,10 @@ const ThreedGenerator = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const { id } = useParams()
+  const initialWorkspaceProjectId =
+    location.state?.workspaceProjectId ||
+    new URLSearchParams(location.search).get('projectId') ||
+    null
   
   // State for the current project
   const [sourceImage, setSourceImage] = useState(null)
@@ -97,6 +102,7 @@ const ThreedGenerator = () => {
   const [prompt, setPrompt] = useState('')
   const [chatHistory, setChatHistory] = useState([])
   const [currentProjectId, setCurrentProjectId] = useState(null)
+  const [workspaceProjectId, setWorkspaceProjectId] = useState(initialWorkspaceProjectId)
   
   // 3D Viewer Control States
   const [showHelp, setShowHelp] = useState(false)
@@ -120,6 +126,14 @@ const ThreedGenerator = () => {
     damping: 25,
     stiffness: 250,
   })
+  const comparisonClipPath = useTransform(
+    springComparisonPosition,
+    (pos) => `inset(0 ${100 - pos}% 0 0)`
+  )
+  const comparisonDividerLeft = useTransform(
+    springComparisonPosition,
+    (pos) => `${pos}%`
+  )
   const initialRenderCost = 3
   const revisionCost = 1
 
@@ -184,6 +198,14 @@ const ThreedGenerator = () => {
 
   // Handle deep-linking
   useEffect(() => {
+    const nextWorkspaceProjectId =
+      location.state?.workspaceProjectId ||
+      new URLSearchParams(location.search).get('projectId') ||
+      null
+    if (nextWorkspaceProjectId && nextWorkspaceProjectId !== workspaceProjectId) {
+      setWorkspaceProjectId(nextWorkspaceProjectId)
+    }
+
     if (location.state?.reset) {
         handleReset();
         window.history.replaceState({}, document.title);
@@ -196,7 +218,7 @@ const ThreedGenerator = () => {
     } else if (location.state?.sourceImage) {
         setSourceImage(location.state.sourceImage);
     }
-  }, [location, currentProjectId])
+  }, [location, currentProjectId, workspaceProjectId])
 
   // Handle direct ID loading
   useEffect(() => {
@@ -209,33 +231,64 @@ const ThreedGenerator = () => {
           }
         } catch (err) {
           console.error('Error loading project by ID:', err)
-          toast.error('Could not find the requested project')
+          if (!location.state?.project && !sourceImage) {
+            toast.error('Could not find the requested project')
+          }
         }
       }
     }
     loadProjectById()
-  }, [id, currentProjectId])
+  }, [id, currentProjectId, location.state, sourceImage])
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0]
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please upload an image file', { id: 'file-type-error' })
+    processImageFile(file)
+  }
+
+  const processImageFile = (file) => {
+    if (!file) return
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file', { id: 'file-type-error' })
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setSourceImage(event.target.result)
+      setVersions([])
+      setCurrentVersionIndex(-1)
+      setCurrentProjectId(null)
+      setChatHistory([])
+      setPrompt('')
+      setStep('config')
+      toast.success('Image loaded', { id: 'image-loaded' })
+    }
+    reader.readAsDataURL(file)
+  }
+
+  useEffect(() => {
+    const handlePaste = (event) => {
+      const target = event.target
+      const isEditableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable
+
+      const items = Array.from(event.clipboardData?.items || [])
+      const imageItem = items.find((item) => item.type?.startsWith('image/'))
+      if (!imageItem) return
+
+      if (isEditableTarget && !event.metaKey && !event.ctrlKey) {
         return
       }
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        setSourceImage(event.target.result)
-        setVersions([])
-        setCurrentVersionIndex(-1)
-        setCurrentProjectId(null)
-        setChatHistory([])
-        setPrompt('')
-        setStep('config')
-      }
-      reader.readAsDataURL(file)
+
+      event.preventDefault()
+      const file = imageItem.getAsFile()
+      processImageFile(file)
     }
-  }
+
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [])
 
   const handleGenerate = async (overriddenPrompt = null, options = {}) => {
     const { forceRegenerate = false } = options
@@ -252,9 +305,9 @@ const ThreedGenerator = () => {
       return
     }
 
-    const isNewRender = versions.length === 0
-    const cost = isNewRender ? initialRenderCost : revisionCost
-    const actionLabel = isNewRender ? '3D render generation' : '3D render revision'
+    const isStyleRevision = selectedStyleHasVariant
+    const cost = isStyleRevision ? revisionCost : initialRenderCost
+    const actionLabel = isStyleRevision ? '3D render revision' : '3D render generation'
     if (!(await confirmCreditSpend(cost, actionLabel))) return
 
     setIsGenerating(true)
@@ -278,6 +331,7 @@ const ThreedGenerator = () => {
         mimeType: sourceImage.split(';')[0].split(':')[1],
         style: selectedStyle,
         prompt: composedPrompt,
+        workspaceProjectId,
       }
 
       if (currentProjectId) payload.projectId = currentProjectId
@@ -326,6 +380,7 @@ const ThreedGenerator = () => {
 
         setVersions(updatedModel.versions || [])
         setCurrentVersionIndex((updatedModel.versions?.length || 1) - 1)
+        setComparisonEnabled(true)
         if (updatedModel?._id) {
           if (!currentProjectId) setCurrentProjectId(updatedModel._id)
           if (!id || id !== updatedModel._id) {
@@ -376,8 +431,12 @@ const ThreedGenerator = () => {
     setCurrentVersionIndex((resolved?.versions?.length || 0) - 1)
     setSourceImage(resolvedSource || null)
     setCurrentProjectId(resolved?._id || null)
+    if (resolved?.workspaceProjectId) {
+      setWorkspaceProjectId(resolved.workspaceProjectId)
+    }
     setChatHistory(resolved?.chatHistory || [])
     setStep('result')
+    setComparisonEnabled(true)
     setMeshyModelUrl(buildProxyUrl(resolved?.glbUrl) || null)
     
     // Check if we need to resume polling
@@ -635,6 +694,17 @@ const ThreedGenerator = () => {
 
   const currentVersion = versions[currentVersionIndex]
   const currentRenderImage = currentVersion?.image
+  const hasGeneratedVariant = !!currentRenderImage
+  const styleLatestIndex = useMemo(() => {
+    const map = {}
+    versions.forEach((version, index) => {
+      if (version?.style) {
+        map[version.style] = index
+      }
+    })
+    return map
+  }, [versions])
+  const selectedStyleHasVariant = styleLatestIndex[selectedStyle] !== undefined
   const displayImageSrc = currentRenderImage?.url
     || (currentRenderImage?.data ? `data:${currentRenderImage?.mimeType};base64,${currentRenderImage?.data}` : null)
     || sourceImage
@@ -647,9 +717,45 @@ const ThreedGenerator = () => {
   }
 
   const proxiedModelUrl = buildProxyUrl(meshyModelUrl)
+  const shouldShowProjectModal =
+    !workspaceProjectId && !id && !location.state?.project && !currentProjectId
+  const loadingPhase =
+    LOADING_PHASES[Math.min(LOADING_PHASES.length - 1, Math.floor(uploadProgress / 20))]
+
+  const handleMainGenerate = () => {
+    if (selectedStyleHasVariant) {
+      handleGenerate(null, { forceRegenerate: true })
+      return
+    }
+    handleGenerate()
+  }
+
+  const handleSwitchVariant = (styleId) => {
+    const index = styleLatestIndex[styleId]
+    if (index === undefined) return
+    setSelectedStyle(styleId)
+    setCurrentVersionIndex(index)
+    setStep('result')
+    setResultTab('image')
+  }
 
   return (
     <>
+      <ProjectSelectionModal
+        open={shouldShowProjectModal}
+        title='Select Project For 3D Builder'
+        description='Choose an existing project or create a new one before generating 3D renders.'
+        onSelect={(project) => {
+          setWorkspaceProjectId(project._id)
+          navigate(`/visualizer?projectId=${project._id}`, {
+            replace: true,
+            state: {
+              workspaceProjectId: project._id,
+              workspaceProjectName: project.name,
+            },
+          })
+        }}
+      />
       <CreditConfirmModal
         isOpen={!!confirmState}
         cost={confirmState?.cost}
@@ -666,27 +772,15 @@ const ThreedGenerator = () => {
       />
       <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
       <TopBar />
-      <div className='w-full bg-white/90 dark:bg-[#0a0a0a] border-b border-[#E5E5E7] dark:border-[#2D2D2F] mt-16'>
-        <div className='max-w-6xl mx-auto px-4 sm:px-6 py-2 flex flex-col gap-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300'>
-          <div className='flex flex-wrap items-center justify-between gap-2'>
-            <span>Credits balance: {creditsBalance}</span>
-            <span>3D Render Set: {initialRenderCost} credits • Revision: {revisionCost} credit</span>
-          </div>
-          {creditsLedger.some((entry) => entry.tool === 'threed') && (
-            <div className='text-[10px] text-gray-400'>
-              Recent usage: {creditsLedger.filter((entry) => entry.tool === 'threed').slice(0, 3).map((entry) => `${entry.action || entry.label || entry.type} (${entry.type === 'credit' ? '+' : '-'}${entry.amount})`).join(' • ')}
-            </div>
-          )}
-        </div>
-      </div>
       
       <ThreeDRenderHistory 
         isOpen={historyOpen} 
         onClose={() => setHistoryOpen(false)}
         onLoadItem={handleLoadFromHistory}
+        workspaceProjectId={workspaceProjectId}
       />
 
-      <main className='flex-1 relative flex flex-col md:flex-row pt-0 h-full overflow-hidden'>
+      <main className='flex-1 relative flex flex-col md:flex-row pt-16 h-full overflow-hidden'>
         
         {/* Sidebar Controls */}
         <aside className={`
@@ -707,7 +801,7 @@ const ThreedGenerator = () => {
               <button onClick={handleReset} className='p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400'>
                 <Plus size={16} />
               </button>
-              <button onClick={() => setIsMobileChatOpen(false)} className={`md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400 ${step === 'result' ? 'block' : 'hidden'}`}>
+              <button onClick={() => setMobileChatOpen(false)} className={`md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg text-gray-400 ${step === 'result' ? 'block' : 'hidden'}`}>
                 <X size={16} />
               </button>
             </div>
@@ -726,18 +820,27 @@ const ThreedGenerator = () => {
                       {sourceImage ? <img src={sourceImage} className='h-full object-contain p-2' /> : <div className='text-center text-gray-400'><Plus size={24} className='mx-auto mb-2 opacity-50'/><span className='text-[10px] font-bold uppercase'>Upload Plan</span></div>}
                       <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
                     </div>
+                    <p className='text-[10px] text-gray-400'>
+                      Tip: You can also paste an image with Ctrl/Cmd + V.
+                    </p>
                     {isGenerating && step === 'config' && (
                       <div className='space-y-2'>
                         <div className='flex items-center justify-between text-[9px] font-bold uppercase tracking-widest text-gray-400'>
-                          <span>Uploading image</span>
-                          <span>{uploadProgress}%</span>
+                          <span>
+                            {uploadProgress >= 100
+                              ? 'Image uploaded successfully'
+                              : 'Uploading image'}
+                          </span>
+                          {uploadProgress < 100 && <span>{uploadProgress}%</span>}
                         </div>
-                        <div className='h-2 w-full rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden'>
-                          <div
-                            className='h-full bg-[#8d775e] transition-all duration-300'
-                            style={{ width: `${uploadProgress}%` }}
-                          />
-                        </div>
+                        {uploadProgress < 100 && (
+                          <div className='h-2 w-full rounded-full bg-gray-100 dark:bg-white/10 overflow-hidden'>
+                            <div
+                              className='h-full bg-[#8d775e] transition-all duration-300'
+                              style={{ width: `${uploadProgress}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </section>
@@ -753,9 +856,36 @@ const ThreedGenerator = () => {
                         >
                           <div className='flex items-center justify-between mb-1'>
                             <span className='font-bold text-xs'>{st.label}</span>
-                            <div className='w-2 h-2 rounded-full' style={{backgroundColor: st.color}} />
+                            <div className='flex items-center gap-2'>
+                              {styleLatestIndex[st.id] !== undefined && (
+                                <span className='text-[9px] font-black uppercase tracking-wider text-emerald-600'>
+                                  Done
+                                </span>
+                              )}
+                              <div className='w-2 h-2 rounded-full' style={{backgroundColor: st.color}} />
+                            </div>
                           </div>
                           <p className='text-[10px] text-gray-400'>{st.description}</p>
+                          {styleLatestIndex[st.id] !== undefined && (
+                            <span
+                              role='button'
+                              tabIndex={0}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleSwitchVariant(st.id)
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleSwitchVariant(st.id)
+                                }
+                              }}
+                              className='mt-2 text-[10px] font-bold text-[#8d775e] hover:underline'
+                            >
+                              View variant
+                            </span>
+                          )}
                         </button>
                       ))}
                     </div>
@@ -764,6 +894,45 @@ const ThreedGenerator = () => {
               </div>
             ) : (
               <div ref={chatContainerRef} className='flex-1 overflow-y-auto p-5 scrollbar-hide space-y-4 flex flex-col'>
+                <div className='rounded-xl border border-[#E5E5E7] dark:border-white/10 bg-gray-50 dark:bg-white/5 p-3 space-y-2'>
+                  <p className='text-[10px] font-black uppercase tracking-widest text-gray-500'>Variants</p>
+                  <div className='grid grid-cols-1 gap-2'>
+                    {STYLES.map((st) => {
+                      const hasVariant = styleLatestIndex[st.id] !== undefined
+                      const isActiveStyle = selectedStyle === st.id
+                      return (
+                        <button
+                          key={st.id}
+                          onClick={() => {
+                            setSelectedStyle(st.id)
+                            if (hasVariant) {
+                              handleSwitchVariant(st.id)
+                            }
+                          }}
+                          className={`w-full rounded-lg border px-3 py-2 text-left transition ${
+                            isActiveStyle
+                              ? 'border-[#8d775e] bg-[#8d775e]/10'
+                              : 'border-gray-200 dark:border-white/10'
+                          }`}
+                        >
+                          <div className='flex items-center justify-between'>
+                            <span className='text-[11px] font-bold'>{st.label}</span>
+                            <span className={`text-[9px] font-black uppercase tracking-wider ${hasVariant ? 'text-emerald-600' : 'text-gray-400'}`}>
+                              {hasVariant ? 'Done' : 'Not generated'}
+                            </span>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button
+                    onClick={handleMainGenerate}
+                    disabled={isGenerating || !sourceImage}
+                    className='w-full rounded-lg bg-[#8d775e] px-3 py-2 text-[11px] font-black uppercase tracking-wider text-white hover:bg-[#7a6650] disabled:opacity-50'
+                  >
+                    {isGenerating ? 'Generating...' : selectedStyleHasVariant ? `Regenerate ${selectedStyle}` : `Generate ${selectedStyle}`}
+                  </button>
+                </div>
                 {chatHistory.length === 0 ? (
                   <div className='flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 opacity-50'>
                     <div className='w-12 h-12 rounded-full bg-[#8d775e]/10 flex items-center justify-center text-[#8d775e]'>
@@ -788,24 +957,25 @@ const ThreedGenerator = () => {
           </div>
 
           <div className='p-4 border-t border-[#E5E5E7] dark:border-[#2D2D2F] bg-[#FDFCFB] dark:bg-[#0c0c0c]'>
-            <div className='relative'>
+            <div className='flex items-center gap-2'>
               <input 
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 placeholder={step === 'config' ? "Describe your vision (optional)..." : "E.g., 'Add a pool', 'Change materials'..."}
-                className='w-full bg-gray-100 dark:bg-white/5 border-none rounded-xl pl-4 pr-10 py-3 h-11 text-[12px] focus:ring-1 focus:ring-[#8d775e]/50'
-                onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
+                className='w-full bg-gray-100 dark:bg-white/5 border-none rounded-xl px-4 py-3 h-11 text-[12px] focus:ring-1 focus:ring-[#8d775e]/50'
+                onKeyDown={(e) => e.key === 'Enter' && handleMainGenerate()}
               />
               <button 
-                onClick={() => handleGenerate()}
+                onClick={handleMainGenerate}
                 disabled={isGenerating || (step === 'config' && !sourceImage)}
-                className='absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-[#8d775e] text-white flex items-center justify-center'
+                className='h-11 shrink-0 rounded-xl bg-[#8d775e] px-4 text-[11px] font-black uppercase tracking-wider text-white hover:bg-[#7a6650] disabled:opacity-50'
               >
-                {isGenerating ? <Loader2 size={14} className='animate-spin' /> : <ArrowRight size={16} />}
+                {isGenerating ? 'Generating...' : selectedStyleHasVariant ? 'Regenerate' : 'Generate'}
               </button>
             </div>
             <div className='mt-2 text-[10px] text-gray-400 font-semibold'>
-              Cost: {versions.length === 0 ? initialRenderCost : revisionCost} credit{versions.length === 0 ? 's' : ''} • Balance: {creditsBalance}
+              Cost: {selectedStyleHasVariant ? revisionCost : initialRenderCost} credit{selectedStyleHasVariant ? '' : 's'} • Balance: {creditsBalance}
+              {selectedStyleHasVariant && ` • ${selectedStyle} variant ready`}
             </div>
           </div>
         </aside>
@@ -862,18 +1032,6 @@ const ThreedGenerator = () => {
                   </motion.button>
                 )}
                 <motion.button 
-                  onClick={() => handleGenerate(null, { forceRegenerate: true })}
-                  disabled={isGenerating || !currentVersion}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className='flex items-center gap-2.5 px-5 py-2 bg-[#8d775e] text-white rounded-xl text-[10px] font-black hover:bg-[#7a6650] transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed'
-                >
-                  <div className='p-1 bg-white/20 rounded-lg'>
-                    <RotateCcw size={14} /> 
-                  </div>
-                  <span className='tracking-[0.1em]'>REGENERATE RENDER</span>
-                </motion.button>
-                <motion.button 
                   onClick={handleDownload} 
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
@@ -896,7 +1054,7 @@ const ThreedGenerator = () => {
                     <div className='absolute inset-0 border-t-2 border-[#8d775e] rounded-full animate-spin' />
                     <Box size={24} className='text-[#8d775e] animate-pulse' />
                   </div>
-                  <p className='text-[10px] font-black uppercase tracking-widest animate-pulse'>{LOADING_PHASES[Math.floor(uploadProgress/20)]}</p>
+                  <p className='text-[10px] font-black uppercase tracking-widest animate-pulse'>{loadingPhase}</p>
                 </motion.div>
               ) : displayImageSrc ? (
                 <motion.div key='content' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className='flex-1 w-full flex flex-col p-3 md:p-5 overflow-hidden'>
@@ -939,23 +1097,31 @@ const ThreedGenerator = () => {
                     <div className='absolute inset-0'>
                       {(resultTab === 'image' || (!meshyModelUrl && !isConvertingTo3D)) && (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className='w-full h-full bg-white dark:bg-white/5 rounded-3xl overflow-hidden border border-[#E5E5E7] dark:border-white/5 flex flex-col items-center justify-center relative'>
-                          <div className='absolute top-4 right-4 z-20'>
-                            <button
-                              onClick={() => setComparisonEnabled((prev) => !prev)}
-                              className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
-                                comparisonEnabled
-                                  ? 'bg-[#8d775e] text-white shadow-lg'
-                                  : 'bg-white/90 dark:bg-black/70 text-gray-500 dark:text-gray-300'
-                              }`}
-                            >
-                              {comparisonEnabled ? 'Comparison On' : 'Comparison Off'}
-                            </button>
-                          </div>
+                          {hasGeneratedVariant && sourceImage && (
+                            <div className='absolute top-4 right-4 z-20 flex items-center gap-2 rounded-full bg-white/90 dark:bg-black/70 px-3 py-1.5 shadow-lg'>
+                              <span className='text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-300'>
+                                Comparison
+                              </span>
+                              <button
+                                onClick={() => setComparisonEnabled((prev) => !prev)}
+                                aria-label='Toggle comparison'
+                                className={`relative h-5 w-10 overflow-hidden rounded-full transition-colors ${
+                                  comparisonEnabled ? 'bg-[#8d775e]' : 'bg-gray-300 dark:bg-gray-600'
+                                }`}
+                              >
+                                <span
+                                  className={`absolute left-0.5 top-0.5 block h-4 w-4 rounded-full bg-white transition-transform ${
+                                    comparisonEnabled ? 'translate-x-[18px]' : 'translate-x-0'
+                                  }`}
+                                />
+                              </button>
+                            </div>
+                          )}
 
-                          {comparisonEnabled && sourceImage ? (
+                          {comparisonEnabled && hasGeneratedVariant && sourceImage ? (
                             <div
                               ref={comparisonRef}
-                              className='relative w-full h-full overflow-hidden cursor-none'
+                              className='relative w-full h-full overflow-hidden'
                               onMouseMove={(event) => handleComparisonUpdate(event.clientX)}
                               onTouchMove={(event) => {
                                 if (event.touches && event.touches[0]) {
@@ -971,10 +1137,7 @@ const ThreedGenerator = () => {
                               <motion.div
                                 className='absolute inset-0 z-10'
                                 style={{
-                                  clipPath: useTransform(
-                                    springComparisonPosition,
-                                    (pos) => `inset(0 ${100 - pos}% 0 0)`
-                                  ),
+                                  clipPath: comparisonClipPath,
                                 }}
                               >
                                 <img
@@ -986,7 +1149,7 @@ const ThreedGenerator = () => {
                               <motion.div
                                 className='absolute top-0 bottom-0 w-[2px] bg-white/70 dark:bg-white/30 z-20 pointer-events-none'
                                 style={{
-                                  left: useTransform(springComparisonPosition, (pos) => `${pos}%`),
+                                  left: comparisonDividerLeft,
                                 }}
                               >
                                 <div className='absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/70 dark:bg-black/60 border border-white/60 dark:border-white/10 flex items-center justify-center shadow-xl'>
@@ -1335,7 +1498,7 @@ const ThreedGenerator = () => {
           {!isMobileChatOpen && (
             <div className='md:hidden fixed bottom-10 left-1/2 -translate-x-1/2 w-[90%] flex gap-2 z-50'>
               {step === 'result' ? (
-                <button onClick={() => setIsMobileChatOpen(true)} className='h-12 flex-1 bg-white dark:bg-[#1a1a1a] text-black dark:text-white border border-gray-200 dark:border-white/10 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 shadow-xl'><MessageSquare size={16} /> Chat</button>
+                <button onClick={() => setMobileChatOpen(true)} className='h-12 flex-1 bg-white dark:bg-[#1a1a1a] text-black dark:text-white border border-gray-200 dark:border-white/10 rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 shadow-xl'><MessageSquare size={16} /> Chat</button>
               ) : (
                 <button onClick={toggleMobileView} className='h-12 flex-1 bg-black dark:bg-white text-white dark:text-black rounded-xl text-xs font-black uppercase flex items-center justify-center gap-2 shadow-xl'><ArrowRight size={16} /> Preview</button>
               )}

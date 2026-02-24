@@ -13,7 +13,7 @@ export const generate3D = async (req, res, next) => {
       return next(createError(400, 'Image is required'))
     }
 
-    const { name } = req.body
+    const { name, workspaceProjectId } = req.body
     let imageBuffer
     let mimeType
     let sourceImageUrl = req.body.image
@@ -57,6 +57,7 @@ export const generate3D = async (req, res, next) => {
 
     const newThreeD = new ThreeDModel({
         userId: req.user._id,
+        workspaceProjectId,
         name: name || `3D Model - ${new Date().toLocaleDateString()}`,
         sourceImage: sourceImageUrl,
         glbUrl: glbUpload.secure_url,
@@ -125,7 +126,7 @@ export const generateVisualization = async (req, res, next) => {
 
     // Save to database
     let model;
-    const { projectId, style, prompt } = req.body;
+    const { projectId, workspaceProjectId, style, prompt } = req.body;
     
     // Create new version object
     const newVersion = {
@@ -145,6 +146,9 @@ export const generateVisualization = async (req, res, next) => {
         if (!model) {
              return next(createError(404, 'Project not found'));
         }
+        if (workspaceProjectId && !model.workspaceProjectId) {
+          model.workspaceProjectId = workspaceProjectId
+        }
         model.versions.push(newVersion);
         // Update main preview image to latest
         model.sourceImage = sourceImageUrl; 
@@ -152,6 +156,7 @@ export const generateVisualization = async (req, res, next) => {
         // Create new model
         model = new ThreeDModel({
             userId: req.user._id,
+            workspaceProjectId,
             name: `3D Project - ${new Date().toLocaleString()}`,
             sourceImage: sourceImageUrl,
             status: 'completed',
@@ -181,7 +186,12 @@ export const generateVisualization = async (req, res, next) => {
 export const getMyThreeDModels = async (req, res, next) => {
   try {
     console.log(`Fetching 3D models for user ${req.user._id}...`)
-    const models = await ThreeDModel.find({ userId: req.user._id, isDeleted: false })
+    const query = { userId: req.user._id, isDeleted: false }
+    if (req.query.workspaceProjectId) {
+      query.workspaceProjectId = req.query.workspaceProjectId
+    }
+
+    const models = await ThreeDModel.find(query)
       .sort({ createdAt: -1 })
 
     console.log(`Found ${models.length} models for user ${req.user._id}`)

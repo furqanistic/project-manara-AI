@@ -32,6 +32,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { getCreditLedger, getCreditsBalance, spendCredits } from "@/lib/credits";
 import { useSelector } from "react-redux";
 import CreditConfirmModal from "@/components/Common/CreditConfirmModal";
+import ProjectSelectionModal from "@/components/Common/ProjectSelectionModal";
 import {
     BRAND_COLOR,
     BRAND_COLOR_DARK,
@@ -64,6 +65,11 @@ const MoodboardGenerator = () => {
   const generateDescriptionsMutation = useGenerateMoodboardDescriptions();
   const navigate = useNavigate();
   const location = useLocation();
+  const initialWorkspaceProjectId =
+    location.state?.workspaceProjectId ||
+    new URLSearchParams(location.search).get("projectId") ||
+    null;
+  const [workspaceProjectId, setWorkspaceProjectId] = useState(initialWorkspaceProjectId);
   const { currentUser } = useSelector((state) => state.user);
   const generationCost = 1;
   const revisionCost = 1;
@@ -76,6 +82,16 @@ const MoodboardGenerator = () => {
   useEffect(() => {
     refreshCredits();
   }, []);
+
+  useEffect(() => {
+    const nextWorkspaceProjectId =
+      location.state?.workspaceProjectId ||
+      new URLSearchParams(location.search).get("projectId") ||
+      null;
+    if (nextWorkspaceProjectId && nextWorkspaceProjectId !== workspaceProjectId) {
+      setWorkspaceProjectId(nextWorkspaceProjectId);
+    }
+  }, [location.state, location.search, workspaceProjectId]);
 
   const confirmCreditSpend = async (cost, actionLabel) => {
     if (!currentUser) {
@@ -142,6 +158,7 @@ const MoodboardGenerator = () => {
         title: `${selectedStyle || "Modern"} ${selectedSpace}`,
         style: styleValue,
         roomType: spaceValue,
+        projectId: workspaceProjectId,
         colorPreferences: [selectedColor],
         paletteColors: paletteColors, // Pass the hex colors
         customPrompt: changes.trim(),
@@ -537,6 +554,21 @@ const MoodboardGenerator = () => {
 
   return (
     <>
+      <ProjectSelectionModal
+        open={!workspaceProjectId}
+        title='Select Project For AI Design Builder'
+        description='Choose an existing project or create a new one before generating AI designs.'
+        onSelect={(project) => {
+          setWorkspaceProjectId(project._id);
+          navigate(`/moodboard?projectId=${project._id}`, {
+            replace: true,
+            state: {
+              workspaceProjectId: project._id,
+              workspaceProjectName: project.name,
+            },
+          });
+        }}
+      />
       <CreditConfirmModal
         isOpen={!!confirmState}
         cost={confirmState?.cost}
@@ -636,6 +668,7 @@ const MoodboardGenerator = () => {
             isOpen={showHistory}
             onClose={() => setShowHistory(false)}
             onSelectMoodboard={handleSelectFromHistory}
+            projectId={workspaceProjectId}
           />
         </div>
       </div>

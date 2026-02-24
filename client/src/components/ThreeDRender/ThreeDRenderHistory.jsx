@@ -66,7 +66,12 @@ const DeleteConfirmationDialog = ({
 };
 
 
-export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
+export const ThreeDRenderHistory = ({
+  isOpen,
+  onClose,
+  onLoadItem,
+  workspaceProjectId = null,
+}) => {
   const [historyItems, setHistoryItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredItems, setFilteredItems] = useState([]);
@@ -75,11 +80,13 @@ export const ThreeDRenderHistory = ({ isOpen, onClose, onLoadItem }) => {
     if (isOpen) {
       loadHistory();
     }
-  }, [isOpen]);
+  }, [isOpen, workspaceProjectId]);
 
   const loadHistory = async () => {
     try {
-      const response = await api.get('/3d/my-models');
+      const response = await api.get('/3d/my-models', {
+        params: workspaceProjectId ? { workspaceProjectId } : undefined,
+      });
       if (response.data && response.data.data) {
         setHistoryItems(response.data.data);
       }

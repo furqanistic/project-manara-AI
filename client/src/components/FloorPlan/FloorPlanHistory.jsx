@@ -65,7 +65,7 @@ const DeleteConfirmationDialog = ({
   );
 };
 
-export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
+export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem, projectId = null }) => {
   const [historyItems, setHistoryItems] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredItems, setFilteredItems] = useState([]);
@@ -74,11 +74,13 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem }) => {
     if (isOpen) {
       loadHistory();
     }
-  }, [isOpen]);
+  }, [isOpen, projectId]);
 
   const loadHistory = async () => {
     try {
-      const response = await api.get('/floorplans/user');
+      const response = await api.get('/floorplans/user', {
+        params: projectId ? { projectId } : undefined,
+      });
       if (response.data && response.data.data) {
         setHistoryItems(response.data.data);
       }

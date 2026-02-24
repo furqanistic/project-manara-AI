@@ -915,17 +915,21 @@ export const getUserMoodboards = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page) || 1
     const limit = parseInt(req.query.limit) || 10
+    const { projectId } = req.query
     const skip = (page - 1) * limit
 
-    const moodboards = await Moodboard.find({ userId: req.user._id })
+    const query = { userId: req.user._id }
+    if (projectId) {
+      query.projectId = projectId
+    }
+
+    const moodboards = await Moodboard.find(query)
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 })
       .populate('userId', 'name email')
 
-    const totalMoodboards = await Moodboard.countDocuments({
-      userId: req.user._id,
-    })
+    const totalMoodboards = await Moodboard.countDocuments(query)
 
     res.status(200).json({
       status: 'success',

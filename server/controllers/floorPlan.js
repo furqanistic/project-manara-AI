@@ -143,7 +143,7 @@ export const deleteFloorPlan = async (req, res, next) => {
 
 export const getUserFloorPlans = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, status = 'all' } = req.query
+    const { page = 1, limit = 10, status = 'all', projectId } = req.query
     const skip = (page - 1) * limit
 
     const query = {
@@ -153,6 +153,9 @@ export const getUserFloorPlans = async (req, res, next) => {
 
     if (status !== 'all') {
       query.status = status
+    }
+    if (projectId) {
+      query.projectId = projectId
     }
 
     const floorPlans = await FloorPlan.find(query)
@@ -375,7 +378,7 @@ export const autoSave = async (req, res, next) => {
 
 export const generateFloorPlanImage = async (req, res, next) => {
   try {
-    const { prompt, aspectRatio = '1:1' } = req.body
+    const { prompt, aspectRatio = '1:1', projectId, name } = req.body
 
     if (!prompt) {
       return next(createError(400, 'Prompt is required'))
@@ -408,7 +411,8 @@ export const generateFloorPlanImage = async (req, res, next) => {
     // Save to database as a project
     const floorPlan = new FloorPlan({
       userId: req.user._id,
-      name: `AI Floor Plan - ${new Date().toLocaleString()}`,
+      projectId,
+      name: name || `AI Floor Plan - ${new Date().toLocaleString()}`,
       status: 'completed',
       thumbnail: uploadResult.secure_url,
       aiGenerations: [{

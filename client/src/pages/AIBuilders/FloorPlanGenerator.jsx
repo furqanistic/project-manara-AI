@@ -34,6 +34,7 @@ import api from '../../config/config'
 import { getCreditLedger, getCreditsBalance, spendCredits } from '@/lib/credits'
 import { useSelector } from 'react-redux'
 import CreditConfirmModal from '@/components/Common/CreditConfirmModal'
+import ProjectSelectionModal from '@/components/Common/ProjectSelectionModal'
 
 const BUILDING_TYPES = [
   { id: 'apartment', label: 'Apartment', icon: Layout },
@@ -94,7 +95,13 @@ const FloorPlanGenerator = () => {
   const [confirmState, setConfirmState] = useState(null)
   const confirmResolverRef = useRef(null)
   const location = useLocation()
+  const navigate = useNavigate()
   const { id } = useParams()
+  const initialWorkspaceProjectId =
+    location.state?.workspaceProjectId ||
+    new URLSearchParams(location.search).get('projectId') ||
+    null
+  const [workspaceProjectId, setWorkspaceProjectId] = useState(initialWorkspaceProjectId)
   
   const [generatedImage, setGeneratedImage] = useState(() => {
     if (location.state?.reset) return null;
@@ -109,6 +116,7 @@ const FloorPlanGenerator = () => {
   })
   
   const chatContainerRef = useRef(null)
+  const fileInputRef = useRef(null)
   const initialGenerationCost = 4
   const revisionCost = 1
 
@@ -163,6 +171,58 @@ const FloorPlanGenerator = () => {
     }
   }, [chatHistory])
 
+  const processImageFile = (file) => {
+    if (!file) return
+    if (!file.type?.startsWith('image/')) {
+      toast.error('Please upload an image file')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result
+      if (typeof dataUrl !== 'string') return
+
+      setGeneratedImage({ url: dataUrl, mimeType: file.type || 'image/png' })
+      setStep('result')
+      toast.success('Image loaded')
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files?.[0]
+    processImageFile(file)
+    if (e.target) {
+      e.target.value = ''
+    }
+  }
+
+  useEffect(() => {
+    const handlePaste = (event) => {
+      const target = event.target
+      const isEditableTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable
+
+      const items = Array.from(event.clipboardData?.items || [])
+      const imageItem = items.find((item) => item.type?.startsWith('image/'))
+      if (!imageItem) return
+
+      if (isEditableTarget && !event.metaKey && !event.ctrlKey) {
+        return
+      }
+
+      event.preventDefault()
+      const file = imageItem.getAsFile()
+      processImageFile(file)
+    }
+
+    window.addEventListener('paste', handlePaste)
+    return () => window.removeEventListener('paste', handlePaste)
+  }, [])
+
   // Persistence
   useEffect(() => {
     localStorage.setItem('fp_generatedImage', generatedImage ? JSON.stringify(generatedImage) : '')
@@ -171,6 +231,14 @@ const FloorPlanGenerator = () => {
   }, [generatedImage, chatHistory])
 
   useEffect(() => {
+    const nextWorkspaceProjectId =
+      location.state?.workspaceProjectId ||
+      new URLSearchParams(location.search).get('projectId') ||
+      null
+    if (nextWorkspaceProjectId && nextWorkspaceProjectId !== workspaceProjectId) {
+      setWorkspaceProjectId(nextWorkspaceProjectId)
+    }
+
     if (location.state?.reset) {
         handleNewProject();
         // Clear the state so refreshing doesn't keep resetting if we implement that
@@ -179,7 +247,7 @@ const FloorPlanGenerator = () => {
         loadFromHistory(location.state.project);
         window.history.replaceState({}, document.title);
     }
-  }, [location.state]);
+  }, [location.state, location.search, workspaceProjectId]);
 
   // Handle direct ID loading
   useEffect(() => {
@@ -192,12 +260,14 @@ const FloorPlanGenerator = () => {
           }
         } catch (err) {
           console.error('Error loading floor plan by ID:', err)
-          toast.error('Could not find the requested project')
+          if (!location.state?.project && !generatedImage) {
+            toast.error('Could not find the requested project')
+          }
         }
       }
     }
     loadProjectById()
-  }, [id])
+  }, [id, location.state, generatedImage])
 
   const handleNewProject = () => {
     setGeneratedImage(null)
@@ -234,7 +304,11 @@ const FloorPlanGenerator = () => {
       if (!generatedImage) {
         response = await api.post('/floorplans/generate-image', { 
             prompt: displayPrompt, 
-            aspectRatio: '1:1' 
+            aspectRatio: '1:1',
+            projectId: workspaceProjectId,
+            name: workspaceProjectId
+              ? `${config.buildingType} ${config.scale} Floor Plan`
+              : undefined,
         })
       } else {
         response = await api.post('/floorplans/edit-image', { 
@@ -289,12 +363,15 @@ const FloorPlanGenerator = () => {
   const loadFromHistory = (item) => {
     const imageToLoad = item.image || { url: item.thumbnail, mimeType: 'image/png' };
     setGeneratedImage(imageToLoad)
+    if (item?.projectId) {
+      const resolvedProjectId =
+        typeof item.projectId === 'string' ? item.projectId : item.projectId?._id
+      if (resolvedProjectId) setWorkspaceProjectId(resolvedProjectId)
+    }
     setStep('result')
     
     toast.success("Session restored", { id: 'session-restored' })
   }
-
-  const navigate = useNavigate()
 
   const handleConvertTo3D = () => {
     if (!generatedImage) return
@@ -312,8 +389,25 @@ const FloorPlanGenerator = () => {
     }
   }
 
+  const shouldShowProjectModal = !workspaceProjectId && !id && !location.state?.project
+
   return (
     <>
+      <ProjectSelectionModal
+        open={shouldShowProjectModal}
+        title='Select Project For Floor Plan Builder'
+        description='Choose an existing project or create a new one before generating floor plans.'
+        onSelect={(project) => {
+          setWorkspaceProjectId(project._id)
+          navigate(`/floorplans?projectId=${project._id}`, {
+            replace: true,
+            state: {
+              workspaceProjectId: project._id,
+              workspaceProjectName: project.name,
+            },
+          })
+        }}
+      />
       <CreditConfirmModal
         isOpen={!!confirmState}
         cost={confirmState?.cost}
@@ -348,6 +442,7 @@ const FloorPlanGenerator = () => {
         isOpen={historyOpen} 
         onClose={() => setHistoryOpen(false)}
         onLoadItem={loadFromHistory}
+        projectId={workspaceProjectId}
       />
 
       {/* Main Container */}
@@ -607,6 +702,24 @@ const FloorPlanGenerator = () => {
                       <p className='text-gray-400 text-xs leading-relaxed'>
                         Select your {config.buildingType} details on the left to get started.
                       </p>
+                      <div className='pt-3 space-y-2'>
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className='px-4 py-2 rounded-lg bg-[#8d775e] text-white text-[11px] font-bold uppercase tracking-wide hover:opacity-90 transition'
+                        >
+                          Upload floor plan image
+                        </button>
+                        <p className='text-[10px] text-gray-400'>
+                          Or press Ctrl/Cmd + V to paste from clipboard
+                        </p>
+                        <input
+                          ref={fileInputRef}
+                          type='file'
+                          accept='image/*'
+                          onChange={handleFileSelect}
+                          className='hidden'
+                        />
+                      </div>
                     </div>
                   </motion.div>
                 )}
