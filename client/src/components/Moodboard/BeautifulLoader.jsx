@@ -1,7 +1,8 @@
 // File: project-manara-AI/client/src/components/Moodboard/BeautifulLoader.jsx
 
 import { motion } from "framer-motion";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
+import BrandSpinner from "@/components/Common/BrandSpinner";
 import { BRAND_COLOR, BRAND_COLOR_LIGHT } from "./Moodboardconfig";
 const BeautifulLoader = ({ progressSteps = [], phase = "image" }) => {
   const imagePhaseSteps = [
@@ -36,76 +37,11 @@ const BeautifulLoader = ({ progressSteps = [], phase = "image" }) => {
     >
       <div className="text-center max-w-md">
         <motion.div
-          className="relative w-32 h-32 mx-auto mb-12"
-          animate={{
-            scale: [1, 1.05, 1],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
+          className="mx-auto mb-12"
+          animate={{ scale: [1, 1.05, 1] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         >
-          {/* Outer rotating ring */}
-          <motion.div
-            className="absolute inset-0 rounded-full border-[1px] border-transparent border-t-[#8d775e]"
-            animate={{ rotate: 360 }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          />
-
-          {/* Middle rotating ring */}
-          <motion.div
-            className="absolute inset-4 rounded-full border-[1px] border-transparent border-b-[#8d775e]/30"
-            animate={{ rotate: -360 }}
-            transition={{
-              duration: 5,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          />
-
-          {/* Inner brand emblem */}
-          <motion.div
-            className="absolute inset-6 rounded-full flex items-center justify-center"
-            animate={{
-              opacity: [0.5, 1, 0.5],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          >
-            <img src="/min-logo.png" alt="Manara" className="w-12 h-12 object-contain" />
-          </motion.div>
-
-          {/* Orbiting particles */}
-          {[0, 120, 240].map((angle, i) => (
-            <motion.div
-              key={i}
-              className="absolute w-1 h-1 rounded-full bg-[#8d775e]"
-              style={{
-                top: "50%",
-                left: "50%",
-                transformOrigin: "0 0",
-              }}
-              animate={{
-                rotate: [angle, angle + 360],
-                x: [48, 48],
-                y: [-0.5, -0.5],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: "linear",
-                delay: i * 0.5,
-              }}
-            />
-          ))}
+          <BrandSpinner size={128} iconSize={48} ringClassName="border-t-[1px]" />
         </motion.div>
 
         <motion.div
@@ -163,16 +99,7 @@ const BeautifulLoader = ({ progressSteps = [], phase = "image" }) => {
                           />
                         </motion.div>
                       ) : isActive ? (
-                        <div className="relative">
-                          <div
-                            className="w-5 h-5 rounded-full border-2 border-transparent animate-spin"
-                            style={{ borderTopColor: BRAND_COLOR }}
-                          />
-                          <Sparkles
-                            className="absolute inset-x-0 inset-y-0 m-auto w-3 h-3"
-                            style={{ color: BRAND_COLOR }}
-                          />
-                        </div>
+                        <BrandSpinner size={20} iconSize={10} ringClassName="border-t-2" />
                       ) : (
                         <div className="w-4 h-4 rounded-full border-2 border-gray-200 dark:border-white/10" />
                       )}

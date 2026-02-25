@@ -29,7 +29,7 @@ import {
 import React, { useEffect, useState } from "react";
 import { toast } from "react-hot-toast";
 import { useNavigate, useLocation } from "react-router-dom";
-import { getCreditLedger, getCreditsBalance, spendCredits } from "@/lib/credits";
+import { getCreditsBalance, spendCredits } from "@/lib/credits";
 import { useSelector } from "react-redux";
 import CreditConfirmModal from "@/components/Common/CreditConfirmModal";
 import ProjectSelectionModal from "@/components/Common/ProjectSelectionModal";
@@ -56,8 +56,6 @@ const MoodboardGenerator = () => {
   const [progressSteps, setProgressSteps] = useState([]);
   const [generationPhase, setGenerationPhase] = useState(null); // 'image' or 'descriptions'
   const [showHistory, setShowHistory] = useState(false); // NEW: History modal state
-  const [creditsBalance, setCreditsBalance] = useState(() => getCreditsBalance());
-  const [creditsLedger, setCreditsLedger] = useState(() => getCreditLedger());
   const [confirmState, setConfirmState] = useState(null);
   const confirmResolverRef = React.useRef(null);
   const createMutation = useCreateMoodboard();
@@ -73,15 +71,6 @@ const MoodboardGenerator = () => {
   const { currentUser } = useSelector((state) => state.user);
   const generationCost = 1;
   const revisionCost = 1;
-
-  const refreshCredits = () => {
-    setCreditsBalance(getCreditsBalance());
-    setCreditsLedger(getCreditLedger());
-  };
-
-  useEffect(() => {
-    refreshCredits();
-  }, []);
 
   useEffect(() => {
     const nextWorkspaceProjectId =
@@ -118,7 +107,6 @@ const MoodboardGenerator = () => {
       toast.error("Not enough credits. Please add more credits to continue.");
       return false;
     }
-    refreshCredits();
     return true;
   };
 
@@ -584,26 +572,13 @@ const MoodboardGenerator = () => {
         }}
       />
       <TopBar />
-      <div className="w-full bg-white/90 dark:bg-[#0a0a0a] border-b border-gray-100 dark:border-white/5 mt-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex flex-col gap-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span>Credits balance: {creditsBalance}</span>
-            <span>Generation cost: {generationCost} credit • Revision: {revisionCost} credit</span>
-          </div>
-          {creditsLedger.some((entry) => entry.tool === "moodboard") && (
-            <div className="text-[10px] text-gray-400">
-              Recent usage: {creditsLedger.filter((entry) => entry.tool === "moodboard").slice(0, 3).map((entry) => `${entry.action || entry.label || entry.type} (${entry.type === "credit" ? "+" : "-"}${entry.amount})`).join(" • ")}
-            </div>
-          )}
-        </div>
-      </div>
       {loadingState === "generating" && (
         <BeautifulLoader
           progressSteps={progressSteps}
           phase={generationPhase}
         />
       )}
-      <div className="min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] relative transition-colors duration-500 flex flex-col pt-12 sm:pt-20 pb-12">
+      <div className="min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] relative transition-colors duration-500 flex flex-col pt-16 sm:pt-20 pb-12">
         {/* Cinematic Ambient Background */}
         <div className='absolute inset-0 overflow-hidden pointer-events-none'>
           <div className='absolute top-[-10%] right-[-5%] w-[70%] h-[70%] rounded-full bg-[#8d775e]/5 dark:bg-[#8d775e]/10 blur-[140px]' />
@@ -628,8 +603,6 @@ const MoodboardGenerator = () => {
             setChanges={setChanges}
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
-            creditsBalance={creditsBalance}
-            generationCost={generationCost}
           />
         ) : (
           <ResultView
@@ -690,8 +663,6 @@ const WizardFlow = ({
   setChanges,
   onGenerate,
   isGenerating,
-  creditsBalance,
-  generationCost,
 }) => {
   const canProceed = () => {
     switch (currentStep) {
@@ -751,9 +722,6 @@ const WizardFlow = ({
                       </>
                     )}
                   </button>
-                  <div className="mt-2 text-[10px] text-gray-400 text-right">
-                    Cost: {generationCost} credit • Balance: {creditsBalance}
-                  </div>
                 </div>
               )}
 

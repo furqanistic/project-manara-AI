@@ -31,10 +31,11 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { FloorPlanHistory } from '../../components/FloorPlan/FloorPlanHistory'
 import TopBar from '../../components/Layout/Topbar'
 import api from '../../config/config'
-import { getCreditLedger, getCreditsBalance, spendCredits } from '@/lib/credits'
+import { getCreditsBalance, spendCredits } from '@/lib/credits'
 import { useSelector } from 'react-redux'
 import CreditConfirmModal from '@/components/Common/CreditConfirmModal'
 import ProjectSelectionModal from '@/components/Common/ProjectSelectionModal'
+import BrandSpinner from '@/components/Common/BrandSpinner'
 
 const BUILDING_TYPES = [
   { id: 'apartment', label: 'Apartment', icon: Layout },
@@ -90,8 +91,6 @@ const FloorPlanGenerator = () => {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [showHistoryMobile, setShowHistoryMobile] = useState(false)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
-  const [creditsBalance, setCreditsBalance] = useState(() => getCreditsBalance())
-  const [creditsLedger, setCreditsLedger] = useState(() => getCreditLedger())
   const [confirmState, setConfirmState] = useState(null)
   const confirmResolverRef = useRef(null)
   const location = useLocation()
@@ -120,15 +119,6 @@ const FloorPlanGenerator = () => {
   const initialGenerationCost = 4
   const revisionCost = 1
 
-  const refreshCredits = () => {
-    setCreditsBalance(getCreditsBalance())
-    setCreditsLedger(getCreditLedger())
-  }
-
-  useEffect(() => {
-    refreshCredits()
-  }, [])
-
   const confirmCreditSpend = async (cost, actionLabel) => {
     if (!currentUser) {
       toast.error('Please sign up or log in to use this tool.')
@@ -151,7 +141,6 @@ const FloorPlanGenerator = () => {
       toast.error('Not enough credits. Please add more credits to continue.')
       return false
     }
-    refreshCredits()
     return true
   }
 
@@ -376,7 +365,13 @@ const FloorPlanGenerator = () => {
   const handleConvertTo3D = () => {
     if (!generatedImage) return
     const imageUrl = generatedImage.url || `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
-    navigate('/visualizer', { state: { sourceImage: imageUrl } })
+    navigate('/visualizer', {
+      state: {
+        sourceImage: imageUrl,
+        workspaceProjectId,
+        workspaceProjectName: location.state?.workspaceProjectName,
+      },
+    })
   }
 
   const toggleMobileView = () => {
@@ -424,19 +419,6 @@ const FloorPlanGenerator = () => {
       />
       <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
       <TopBar />
-      <div className='w-full bg-white/90 dark:bg-[#0a0a0a] border-b border-[#E5E5E7] dark:border-[#2D2D2F] mt-16'>
-        <div className='max-w-6xl mx-auto px-4 sm:px-6 py-2 flex flex-col gap-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300'>
-          <div className='flex flex-wrap items-center justify-between gap-2'>
-            <span>Credits balance: {creditsBalance}</span>
-            <span>2D Floor Plan: {initialGenerationCost} credits • Revision: {revisionCost} credit</span>
-          </div>
-          {creditsLedger.some((entry) => entry.tool === 'floorplan') && (
-            <div className='text-[10px] text-gray-400'>
-              Recent usage: {creditsLedger.filter((entry) => entry.tool === 'floorplan').slice(0, 3).map((entry) => `${entry.action || entry.label || entry.type} (${entry.type === 'credit' ? '+' : '-'}${entry.amount})`).join(' • ')}
-            </div>
-          )}
-        </div>
-      </div>
       
       <FloorPlanHistory 
         isOpen={historyOpen} 
@@ -446,7 +428,7 @@ const FloorPlanGenerator = () => {
       />
 
       {/* Main Container */}
-      <main className='flex-1 relative flex flex-col md:flex-row pt-0 h-full overflow-hidden'>
+      <main className='flex-1 relative flex flex-col md:flex-row pt-16 h-full overflow-hidden'>
         
         {/* Left Section: Controls & Config (Compact Sidebar) */}
         <aside className={`
@@ -614,10 +596,6 @@ const FloorPlanGenerator = () => {
                   {isGenerating ? <Loader2 size={14} className='animate-spin' /> : <ArrowRight size={16} />}
                 </button>
                </div>
-               <div className='text-[10px] text-gray-400 font-semibold'>
-                 Cost: {generatedImage ? revisionCost : initialGenerationCost} credit{generatedImage ? '' : 's'} • Balance: {creditsBalance}
-               </div>
-               
                {step === 'result' && (
                  <div className='flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide'>
                     {['Add Balcony', 'Open Plan', 'Luxury Bath'].map((tag) => (
@@ -734,15 +712,7 @@ const FloorPlanGenerator = () => {
                     exit={{ opacity: 0 }}
                     className='absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-xl z-30 flex flex-col items-center justify-center'
                   >
-                    <div className='relative w-16 h-16 mb-4 flex items-center justify-center'>
-                       <div className='absolute inset-0 border-t-2 border-[#8d775e] rounded-full animate-spin' />
-                       <img 
-                          src="/logoicon.png" 
-                          alt="Processing" 
-                          className='w-8 h-8 object-contain animate-pulse'
-                       />
-                    </div>
-                    <p className='text-[10px] font-black uppercase tracking-[0.3em] animate-pulse'>Designing</p>
+                    <BrandSpinner label='Designing' className='gap-4' />
                   </motion.div>
                 )}
              </AnimatePresence>

@@ -38,9 +38,10 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { getCreditLedger, getCreditsBalance, spendCredits } from '@/lib/credits'
+import { getCreditsBalance, spendCredits } from '@/lib/credits'
 import { useSelector } from 'react-redux'
 import CreditConfirmModal from '@/components/Common/CreditConfirmModal'
+import BrandSpinner from '@/components/Common/BrandSpinner'
 
 const STYLES = [
   { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors', color: '#de7c7c' },
@@ -113,8 +114,6 @@ const ThreedGenerator = () => {
   const [viewerExposure, setViewerExposure] = useState(1.2)
   const [viewerShadow, setViewerShadow] = useState(1)
   const [viewerRotateSpeed, setViewerRotateSpeed] = useState(30)
-  const [creditsBalance, setCreditsBalance] = useState(() => getCreditsBalance())
-  const [creditsLedger, setCreditsLedger] = useState(() => getCreditLedger())
   const [confirmState, setConfirmState] = useState(null)
   const confirmResolverRef = useRef(null)
   
@@ -137,11 +136,6 @@ const ThreedGenerator = () => {
   const initialRenderCost = 3
   const revisionCost = 1
 
-  const refreshCredits = () => {
-    setCreditsBalance(getCreditsBalance())
-    setCreditsLedger(getCreditLedger())
-  }
-
   const handleComparisonUpdate = (clientX) => {
     if (!comparisonRef.current) return
     const rect = comparisonRef.current.getBoundingClientRect()
@@ -149,10 +143,6 @@ const ThreedGenerator = () => {
     const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100))
     comparisonPosition.set(percentage)
   }
-
-  useEffect(() => {
-    refreshCredits()
-  }, [])
 
   const confirmCreditSpend = async (cost, actionLabel) => {
     if (!currentUser) {
@@ -176,7 +166,6 @@ const ThreedGenerator = () => {
       toast.error('Not enough credits. Please add more credits to continue.')
       return false
     }
-    refreshCredits()
     return true
   }
 
@@ -973,10 +962,6 @@ const ThreedGenerator = () => {
                 {isGenerating ? 'Generating...' : selectedStyleHasVariant ? 'Regenerate' : 'Generate'}
               </button>
             </div>
-            <div className='mt-2 text-[10px] text-gray-400 font-semibold'>
-              Cost: {selectedStyleHasVariant ? revisionCost : initialRenderCost} credit{selectedStyleHasVariant ? '' : 's'} • Balance: {creditsBalance}
-              {selectedStyleHasVariant && ` • ${selectedStyle} variant ready`}
-            </div>
           </div>
         </aside>
 
@@ -1050,11 +1035,11 @@ const ThreedGenerator = () => {
             <AnimatePresence mode='wait'>
               {isGenerating ? (
                 <motion.div key='loading' className='flex-1 flex flex-col items-center justify-center text-center space-y-4'>
-                  <div className='relative w-16 h-16 mx-auto flex items-center justify-center'>
-                    <div className='absolute inset-0 border-t-2 border-[#8d775e] rounded-full animate-spin' />
-                    <Box size={24} className='text-[#8d775e] animate-pulse' />
-                  </div>
-                  <p className='text-[10px] font-black uppercase tracking-widest animate-pulse'>{loadingPhase}</p>
+                  <BrandSpinner
+                    label={loadingPhase}
+                    className='gap-4'
+                    labelClassName='text-[10px] font-black uppercase tracking-widest animate-pulse'
+                  />
                 </motion.div>
               ) : displayImageSrc ? (
                 <motion.div key='content' initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className='flex-1 w-full flex flex-col p-3 md:p-5 overflow-hidden'>

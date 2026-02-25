@@ -45,6 +45,8 @@ const formatDate = (value) =>
   })
 
 const LAST_VIEWED_PROJECT_KEY = 'manara_last_viewed_project_id'
+const PROJECT_SKELETON_ITEMS = [1, 2, 3]
+const WORKSPACE_COUNT_SKELETON_ITEMS = [1, 2, 3]
 
 const ProjectsPage = () => {
   const navigate = useNavigate()
@@ -180,11 +182,22 @@ const ProjectsPage = () => {
 
           {!isLoading && projects.length === 0 && (
             <div className='rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-500 dark:border-white/10 dark:text-gray-400'>
-              No projects yet. Create your first project above.
+              No projects found yet. Create your first project above.
             </div>
           )}
 
           <div className='flex gap-3 overflow-x-auto pb-1'>
+            {isLoading &&
+              PROJECT_SKELETON_ITEMS.map((item) => (
+                <div
+                  key={item}
+                  className='min-w-[250px] animate-pulse rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/5'
+                >
+                  <div className='mb-3 h-4 w-2/3 rounded bg-gray-200 dark:bg-white/10' />
+                  <div className='mb-2 h-3 w-1/3 rounded bg-gray-200 dark:bg-white/10' />
+                  <div className='h-3 w-1/2 rounded bg-gray-200 dark:bg-white/10' />
+                </div>
+              ))}
             {projects.map((project) => {
               const isActive = activeProjectId === project._id
               const isLastViewed = lastViewedProjectId === project._id
@@ -238,7 +251,43 @@ const ProjectsPage = () => {
             </div>
           )}
 
-          {activeProjectId && (
+          {activeProjectId && workspaceLoading && !workspaceData?.data && (
+            <>
+              <div className='mb-5 flex flex-wrap items-start justify-between gap-3'>
+                <div className='animate-pulse space-y-2'>
+                  <div className='h-3 w-32 rounded bg-gray-200 dark:bg-white/10' />
+                  <div className='h-8 w-56 rounded bg-gray-200 dark:bg-white/10' />
+                </div>
+              </div>
+
+              <div className='mb-6 grid gap-3 md:grid-cols-3'>
+                {PROJECT_SKELETON_ITEMS.map((item) => (
+                  <div
+                    key={item}
+                    className='animate-pulse rounded-2xl border border-gray-200 bg-white p-4 dark:border-white/10 dark:bg-white/5'
+                  >
+                    <div className='mb-3 h-4 w-1/2 rounded bg-gray-200 dark:bg-white/10' />
+                    <div className='mb-2 h-3 w-4/5 rounded bg-gray-200 dark:bg-white/10' />
+                    <div className='h-3 w-3/5 rounded bg-gray-200 dark:bg-white/10' />
+                  </div>
+                ))}
+              </div>
+
+              <div className='grid gap-4 md:grid-cols-3'>
+                {WORKSPACE_COUNT_SKELETON_ITEMS.map((item) => (
+                  <div
+                    key={item}
+                    className='animate-pulse rounded-2xl border border-gray-200 p-4 dark:border-white/10'
+                  >
+                    <div className='mb-3 h-3 w-2/5 rounded bg-gray-200 dark:bg-white/10' />
+                    <div className='h-8 w-12 rounded bg-gray-200 dark:bg-white/10' />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {activeProjectId && (!workspaceLoading || workspaceData?.data) && (
             <>
               <div className='mb-5 flex flex-wrap items-start justify-between gap-3'>
                 <div>
