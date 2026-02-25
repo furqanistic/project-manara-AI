@@ -228,6 +228,8 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
 
   // Use the first generated image for thumbnail
   const displayImage = item.versions?.[0]?.image || item.image;
+  const hasInteractiveModel = !!item.glbUrl || item.meshyStatus === "succeeded";
+  const isModelProcessing = item.meshyStatus === "pending";
 
   const handleDownload = (e) => {
     e.stopPropagation();
@@ -282,6 +284,16 @@ const HistoryCard = ({ item, onLoad, onDelete }) => {
             {item.versions?.length > 1 && (
               <div className="text-[9px] font-bold text-[#8d775e] bg-[#8d775e]/10 px-2 py-0.5 rounded-full inline-block uppercase tracking-widest">
                 {item.versions.length} Versions
+              </div>
+            )}
+            {hasInteractiveModel && (
+              <div className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100/80 dark:bg-emerald-500/10 px-2 py-0.5 rounded-full inline-block uppercase tracking-widest">
+                Interactive 3D Ready
+              </div>
+            )}
+            {!hasInteractiveModel && isModelProcessing && (
+              <div className="text-[9px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-500/10 px-2 py-0.5 rounded-full inline-block uppercase tracking-widest">
+                3D Model Processing
               </div>
             )}
           </div>

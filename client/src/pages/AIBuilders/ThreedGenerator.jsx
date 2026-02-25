@@ -710,6 +710,7 @@ const ThreedGenerator = () => {
     !workspaceProjectId && !id && !location.state?.project && !currentProjectId
   const loadingPhase =
     LOADING_PHASES[Math.min(LOADING_PHASES.length - 1, Math.floor(uploadProgress / 20))]
+  const isMeshyBundlingPhase = isConvertingTo3D && meshyProgress >= 49 && meshyProgress < 55
 
   const handleMainGenerate = () => {
     if (selectedStyleHasVariant) {
@@ -1075,6 +1076,11 @@ const ThreedGenerator = () => {
                           style={{ width: `${meshyProgress}%` }}
                         />
                       </div>
+                      {isMeshyBundlingPhase && (
+                        <p className='mt-2 text-[10px] text-amber-600 dark:text-amber-400'>
+                          We are bundling your 3D assets. It may stay around 49% briefly, this is expected.
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -1445,6 +1451,11 @@ const ThreedGenerator = () => {
                           </div>
                           <h4 className='font-bold text-xs uppercase tracking-widest'>Generating 3D Object...</h4>
                           <p className='text-[10px] text-gray-400 mt-2 max-w-[200px]'>You can safely close this page or check other projects; we'll keep building it for you in the background.</p>
+                          {isMeshyBundlingPhase && (
+                            <p className='text-[10px] text-amber-600 dark:text-amber-400 mt-2 max-w-[260px]'>
+                              It is normal for progress to pause around 49% while we bundle model files.
+                            </p>
+                          )}
                         </motion.div>
                       )}
 

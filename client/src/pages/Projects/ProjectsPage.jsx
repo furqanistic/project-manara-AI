@@ -301,9 +301,9 @@ const ProjectsPage = () => {
 
               <div className='mb-6 grid gap-3 md:grid-cols-3'>
                 <BuilderButton
-                  title='3D Renders'
-                  subtitle='Generate and iterate 3D outputs for this project.'
-                  ctaLabel='Open 3D Renderer'
+                  title='AI Design Generator'
+                  subtitle='Create moodboards and design concepts for this project.'
+                  ctaLabel='Open AI Design Builder'
                   onClick={() => goToBuilder('threed')}
                 />
                 <BuilderButton
@@ -313,9 +313,9 @@ const ProjectsPage = () => {
                   onClick={() => goToBuilder('floorplan')}
                 />
                 <BuilderButton
-                  title='AI Design Generator'
-                  subtitle='Create moodboards and design concepts for this project.'
-                  ctaLabel='Open AI Design Builder'
+                  title='3D Renders'
+                  subtitle='Generate and iterate 3D outputs for this project.'
+                  ctaLabel='Open 3D Renderer'
                   onClick={() => goToBuilder('moodboard')}
                   featured
                 />
