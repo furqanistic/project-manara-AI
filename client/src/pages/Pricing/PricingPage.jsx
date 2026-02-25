@@ -4,10 +4,11 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { motion } from 'framer-motion'
 import { Crown, Sparkles, Star } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSelector } from 'react-redux'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { addCredits } from '@/lib/credits'
 import { stripeService } from '@/services/stripeService'
 
 const CREDIT_DEFINITIONS = [
@@ -76,6 +77,12 @@ const CREDIT_PACKAGES = [
     cta: 'Add 100 Credits',
   },
 ]
+const PLAN_CREDITS = {
+  starter: 20,
+  home: 50,
+  plus: 100,
+}
+const CREDIT_GRANT_PREFIX = 'manara_credit_grant'
 
 const Decorations = () => (
   <div className='absolute inset-0 overflow-hidden pointer-events-none'>
@@ -176,7 +183,23 @@ const PricingPage = () => {
   const [cardsCount, setCardsCount] = useState(0)
   const [isCardsLoading, setIsCardsLoading] = useState(false)
   const { currentUser } = useSelector((state) => state.user)
+  const location = useLocation()
   const navigate = useNavigate()
+  const processedSearchRef = useRef('')
+
+  const applyCreditsGrant = (grantKey, amount, description) => {
+    const safeAmount = Math.max(0, Number(amount) || 0)
+    if (!safeAmount || !grantKey || typeof window === 'undefined') return
+
+    const storageKey = `${CREDIT_GRANT_PREFIX}:${grantKey}`
+    if (localStorage.getItem(storageKey) === '1') return
+
+    addCredits(safeAmount, {
+      source: 'subscription_purchase',
+      description,
+    })
+    localStorage.setItem(storageKey, '1')
+  }
 
   useEffect(() => {
     if (!currentUser) return
@@ -195,6 +218,49 @@ const PricingPage = () => {
 
     loadPaymentMethods()
   }, [currentUser])
+
+  useEffect(() => {
+    if (!location.search || processedSearchRef.current === location.search) return
+    processedSearchRef.current = location.search
+
+    const params = new URLSearchParams(location.search)
+    const checkoutSuccess = params.get('success')
+    const sessionId = params.get('session_id')
+
+    if (checkoutSuccess !== 'true' || !sessionId) return
+
+    stripeService
+      .syncCheckoutSession(sessionId)
+      .then((syncResponse) => {
+        const grantedCredits = Number(syncResponse?.data?.grantedCredits) || 0
+        const grantedPlanId = syncResponse?.data?.grantedPlanId || null
+        const creditGrantKey = syncResponse?.data?.creditGrantKey || `checkout:${sessionId}`
+        const fallbackCredits = grantedPlanId ? PLAN_CREDITS[grantedPlanId] || 0 : 0
+        const finalCredits = grantedCredits || fallbackCredits
+
+        if (finalCredits > 0) {
+          applyCreditsGrant(
+            creditGrantKey,
+            finalCredits,
+            `Plan purchase (${grantedPlanId || 'subscription'})`
+          )
+          toast.success(`${finalCredits} credits added to your account.`, {
+            id: `credits-granted-pricing-${sessionId}`,
+          })
+        } else {
+          toast.success('Checkout completed successfully.', {
+            id: `stripe-checkout-success-pricing-${sessionId}`,
+          })
+        }
+      })
+      .catch((error) => {
+        console.error('Checkout sync failed:', error)
+        toast.error('Checkout completed, but failed to sync credits. Please refresh.')
+      })
+      .finally(() => {
+        navigate(location.pathname, { replace: true })
+      })
+  }, [location.pathname, location.search, navigate])
 
   const handleSelectPlan = async (plan) => {
     if (!currentUser) {
@@ -218,7 +284,7 @@ const PricingPage = () => {
       try {
         const response = await stripeService.createCheckoutSession({
           planId: plan.id,
-          priceId: plan.priceId,
+          purchaseType: 'topup',
         })
 
         if (response?.url) {

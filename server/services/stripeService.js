@@ -122,6 +122,55 @@ export const stripeService = {
   },
 
   /**
+   * Create a one-time checkout session for credit top-ups
+   */
+  createTopupCheckoutSession: async (
+    customerId,
+    { planId, credits, amountAed, successUrl, cancelUrl }
+  ) => {
+    const { cards } = await stripeService.listCardPaymentMethods(customerId);
+    if (cards.length === 0) {
+      throw new Error('Please link at least one card before purchasing credits.');
+    }
+
+    const amount = Number(amountAed);
+    const totalCredits = Number(credits);
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(totalCredits) || totalCredits <= 0) {
+      throw new Error('Invalid top-up configuration.');
+    }
+
+    return await stripe.checkout.sessions.create({
+      customer: customerId,
+      mode: 'payment',
+      payment_method_types: ['card'],
+      billing_address_collection: 'auto',
+      customer_update: {
+        address: 'auto',
+      },
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: 'aed',
+            unit_amount: Math.round(amount * 100),
+            product_data: {
+              name: `${planId} credit top-up`,
+              description: `${totalCredits} credits`,
+            },
+          },
+        },
+      ],
+      metadata: {
+        purchaseType: 'topup',
+        planId,
+        credits: String(totalCredits),
+      },
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    });
+  },
+
+  /**
    * Create a customer portal session for managing subscription
    */
   createPortalSession: async (customerId, returnUrl) => {
@@ -134,8 +183,8 @@ export const stripeService = {
   /**
    * Retrieve subscription details
    */
-  getSubscription: async (subscriptionId) => {
-    return await stripe.subscriptions.retrieve(subscriptionId);
+  getSubscription: async (subscriptionId, options = {}) => {
+    return await stripe.subscriptions.retrieve(subscriptionId, options);
   },
 
   /**
@@ -143,6 +192,28 @@ export const stripeService = {
    */
   updateSubscription: async (subscriptionId, payload) => {
     return await stripe.subscriptions.update(subscriptionId, payload);
+  },
+
+  createSubscriptionScheduleFromSubscription: async (subscriptionId) => {
+    return await stripe.subscriptionSchedules.create({
+      from_subscription: subscriptionId,
+    });
+  },
+
+  updateSubscriptionSchedule: async (scheduleId, payload) => {
+    return await stripe.subscriptionSchedules.update(scheduleId, payload);
+  },
+
+  getSubscriptionSchedule: async (scheduleId) => {
+    return await stripe.subscriptionSchedules.retrieve(scheduleId);
+  },
+
+  releaseSubscriptionSchedule: async (scheduleId) => {
+    return await stripe.subscriptionSchedules.release(scheduleId);
+  },
+
+  cancelSubscriptionSchedule: async (scheduleId) => {
+    return await stripe.subscriptionSchedules.cancel(scheduleId);
   },
 
   /**
@@ -182,9 +253,56 @@ export const stripeService = {
       stripe.customers.retrieve(customerId),
     ]);
 
-    const cards = paymentMethods.data;
+    const rawCards = paymentMethods.data
+      .map((paymentMethod) => ({
+        id: paymentMethod.id,
+        brand: paymentMethod.card?.brand || 'card',
+        last4: paymentMethod.card?.last4 || '****',
+        expMonth: paymentMethod.card?.exp_month || null,
+        expYear: paymentMethod.card?.exp_year || null,
+        fingerprint: paymentMethod.card?.fingerprint || null,
+        created: paymentMethod.created || 0,
+      }))
+      .sort((a, b) => b.created - a.created);
+
+    // Some Stripe flows can attach the same physical card multiple times.
+    // Keep the newest copy per unique card signature for cleaner UX.
+    const seenSignatures = new Set();
+    const cards = [];
+    for (const card of rawCards) {
+      const signature = [
+        card.fingerprint || 'no-fingerprint',
+        card.brand,
+        card.last4,
+        card.expMonth,
+        card.expYear,
+      ].join(':');
+
+      if (seenSignatures.has(signature)) continue;
+      seenSignatures.add(signature);
+      cards.push({ ...card, signature });
+    }
+
     let defaultPaymentMethodId =
       customer?.invoice_settings?.default_payment_method || null;
+
+    const defaultCard = cards.find((card) => card.id === defaultPaymentMethodId);
+    if (!defaultCard && defaultPaymentMethodId) {
+      const previousDefault = rawCards.find((card) => card.id === defaultPaymentMethodId);
+      if (previousDefault) {
+        const signature = [
+          previousDefault.fingerprint || 'no-fingerprint',
+          previousDefault.brand,
+          previousDefault.last4,
+          previousDefault.expMonth,
+          previousDefault.expYear,
+        ].join(':');
+        const dedupedMatch = cards.find((card) => card.signature === signature);
+        if (dedupedMatch) {
+          defaultPaymentMethodId = dedupedMatch.id;
+        }
+      }
+    }
 
     const hasValidDefault = defaultPaymentMethodId
       ? cards.some((card) => card.id === defaultPaymentMethodId)
@@ -200,10 +318,10 @@ export const stripeService = {
     return {
       cards: cards.map((paymentMethod) => ({
         id: paymentMethod.id,
-        brand: paymentMethod.card?.brand || 'card',
-        last4: paymentMethod.card?.last4 || '****',
-        expMonth: paymentMethod.card?.exp_month || null,
-        expYear: paymentMethod.card?.exp_year || null,
+        brand: paymentMethod.brand,
+        last4: paymentMethod.last4,
+        expMonth: paymentMethod.expMonth,
+        expYear: paymentMethod.expYear,
       })),
       defaultPaymentMethodId,
     };

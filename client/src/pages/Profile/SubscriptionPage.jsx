@@ -13,6 +13,15 @@ import toast from 'react-hot-toast';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TopBar from '../../components/Layout/Topbar';
 import { Button } from '../../components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../../components/ui/dialog';
+import { addCredits } from '../../lib/credits';
 import { stripeService } from '../../services/stripeService';
 
 const CREDIT_DEFINITIONS = [
@@ -54,6 +63,17 @@ const CREDIT_PACKAGES = [
     features: ['Best value', 'Ideal for teams', 'Credits do not expire'],
   },
 ];
+const PLAN_ORDER = {
+  starter: 1,
+  home: 2,
+  plus: 3,
+};
+const PLAN_CREDITS = {
+  starter: 20,
+  home: 50,
+  plus: 100,
+};
+const CREDIT_GRANT_PREFIX = 'manara_credit_grant';
 
 const formatCardBrand = (brand) => {
   if (!brand) return 'Card';
@@ -76,8 +96,16 @@ const SubscriptionPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingCard, setIsAddingCard] = useState(false);
   const [processingPlanId, setProcessingPlanId] = useState(null);
-  const [isUpdatingSubscription, setIsUpdatingSubscription] = useState(false);
+  const [subscriptionActionBusy, setSubscriptionActionBusy] = useState(null);
   const [busyCardId, setBusyCardId] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    open: false,
+    title: '',
+    description: '',
+    confirmLabel: '',
+    tone: 'default',
+    action: null,
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const processedSearchRef = useRef('');
@@ -99,6 +127,37 @@ const SubscriptionPage = () => {
 
     return subscription.subscriptionStatus.replace('_', ' ');
   }, [subscription.subscriptionStatus]);
+
+  const nextBillingLabel = useMemo(() => {
+    if (isLoading) return 'Loading...';
+    if (!hasSubscription) return 'No active plan';
+    return formatDate(subscription?.nextBillingDate) === 'N/A'
+      ? 'Pending sync'
+      : formatDate(subscription?.nextBillingDate);
+  }, [hasSubscription, isLoading, subscription?.nextBillingDate]);
+  const isUpdatingSubscription = Boolean(subscriptionActionBusy);
+
+  const scheduledChangeLabel = useMemo(() => {
+    const scheduledPlanName = subscription?.scheduledPlanName;
+    const scheduledDate = formatDate(subscription?.scheduledChangeAt);
+    if (!scheduledPlanName || scheduledDate === 'N/A') return null;
+    return `${scheduledPlanName} on ${scheduledDate}`;
+  }, [subscription?.scheduledPlanName, subscription?.scheduledChangeAt]);
+  const hasScheduledPlanChange = Boolean(subscription?.scheduledPlanId && subscription?.scheduledChangeAt);
+
+  const applyCreditsGrant = (grantKey, amount, description) => {
+    const safeAmount = Math.max(0, Number(amount) || 0);
+    if (!safeAmount || !grantKey || typeof window === 'undefined') return;
+
+    const storageKey = `${CREDIT_GRANT_PREFIX}:${grantKey}`;
+    if (localStorage.getItem(storageKey) === '1') return;
+
+    addCredits(safeAmount, {
+      source: 'subscription_purchase',
+      description,
+    });
+    localStorage.setItem(storageKey, '1');
+  };
 
   const refreshBillingStatus = async () => {
     const response = await stripeService.getBillingStatus();
@@ -140,7 +199,25 @@ const SubscriptionPage = () => {
       if (sessionId) {
         stripeService
           .syncCheckoutSession(sessionId)
-          .then(() => refreshBillingStatus())
+          .then((syncResponse) => {
+            const grantedCredits = Number(syncResponse?.data?.grantedCredits) || 0;
+            const grantedPlanId = syncResponse?.data?.grantedPlanId || null;
+            const creditGrantKey = syncResponse?.data?.creditGrantKey || `checkout:${sessionId}`;
+            const fallbackCredits = grantedPlanId ? PLAN_CREDITS[grantedPlanId] || 0 : 0;
+            const finalCredits = grantedCredits || fallbackCredits;
+
+            if (finalCredits > 0) {
+              applyCreditsGrant(
+                creditGrantKey,
+                finalCredits,
+                `Plan purchase (${grantedPlanId || 'subscription'})`
+              );
+              toast.success(`${finalCredits} credits added to your account.`, {
+                id: `credits-granted-${sessionId}`,
+              });
+            }
+            return refreshBillingStatus();
+          })
           .catch((error) => {
             console.error('Checkout sync failed:', error);
             refreshBillingStatus().catch(() => {});
@@ -253,6 +330,86 @@ const SubscriptionPage = () => {
     }
   };
 
+  const openConfirmDialog = ({
+    title,
+    description,
+    confirmLabel,
+    tone = 'default',
+    action,
+  }) => {
+    setConfirmDialog({
+      open: true,
+      title,
+      description,
+      confirmLabel,
+      tone,
+      action,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog((prev) => ({
+      ...prev,
+      open: false,
+    }));
+  };
+
+  const executePlanChange = async (plan, options = {}) => {
+    setProcessingPlanId(plan.id);
+    try {
+      const response = await stripeService.changeSubscriptionPlan({
+        planId: plan.id,
+        priceId: plan.priceId,
+        renewNow: Boolean(options.renewNow),
+      });
+      const grantedCredits = Number(response?.grantedCredits) || 0;
+      const creditGrantKey = response?.creditGrantKey || null;
+      if (grantedCredits > 0) {
+        applyCreditsGrant(creditGrantKey, grantedCredits, `Plan upgrade (${plan.name})`);
+        toast.success(`${grantedCredits} credits added to your account.`, {
+          id: `credits-upgrade-${plan.id}`,
+        });
+      }
+      toast.success(response?.message || 'Plan updated successfully.');
+      await refreshBillingStatus();
+    } catch (error) {
+      console.error('Change plan error:', error);
+      toast.error(error?.response?.data?.message || 'Failed to change plan.');
+    } finally {
+      setProcessingPlanId(null);
+    }
+  };
+
+  const handleChangePlan = async (plan) => {
+    if (!hasSubscription) {
+      await handlePlanOperation(plan);
+      return;
+    }
+
+    if (activePlanId === plan.id) {
+      openConfirmDialog({
+        title: `Renew ${plan.name} now?`,
+        description:
+          'This will charge the full plan amount now, add a fresh credit pack immediately, and start a new billing period today.',
+        confirmLabel: 'Renew Now',
+        action: () => executePlanChange(plan, { renewNow: true }),
+      });
+      return;
+    }
+
+    const currentRank = PLAN_ORDER[activePlanId] || 0;
+    const targetRank = PLAN_ORDER[plan.id] || 0;
+    const isDowngrade = currentRank > 0 && targetRank > 0 && targetRank < currentRank;
+    openConfirmDialog({
+      title: isDowngrade ? `Downgrade to ${plan.name}?` : `Upgrade to ${plan.name}?`,
+      description: isDowngrade
+        ? `Your current plan remains active until the billing period ends, then your account moves to ${plan.name}.`
+        : `Your account will move to ${plan.name} right away, and the prorated difference for this cycle will be charged immediately.`,
+      confirmLabel: isDowngrade ? 'Schedule Downgrade' : 'Confirm Upgrade',
+      action: () => executePlanChange(plan),
+    });
+  };
+
   const handleOpenPortal = async () => {
     try {
       const response = await stripeService.createPortalSession();
@@ -273,26 +430,29 @@ const SubscriptionPage = () => {
       return;
     }
 
-    const confirmed = window.confirm(
-      'Cancel at period end? The user keeps access until the next billing date.'
-    );
-    if (!confirmed) return;
-
-    setIsUpdatingSubscription(true);
-    try {
-      const response = await stripeService.cancelSubscription();
-      toast.success(
-        response?.message || 'Subscription set to cancel at period end.'
-      );
-      await refreshBillingStatus();
-    } catch (error) {
-      console.error('Cancel subscription error:', error);
-      toast.error(
-        error?.response?.data?.message || 'Unable to cancel subscription.'
-      );
-    } finally {
-      setIsUpdatingSubscription(false);
-    }
+    openConfirmDialog({
+      title: 'Cancel at period end?',
+      description: 'Your plan stays active until the next billing date, then renewal stops automatically.',
+      confirmLabel: 'Confirm Cancellation',
+      tone: 'danger',
+      action: async () => {
+        setSubscriptionActionBusy('cancel_period');
+        try {
+          const response = await stripeService.cancelSubscription();
+          toast.success(
+            response?.message || 'Subscription set to cancel at period end.'
+          );
+          await refreshBillingStatus();
+        } catch (error) {
+          console.error('Cancel subscription error:', error);
+          toast.error(
+            error?.response?.data?.message || 'Unable to cancel subscription.'
+          );
+        } finally {
+          setSubscriptionActionBusy(null);
+        }
+      },
+    });
   };
 
   const handleResumeSubscription = async () => {
@@ -301,7 +461,7 @@ const SubscriptionPage = () => {
       return;
     }
 
-    setIsUpdatingSubscription(true);
+    setSubscriptionActionBusy('resume');
     try {
       const response = await stripeService.resumeSubscription();
       toast.success(
@@ -314,7 +474,25 @@ const SubscriptionPage = () => {
         error?.response?.data?.message || 'Unable to resume subscription.'
       );
     } finally {
-      setIsUpdatingSubscription(false);
+      setSubscriptionActionBusy(null);
+    }
+  };
+
+  const handleCancelScheduledChange = async () => {
+    if (!hasScheduledPlanChange) return;
+
+    setSubscriptionActionBusy('cancel_schedule');
+    try {
+      const response = await stripeService.cancelScheduledPlanChange();
+      toast.success(response?.message || 'Scheduled plan change canceled.');
+      await refreshBillingStatus();
+    } catch (error) {
+      console.error('Cancel scheduled change error:', error);
+      toast.error(
+        error?.response?.data?.message || 'Unable to cancel scheduled change.'
+      );
+    } finally {
+      setSubscriptionActionBusy(null);
     }
   };
 
@@ -390,21 +568,29 @@ const SubscriptionPage = () => {
 
                     <Button
                       onClick={() => {
-                        if (hasSubscription && activePlanId !== plan.id) {
-                          handleOpenPortal();
+                        if (hasSubscription) {
+                          handleChangePlan(plan);
                           return;
                         }
                         handlePlanOperation(plan);
                       }}
-                      disabled={Boolean(processingPlanId) || isLoading || (hasSubscription && activePlanId === plan.id)}
+                      disabled={
+                        Boolean(processingPlanId) ||
+                        isLoading ||
+                        (hasScheduledPlanChange && subscription?.scheduledPlanId === plan.id)
+                      }
                       className='w-full py-6 rounded-2xl font-bold text-sm transition-all bg-gray-900 hover:bg-black text-white disabled:opacity-60'
                     >
                       {processingPlanId === plan.id
                         ? 'Processing...'
                         : hasSubscription && activePlanId === plan.id
-                          ? 'Current Plan'
+                          ? 'Renew Now'
+                          : hasSubscription && hasScheduledPlanChange && subscription?.scheduledPlanId === plan.id
+                            ? 'Scheduled'
                           : hasSubscription
-                            ? 'Change in Payment Portal'
+                            ? (PLAN_ORDER[plan.id] || 0) < (PLAN_ORDER[activePlanId] || 0)
+                              ? 'Downgrade at Renewal'
+                              : 'Upgrade Now'
                             : 'Buy Plan'}
                     </Button>
                   </motion.div>
@@ -430,7 +616,7 @@ const SubscriptionPage = () => {
           </div>
 
           <div className='xl:col-span-3 space-y-6'>
-            <div className='bg-white dark:bg-[#111] rounded-[40px] p-8 border border-gray-100 dark:border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]'>
+            <div className='bg-white dark:bg-[#111] rounded-[28px] p-6 md:p-8 border border-gray-100 dark:border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]'>
               <h4 className='text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 pb-2 border-b border-gray-50'>Subscription</h4>
 
               <div className='space-y-6'>
@@ -446,7 +632,7 @@ const SubscriptionPage = () => {
 
                 <div className='space-y-1'>
                   <p className='text-[10px] font-bold text-gray-400 uppercase'>Next Billing Date</p>
-                  <p className='text-sm font-bold text-gray-900 dark:text-white'>{formatDate(subscription?.nextBillingDate)}</p>
+                  <p className='text-sm font-bold text-gray-900 dark:text-white'>{nextBillingLabel}</p>
                 </div>
 
                 <div className='space-y-1'>
@@ -455,6 +641,13 @@ const SubscriptionPage = () => {
                     {!hasSubscription ? 'No active renewal' : isCancelScheduled ? 'Will cancel at period end' : 'Auto-renew enabled'}
                   </p>
                 </div>
+
+                {scheduledChangeLabel ? (
+                  <div className='space-y-1'>
+                    <p className='text-[10px] font-bold text-gray-400 uppercase'>Scheduled Change</p>
+                    <p className='text-sm font-bold text-gray-900 dark:text-white'>{scheduledChangeLabel}</p>
+                  </div>
+                ) : null}
 
                 <div className='space-y-1'>
                   <p className='text-[10px] font-bold text-gray-400 uppercase'>Linked Cards</p>
@@ -467,12 +660,21 @@ const SubscriptionPage = () => {
                 </div>
 
                 <div className='space-y-2'>
+                  {hasScheduledPlanChange ? (
+                    <Button
+                      onClick={handleCancelScheduledChange}
+                      disabled={isUpdatingSubscription}
+                      className='w-full h-9 px-3 text-[11px] rounded-xl bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 disabled:opacity-60 dark:bg-transparent dark:border-white/20 dark:text-white dark:hover:bg-white/5'
+                    >
+                      {subscriptionActionBusy === 'cancel_schedule' ? 'Updating...' : 'Cancel Scheduled Change'}
+                    </Button>
+                  ) : null}
                   <Button
                     onClick={isCancelScheduled ? handleResumeSubscription : handleCancelSubscription}
                     disabled={isUpdatingSubscription || !hasSubscription}
                     className='w-full h-9 px-3 text-[11px] rounded-xl bg-gray-900 text-white disabled:opacity-60'
                   >
-                    {isUpdatingSubscription
+                    {(subscriptionActionBusy === 'cancel_period' || subscriptionActionBusy === 'resume')
                       ? 'Updating...'
                       : isCancelScheduled
                         ? 'Resume Subscription'
@@ -482,8 +684,8 @@ const SubscriptionPage = () => {
               </div>
             </div>
 
-            <div className='bg-white dark:bg-[#111] rounded-[40px] p-8 border border-gray-100 dark:border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]'>
-              <h4 className='text-xs font-bold text-gray-400 uppercase tracking-widest mb-6 pb-2 border-b border-gray-50'>Payment Method</h4>
+            <div className='bg-white dark:bg-[#111] rounded-[28px] p-6 md:p-8 border border-gray-100 dark:border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.5)]'>
+              <h4 className='text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-6 pb-2 border-b border-gray-100 dark:border-white/10'>Payment Method</h4>
 
               <div className='space-y-4'>
                 {cards.length === 0 && !isLoading && (
@@ -494,13 +696,13 @@ const SubscriptionPage = () => {
                   const isPrimary = card.id === defaultPaymentMethodId;
                   const isBusy = busyCardId === card.id;
                   return (
-                    <div key={card.id} className='rounded-2xl border border-gray-100 dark:border-white/10 p-4 space-y-3'>
+                    <div key={card.id} className='rounded-xl border border-gray-200 dark:border-white/15 p-4 space-y-3 bg-gray-50/50 dark:bg-white/[0.02]'>
                       <div className='flex items-start justify-between gap-3'>
                         <div>
                           <p className='text-sm font-bold text-gray-900 dark:text-white'>
                             {formatCardBrand(card.brand)} •••• {card.last4}
                           </p>
-                          <p className='text-xs text-gray-400'>Exp {card.expMonth}/{card.expYear}</p>
+                          <p className='text-xs text-gray-500 dark:text-gray-400'>Exp {card.expMonth}/{card.expYear}</p>
                         </div>
                         {isPrimary ? (
                           <span className='text-[10px] px-2 py-1 rounded-full bg-[#937c60]/10 text-[#937c60] font-bold uppercase tracking-wide'>
@@ -514,7 +716,7 @@ const SubscriptionPage = () => {
                           <Button
                             onClick={() => handleMakePrimary(card.id)}
                             disabled={isBusy}
-                            className='h-8 px-3 text-[11px] bg-gray-900 text-white rounded-xl'
+                            className='h-8 px-3 text-[11px] bg-gray-900 text-white rounded-lg'
                           >
                             {isBusy ? 'Saving...' : 'Make Primary'}
                           </Button>
@@ -522,7 +724,7 @@ const SubscriptionPage = () => {
                         <Button
                           onClick={() => handleRemoveCard(card.id)}
                           disabled={isBusy || cards.length <= 1}
-                          className='h-8 px-3 text-[11px] bg-transparent border border-red-200 text-red-600 rounded-xl hover:bg-red-50'
+                          className='h-8 px-3 text-[11px] bg-transparent border border-red-200 text-red-600 rounded-lg hover:bg-red-50'
                         >
                           <Trash2 size={12} className='mr-1' />
                           Remove
@@ -535,7 +737,7 @@ const SubscriptionPage = () => {
                 <Button
                   onClick={handleAddCard}
                   disabled={isAddingCard}
-                  className='w-full bg-gray-900 text-white py-4 rounded-xl font-bold text-xs'
+                  className='w-full bg-gray-900 text-white py-4 rounded-lg font-bold text-xs'
                 >
                   {isAddingCard ? 'Opening Stripe...' : 'Add Card'}
                 </Button>
@@ -552,7 +754,7 @@ const SubscriptionPage = () => {
                   onClick={handleOpenPortal}
                   className='w-full bg-white/10 hover:bg-white/20 text-white py-3 rounded-xl font-bold text-xs mb-4'
                 >
-                  OpenMy payment portal
+                  Open my payment portal
                 </Button>
                 <a
                   href='mailto:billing@manaradesign.ai'
@@ -566,6 +768,57 @@ const SubscriptionPage = () => {
           </div>
         </div>
       </main>
+
+      <Dialog
+        open={confirmDialog.open}
+        onOpenChange={(open) => {
+          if (!open) closeConfirmDialog();
+        }}
+      >
+        <DialogContent
+          showCloseButton={!processingPlanId && !isUpdatingSubscription}
+          className='max-w-md rounded-2xl border border-gray-200 dark:border-white/20 bg-white dark:bg-[#0f0f0f] p-6'
+        >
+          <DialogHeader>
+            <DialogTitle className='text-lg font-bold text-gray-900 dark:text-white'>
+              {confirmDialog.title}
+            </DialogTitle>
+            <DialogDescription className='text-sm text-gray-600 dark:text-gray-300'>
+              {confirmDialog.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className='mt-4 gap-2 sm:justify-end'>
+            <Button
+              onClick={closeConfirmDialog}
+              disabled={Boolean(processingPlanId) || isUpdatingSubscription}
+              className='h-9 px-4 rounded-lg bg-transparent border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
+            >
+              Back
+            </Button>
+            <Button
+              onClick={async () => {
+                const action = confirmDialog.action;
+                if (!action) return;
+                try {
+                  await action();
+                } finally {
+                  closeConfirmDialog();
+                }
+              }}
+              disabled={Boolean(processingPlanId) || isUpdatingSubscription}
+              className={`h-9 px-4 rounded-lg text-white ${
+                confirmDialog.tone === 'danger'
+                  ? 'bg-red-600 hover:bg-red-700'
+                  : 'bg-gray-900 hover:bg-black'
+              }`}
+            >
+              {Boolean(processingPlanId) || isUpdatingSubscription
+                ? 'Processing...'
+                : confirmDialog.confirmLabel || 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

@@ -13,6 +13,7 @@ import {
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { NavLink, useNavigate } from "react-router-dom";
+import { useCredits } from "@/hooks/useCredits";
 import { useLogout } from "../../hooks/useAuth";
 
 const TopBar = () => {
@@ -30,6 +31,7 @@ const TopBar = () => {
   });
 
   const { currentUser } = useSelector((state) => state.user);
+  const { creditBalance } = useCredits();
   const logoutMutation = useLogout();
   const navigate = useNavigate();
   const avatarUrl = currentUser?.onboardingData?.avatar?.url;
@@ -247,10 +249,15 @@ const TopBar = () => {
             </button>
 
             {currentUser ? (
-              <div
-                className="relative"
-                ref={(el) => (dropdownRefs.current["user"] = el)}
-              >
+              <>
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#8d775e]/20 bg-[#8d775e]/10 text-[#8d775e] dark:bg-[#8d775e]/15 dark:text-[#cdbda9]">
+                  <Banknote size={14} />
+                  <span className="text-xs font-bold tracking-wide">{creditBalance} credits</span>
+                </div>
+                <div
+                  className="relative"
+                  ref={(el) => (dropdownRefs.current["user"] = el)}
+                >
                 <button
                   onClick={() => toggleDropdown("user")}
                   className="flex items-center gap-2 p-1 pr-3 bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-full hover:border-[#8d775e]/30 dark:hover:border-white/20 transition-all shadow-sm group"
@@ -292,6 +299,9 @@ const TopBar = () => {
                         <p className="text-[11px] text-[#8d775e] font-bold uppercase tracking-wider mt-0.5">
                           Pro Member
                         </p>
+                        <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-1">
+                          Credits: <span className="font-bold text-[#8d775e]">{creditBalance}</span>
+                        </p>
                       </div>
 
                       <div className="space-y-0.5">
@@ -318,7 +328,8 @@ const TopBar = () => {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+                </div>
+              </>
             ) : (
               <div className="flex items-center gap-2">
                 <button
@@ -412,6 +423,12 @@ const TopBar = () => {
                 
                 {/* Mobile Dark Mode Toggle */}
                 <div className="pt-4 mt-2 border-t border-gray-100 dark:border-white/10">
+                  {currentUser && (
+                    <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#8d775e]/10 dark:bg-[#8d775e]/15 text-[#8d775e] dark:text-[#cdbda9] mb-2">
+                      <span className="text-[11px] font-bold uppercase tracking-widest">Credits</span>
+                      <span className="text-sm font-bold">{creditBalance}</span>
+                    </div>
+                  )}
                   <button
                     onClick={toggleTheme}
                     className="flex items-center gap-3 w-full px-4 py-3.5 text-[16px] font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white rounded-xl transition-all"

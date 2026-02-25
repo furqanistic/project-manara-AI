@@ -1,8 +1,12 @@
 import axiosInstance from "../config/config";
 
 export const stripeService = {
-  createCheckoutSession: async ({ planId, priceId }) => {
-    const response = await axiosInstance.post("/stripe/create-checkout-session", { planId, priceId });
+  createCheckoutSession: async ({ planId, priceId, purchaseType }) => {
+    const response = await axiosInstance.post("/stripe/create-checkout-session", {
+      planId,
+      priceId,
+      purchaseType,
+    });
     return response.data;
   },
 
@@ -41,8 +45,22 @@ export const stripeService = {
     return response.data;
   },
 
+  cancelScheduledPlanChange: async () => {
+    const response = await axiosInstance.post("/stripe/subscription/cancel-scheduled-change");
+    return response.data;
+  },
+
   resumeSubscription: async () => {
     const response = await axiosInstance.post("/stripe/subscription/resume");
+    return response.data;
+  },
+
+  changeSubscriptionPlan: async ({ planId, priceId, renewNow }) => {
+    const response = await axiosInstance.post("/stripe/subscription/change-plan", {
+      planId,
+      priceId,
+      renewNow,
+    });
     return response.data;
   },
 

@@ -3,8 +3,8 @@ import AvatarCreationModal from "@/components/Auth/AvatarCreationModal";
 import React, { useEffect, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { useChangePassword, useCurrentUser, useUpdateProfile } from "@/hooks/useAuth";
+import { useCredits } from "@/hooks/useCredits";
 import { AlertCircle, CheckCircle2, Edit2, Lock, Mail, Save, User } from "lucide-react";
-import { getCreditLedger, getCreditsBalance } from "@/lib/credits";
 import {
   Bar,
   BarChart,
@@ -89,8 +89,7 @@ function Profile() {
   const [errorMessage, setErrorMessage] = useState("");
   const [activeTab, setActiveTab] = useState("profile");
   const [isAvatarEditorOpen, setIsAvatarEditorOpen] = useState(false);
-  const [creditLedger, setCreditLedger] = useState(() => getCreditLedger());
-  const [creditBalance, setCreditBalance] = useState(() => getCreditsBalance());
+  const { creditLedger, creditBalance } = useCredits();
 
   const {
     register: registerProfile,
@@ -141,25 +140,6 @@ function Profile() {
       return () => clearTimeout(timer);
     }
   }, [errorMessage]);
-
-  useEffect(() => {
-    const refreshCredits = () => {
-      setCreditLedger(getCreditLedger());
-      setCreditBalance(getCreditsBalance());
-    };
-    refreshCredits();
-    const handleStorage = (event) => {
-      if (event.key === "manara_credits_balance" || event.key === "manara_credits_ledger") {
-        refreshCredits();
-      }
-    };
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("manara:credits-updated", refreshCredits);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("manara:credits-updated", refreshCredits);
-    };
-  }, []);
 
   const onProfileSubmit = async (data) => {
     try {
@@ -449,7 +429,12 @@ function Profile() {
                   Usage
                 </p>
               </div>
-              <p className="text-xs text-gray-400 mb-6">Credits used over the last 30 days.</p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs text-gray-400">Credits used over the last 30 days.</p>
+                <div className="text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-300">
+                  Available: <span className="text-[#937c60]">{creditBalance}</span>
+                </div>
+              </div>
               <div className="w-full h-[260px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={usageData} margin={{ left: -10, right: 10 }}>

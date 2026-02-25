@@ -1,6 +1,8 @@
 import express from 'express';
 import {
   cancelSubscriptionAtPeriodEnd,
+  cancelScheduledPlanChange,
+  changeSubscriptionPlan,
   createCheckoutSession,
   createPortalSession,
   createSetupSession,
@@ -24,7 +26,9 @@ router.patch('/payment-methods/:paymentMethodId/default', verifyToken, setDefaul
 router.delete('/payment-methods/:paymentMethodId', verifyToken, deletePaymentMethod);
 router.get('/billing-status', verifyToken, getBillingStatus);
 router.post('/subscription/cancel', verifyToken, cancelSubscriptionAtPeriodEnd);
+router.post('/subscription/cancel-scheduled-change', verifyToken, cancelScheduledPlanChange);
 router.post('/subscription/resume', verifyToken, resumeSubscription);
+router.post('/subscription/change-plan', verifyToken, changeSubscriptionPlan);
 router.post('/sync-checkout-session', verifyToken, syncCheckoutSession);
 
 // Webhook must be handled with raw body - we'll config this in index.js
