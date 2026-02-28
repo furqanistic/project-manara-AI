@@ -115,7 +115,7 @@ const OnboardingModal = () => {
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold dark:text-white">Household Size</h2>
-            <p className="text-sm text-gray-500">Pick the option that fits your home best.</p>
+            <p className="text-sm text-readable-secondary">Pick the option that fits your home best.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {householdOptions.map((opt) => (
                 <button
@@ -128,7 +128,7 @@ const OnboardingModal = () => {
                   }`}
                 >
                   <p className={`font-bold mb-1 ${formData.householdSize === opt.id ? "text-[#8d775e]" : "text-gray-900 dark:text-white"}`}>{opt.label}</p>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-widest">{opt.desc}</p>
+                  <p className="text-[10px] text-readable-muted uppercase tracking-widest">{opt.desc}</p>
                 </button>
               ))}
             </div>
@@ -141,7 +141,7 @@ const OnboardingModal = () => {
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold dark:text-white">Type of Home</h2>
-            <p className="text-sm text-gray-500">Choose your primary home type.</p>
+            <p className="text-sm text-readable-secondary">Choose your primary home type.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {homeTypeOptions.map((opt) => (
                 <button
@@ -154,7 +154,7 @@ const OnboardingModal = () => {
                   }`}
                 >
                   <p className={`font-bold mb-1 ${formData.homeType === opt.id ? "text-[#8d775e]" : "text-gray-900 dark:text-white"}`}>{opt.label}</p>
-                  <p className="text-[10px] text-gray-400 uppercase tracking-widest">{opt.desc}</p>
+                  <p className="text-[10px] text-readable-muted uppercase tracking-widest">{opt.desc}</p>
                 </button>
               ))}
             </div>
@@ -167,7 +167,7 @@ const OnboardingModal = () => {
         return (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold dark:text-white">General Preferences</h2>
-            <p className="text-sm text-gray-500">Pick a few vibes that represent your style.</p>
+            <p className="text-sm text-readable-secondary">Pick a few vibes that represent your style.</p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {preferenceOptions.map((opt) => {
                 const isSelected = formData.preferences.includes(opt.id);
@@ -187,7 +187,7 @@ const OnboardingModal = () => {
                     className={`p-3 rounded-2xl border text-left transition-all ${
                       isSelected
                         ? "bg-[#8d775e] text-white border-[#8d775e]"
-                        : "bg-white dark:bg-white/5 text-gray-500 border-gray-100 dark:border-white/10"
+                        : "bg-white dark:bg-white/5 text-readable-secondary border-gray-100 dark:border-white/10"
                     }`}
                   >
                     <p className="text-xs font-bold">{opt.label}</p>
@@ -201,7 +201,7 @@ const OnboardingModal = () => {
             )}
             <div className="p-5 rounded-[28px] bg-[#8d775e]/5 border border-[#8d775e]/10 text-center">
               <Sparkles className="w-8 h-8 text-[#8d775e] mx-auto mb-3" />
-              <p className="text-gray-600 dark:text-gray-400 text-sm leading-relaxed">
+              <p className="text-readable-secondary text-sm leading-relaxed">
                 These choices help us shape your avatar and recommendations.
               </p>
             </div>
@@ -263,14 +263,14 @@ const OnboardingModal = () => {
                     <div className="w-8 h-8 rounded-full border-2 border-[#8d775e] flex items-center justify-center text-[10px] font-bold text-[#8d775e]">
                         {step}
                     </div>
-                    <span className="text-xs font-bold text-gray-500 dark:text-gray-400">Current Step</span>
+                    <span className="text-xs font-bold text-readable-secondary">Current Step</span>
                 </div>
                 <div className="w-[1px] h-8 bg-gray-200 dark:bg-white/10 ml-4" />
                 <div className="flex items-center gap-3 opacity-30">
-                    <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-white/20 flex items-center justify-center text-[10px] font-bold text-gray-400">
+                    <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-white/20 flex items-center justify-center text-[10px] font-bold text-readable-muted">
                         {step < 10 ? step + 1 : 10}
                     </div>
-                    <span className="text-xs font-bold text-gray-400">Next Step</span>
+                    <span className="text-xs font-bold text-readable-muted">Next Step</span>
                 </div>
             </div>
           </div>
@@ -297,7 +297,7 @@ const OnboardingModal = () => {
                 onClick={handleBack}
                 disabled={step === 1}
                 className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all ${
-                  step === 1 ? "opacity-0 pointer-events-none" : "hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500"
+                  step === 1 ? "opacity-0 pointer-events-none" : "hover:bg-gray-100 dark:hover:bg-white/5 text-readable-secondary"
                 }`}
               >
                 <ArrowLeft size={16} />

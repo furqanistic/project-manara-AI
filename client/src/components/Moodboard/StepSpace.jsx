@@ -30,7 +30,7 @@ export const StepSpace = ({ selectedSpace, setSelectedSpace }) => {
         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
           Select <span className="text-[#8d775e] font-serif italic">Your Canvas.</span>
         </h2>
-        <p className="text-gray-400 dark:text-gray-500 font-medium text-sm">
+        <p className="text-readable-secondary font-medium text-sm">
           What environment are we dreaming into existence today?
         </p>
       </div>
@@ -57,13 +57,13 @@ export const StepSpace = ({ selectedSpace, setSelectedSpace }) => {
                   className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3 transition-all ${
                     isSelected 
                       ? "bg-[#8d775e] text-white shadow-lg shadow-[#8d775e]/20" 
-                      : "bg-gray-50 dark:bg-black/40 text-gray-400 group-hover:bg-gray-100 dark:group-hover:bg-black/60"
+                      : "bg-gray-50 dark:bg-black/40 text-readable-muted group-hover:bg-gray-100 dark:group-hover:bg-black/60"
                   }`}
                 >
                   <IconComponent className="w-5 h-5 sm:w-7 sm:h-7" />
                 </div>
                 <h3 className={`font-bold text-[10px] sm:text-[13px] transition-colors truncate ${
-                  isSelected ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"
+                  isSelected ? "text-readable-primary" : "text-readable-secondary"
                 }`}>
                   {space.name}
                 </h3>

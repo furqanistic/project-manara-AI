@@ -74,6 +74,20 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted-safe: #4b5563;
+  --text-on-dark: #f9fafb;
+  --surface-elevated: #ffffff;
+  --surface-elevated-border: #e5e7eb;
+  --surface-overlay: rgba(255, 255, 255, 0.92);
+  --btn-primary: #8d775e;
+  --btn-primary-hover: #7a6650;
+  --btn-primary-foreground: #ffffff;
+  --btn-secondary: #f3f4f6;
+  --btn-secondary-hover: #e5e7eb;
+  --btn-secondary-foreground: #111827;
+  --btn-secondary-border: #d1d5db;
 }
 
 .dark {
@@ -108,9 +122,57 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --text-primary: #f9fafb;
+  --text-secondary: #e5e7eb;
+  --text-muted-safe: #d1d5db;
+  --text-on-dark: #f9fafb;
+  --surface-elevated: rgba(255, 255, 255, 0.08);
+  --surface-elevated-border: rgba(255, 255, 255, 0.18);
+  --surface-overlay: rgba(0, 0, 0, 0.82);
+  --btn-primary: #a88f73;
+  --btn-primary-hover: #b89d80;
+  --btn-primary-foreground: #111827;
+  --btn-secondary: rgba(255, 255, 255, 0.14);
+  --btn-secondary-hover: rgba(255, 255, 255, 0.2);
+  --btn-secondary-foreground: #f9fafb;
+  --btn-secondary-border: rgba(255, 255, 255, 0.26);
 }
 
 @layer utilities {
+  .text-readable-primary {
+    color: var(--text-primary);
+  }
+  .text-readable-secondary {
+    color: var(--text-secondary);
+  }
+  .text-readable-muted {
+    color: var(--text-muted-safe);
+  }
+  .text-on-dark {
+    color: var(--text-on-dark);
+  }
+  .surface-elevated {
+    background-color: var(--surface-elevated);
+    border-color: var(--surface-elevated-border);
+  }
+  .surface-overlay {
+    background-color: var(--surface-overlay);
+  }
+  .btn-primary-readable {
+    background-color: var(--btn-primary);
+    color: var(--btn-primary-foreground);
+  }
+  .btn-primary-readable:hover {
+    background-color: var(--btn-primary-hover);
+  }
+  .btn-secondary-readable {
+    background-color: var(--btn-secondary);
+    color: var(--btn-secondary-foreground);
+    border: 1px solid var(--btn-secondary-border);
+  }
+  .btn-secondary-readable:hover {
+    background-color: var(--btn-secondary-hover);
+  }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

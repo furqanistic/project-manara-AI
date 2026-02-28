@@ -62,12 +62,12 @@ const ProjectSelectionModal = ({
       <div className='w-full max-w-lg rounded-2xl border border-gray-200 bg-white p-5 shadow-2xl dark:border-white/10 dark:bg-[#121212]'>
         <div className='mb-1 flex items-start justify-between gap-3'>
           <div>
-            <h3 className='text-lg font-bold text-gray-900 dark:text-white'>{title}</h3>
-            <p className='mt-1 text-sm text-gray-500 dark:text-gray-400'>{description}</p>
+            <h3 className='text-lg font-bold text-readable-primary'>{title}</h3>
+            <p className='mt-1 text-sm text-readable-secondary'>{description}</p>
           </div>
           <button
             onClick={handleBack}
-            className='rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-white/10 dark:hover:text-gray-300'
+            className='rounded-lg p-1.5 text-readable-muted hover:bg-gray-100 hover:text-readable-primary dark:hover:bg-white/10'
             aria-label='Close'
           >
             <X size={16} />
@@ -79,21 +79,21 @@ const ProjectSelectionModal = ({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder='Project name'
-            className='w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm outline-none focus:border-[#8d775e] dark:border-white/10 dark:bg-white/5 dark:text-white'
+            className='w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-readable-primary outline-none focus:border-[#8d775e] dark:border-white/10 dark:bg-white/5'
           />
           <button
             type='submit'
             disabled={createMutation.isPending}
-            className='rounded-xl bg-[#8d775e] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60'
+            className='btn-primary-readable rounded-xl px-4 py-2 text-sm font-semibold disabled:opacity-60'
           >
             {createMutation.isPending ? 'Creating...' : 'Create'}
           </button>
         </form>
 
         <div className='mt-4 max-h-56 overflow-y-auto space-y-2'>
-          {isLoading && <p className='text-sm text-gray-500 dark:text-gray-400'>Loading projects...</p>}
+          {isLoading && <p className='text-sm text-readable-secondary'>Loading projects...</p>}
           {!isLoading && projects.length === 0 && (
-            <p className='text-sm text-gray-500 dark:text-gray-400'>No projects yet. Create one to continue.</p>
+            <p className='text-sm text-readable-secondary'>No projects yet. Create one to continue.</p>
           )}
           {projects.map((project) => (
             <button
@@ -101,8 +101,8 @@ const ProjectSelectionModal = ({
               onClick={() => onSelect(project)}
               className='w-full rounded-xl border border-gray-200 px-3 py-2 text-left hover:border-[#8d775e]/40 dark:border-white/10 dark:bg-white/5'
             >
-              <p className='text-sm font-semibold text-gray-900 dark:text-white'>{project.name}</p>
-              <p className='text-xs text-gray-500 dark:text-gray-400'>
+              <p className='text-sm font-semibold text-readable-primary'>{project.name}</p>
+              <p className='text-xs text-readable-secondary'>
                 {project.counts?.total || 0} outputs
               </p>
             </button>
@@ -112,13 +112,13 @@ const ProjectSelectionModal = ({
         <div className='mt-4 flex items-center justify-end gap-2'>
           <button
             onClick={handleBack}
-            className='rounded-xl border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/5'
+            className='btn-secondary-readable rounded-xl px-3 py-2 text-sm font-semibold'
           >
             Back
           </button>
           <button
             onClick={handleGoToProjects}
-            className='rounded-xl bg-[#8d775e] px-3 py-2 text-sm font-semibold text-white hover:bg-[#7a6650]'
+            className='btn-primary-readable rounded-xl px-3 py-2 text-sm font-semibold'
           >
             Go to Projects
           </button>

@@ -695,7 +695,7 @@ const WizardFlow = ({
                 <button
                   onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
                   disabled={currentStep === 0 || isGenerating}
-                  className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all disabled:opacity-20"
+                  className="flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 text-readable-muted hover:text-readable-primary transition-all disabled:opacity-20"
                   title="Back"
                 >
                   <ArrowLeft className="w-5 h-5" />
@@ -787,7 +787,7 @@ const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
           Design <span className="text-[#8d775e] font-serif italic">Styles.</span>
         </h2>
-        <p className="text-gray-400 dark:text-gray-500 font-medium text-sm">
+        <p className="text-readable-secondary font-medium text-sm">
           Choose the architectural DNA for your space.
         </p>
       </div>
@@ -813,11 +813,11 @@ const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
 
             <div className="relative z-10">
               <h3 className={`font-bold text-[10px] sm:text-sm mb-1 transition-colors truncate ${
-                selectedStyle === style.label ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"
+                selectedStyle === style.label ? "text-readable-primary" : "text-readable-secondary"
               }`}>
                 {style.label}
               </h3>
-              <p className="hidden sm:block text-[9px] font-bold text-gray-400 uppercase tracking-widest opacity-60">
+              <p className="hidden sm:block text-[9px] font-bold text-readable-muted uppercase tracking-widest opacity-80">
                 {style.description}
               </p>
             </div>
@@ -848,7 +848,7 @@ const StepStyle = ({ selectedStyle, setSelectedStyle }) => {
             Trajectory set: {selectedStyle}
           </span>
         ) : (
-          <span className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">Select a style to continue</span>
+          <span className="text-xs font-bold uppercase tracking-[0.2em] text-readable-muted">Select a style to continue</span>
         )}
       </motion.div>
     </div>
@@ -884,7 +884,7 @@ const StepColorsAndVision = ({
         <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
           Colors & <span className="text-[#8d775e] font-serif italic">Vision.</span>
         </h2>
-        <p className="text-gray-400 dark:text-gray-500 font-medium text-sm">
+        <p className="text-readable-secondary font-medium text-sm">
           Define the chromatic spectrum and conceptual requirements.
         </p>
       </div>
@@ -911,7 +911,7 @@ const StepColorsAndVision = ({
               >
                 <div className="flex items-center justify-between mb-1 sm:mb-2">
                   <h3 className={`font-bold text-[10px] sm:text-[13px] truncate ${
-                    selectedColor === palette.name ? "text-gray-900" : "text-gray-500"
+                    selectedColor === palette.name ? "text-readable-primary" : "text-readable-secondary"
                   }`}>
                     {palette.name}
                   </h3>
@@ -948,12 +948,12 @@ const StepColorsAndVision = ({
               }}
             />
             <div className="flex justify-between mt-2">
-              <p className="text-[11px] text-gray-400">
+              <p className="text-[11px] text-readable-muted">
                 {changes.length} characters
               </p>
               <button 
                 onClick={() => setChanges("")}
-                className="text-[11px] text-gray-400 hover:text-red-500 transition-colors"
+                className="text-[11px] text-readable-muted hover:text-red-500 transition-colors"
                 disabled={!changes}
               >
                 Clear

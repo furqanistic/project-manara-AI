@@ -44,8 +44,8 @@ const UnifiedView = ({ moodboard, generationPhase }) => {
           {moodDescription && (
             <div className="bg-gray-50 dark:bg-black/20 rounded-2xl p-6 border border-gray-100 dark:border-white/5">
                <h5 className="text-sm font-bold text-gray-900 dark:text-white mb-2">{moodDescription.mood}</h5>
-               <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">{moodDescription.feeling}</p>
-               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{moodDescription.description}</p>
+               <p className="text-xs text-readable-muted uppercase tracking-widest mb-3">{moodDescription.feeling}</p>
+               <p className="text-sm text-readable-secondary leading-relaxed">{moodDescription.description}</p>
             </div>
           )}
 
@@ -53,13 +53,13 @@ const UnifiedView = ({ moodboard, generationPhase }) => {
              {narrative?.vibe && (
                <div className="p-5 bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
                   <span className="text-[9px] font-bold text-[#8d775e] uppercase tracking-widest block mb-2">Atmosphere</span>
-                  <p className="text-sm text-gray-500">{narrative.vibe}</p>
+                  <p className="text-sm text-readable-secondary">{narrative.vibe}</p>
                </div>
              )}
              {narrative?.lifestyle && (
                <div className="p-5 bg-white dark:bg-white/5 rounded-2xl border border-gray-100 dark:border-white/5">
                   <span className="text-[9px] font-bold text-[#8d775e] uppercase tracking-widest block mb-2">Lifestyle</span>
-                  <p className="text-sm text-gray-500">{narrative.lifestyle}</p>
+                  <p className="text-sm text-readable-secondary">{narrative.lifestyle}</p>
                </div>
              )}
           </div>
@@ -82,7 +82,7 @@ const UnifiedView = ({ moodboard, generationPhase }) => {
                   className="h-16 rounded-xl border border-gray-100 dark:border-white/10 shadow-sm"
                   style={{ backgroundColor: color.hex }}
                 />
-                <p className="text-[9px] font-bold text-gray-400 uppercase text-center">{color.name}</p>
+                <p className="text-[9px] font-bold text-readable-muted uppercase text-center">{color.name}</p>
               </div>
             ))}
           </div>
@@ -104,8 +104,8 @@ const UnifiedView = ({ moodboard, generationPhase }) => {
                 <div key={`${key}-${idx}`} className="p-5 bg-gray-50 dark:bg-black/20 rounded-2xl border border-gray-100 dark:border-white/5">
                    <div className="text-sm font-bold text-gray-900 dark:text-white mb-2">{item.type}</div>
                    <div className="flex gap-4">
-                      {item.finish && <span className="text-[10px] text-gray-400 uppercase">Finish: <span className="text-gray-600 dark:text-gray-300">{item.finish}</span></span>}
-                      {item.texture && <span className="text-[10px] text-gray-400 uppercase">Texture: <span className="text-gray-600 dark:text-gray-300">{item.texture}</span></span>}
+                      {item.finish && <span className="text-[10px] text-readable-muted uppercase">Finish: <span className="text-readable-secondary">{item.finish}</span></span>}
+                      {item.texture && <span className="text-[10px] text-readable-muted uppercase">Texture: <span className="text-readable-secondary">{item.texture}</span></span>}
                    </div>
                 </div>
               ))
@@ -178,7 +178,7 @@ export const ResultView = ({
             </motion.div>
          </div>
          <p className="text-xl font-bold text-gray-900 dark:text-white mb-2">Assembling vision...</p>
-         <p className="text-sm font-medium text-gray-400">Coordinating neural mappings and architectural data...</p>
+         <p className="text-sm font-medium text-readable-secondary">Coordinating neural mappings and architectural data...</p>
       </div>
     );
   }
@@ -200,11 +200,11 @@ export const ResultView = ({
             <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-2 leading-none uppercase">
                 {currentMoodboard.title}
             </h1>
-            <p className="text-gray-400 font-medium italic font-serif">A {currentMoodboard.style} {currentMoodboard.roomType} synthesis.</p>
+            <p className="text-readable-secondary font-medium italic font-serif">A {currentMoodboard.style} {currentMoodboard.roomType} synthesis.</p>
           </div>
           <button
             onClick={onBackToCreate}
-            className="px-8 py-4 rounded-xl font-bold bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 text-gray-500 hover:text-gray-900 transition-all shadow-sm"
+            className="btn-secondary-readable px-8 py-4 rounded-xl font-bold transition-all shadow-sm"
           >
             New Creation
           </button>
@@ -248,21 +248,21 @@ export const ResultView = ({
                 <button onClick={() => setShowEditModal(true)} className="w-full py-4 bg-[#8d775e] text-white font-bold rounded-2xl hover:opacity-90 transition-all flex items-center justify-center gap-3 shadow-lg shadow-[#8d775e]/20">
                   <Edit3 className="w-5 h-5" /> Refine Architecture
                 </button>
-                <button onClick={onRegenerate} disabled={loadingState === "generating"} className="w-full py-4 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white font-bold rounded-2xl hover:bg-gray-100 transition-all flex items-center justify-center gap-3">
+                <button onClick={onRegenerate} disabled={loadingState === "generating"} className="btn-secondary-readable w-full py-4 font-bold rounded-2xl transition-all flex items-center justify-center gap-3">
                   <RefreshCw className={`w-5 h-5 ${loadingState === "generating" ? "animate-spin" : ""}`} /> New Variant
                 </button>
-                <button onClick={onDownload} className="w-full py-4 bg-gray-50 dark:bg-white/5 text-gray-900 dark:text-white font-bold rounded-2xl hover:bg-gray-100 transition-all flex items-center justify-center gap-3">
+                <button onClick={onDownload} className="btn-secondary-readable w-full py-4 font-bold rounded-2xl transition-all flex items-center justify-center gap-3">
                   <Download className="w-5 h-5" /> Download Asset
                 </button>
               </div>
 
               <div className="mt-12 space-y-6 pt-10 border-t border-gray-50 dark:border-white/5">
                  <div>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Architecture</span>
+                    <span className="text-[9px] font-bold text-readable-muted uppercase tracking-widest block mb-1">Architecture</span>
                     <span className="text-base font-bold text-gray-900 dark:text-white capitalize">{currentMoodboard.style}</span>
                  </div>
                  <div>
-                    <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block mb-1">Spatial Assignment</span>
+                    <span className="text-[9px] font-bold text-readable-muted uppercase tracking-widest block mb-1">Spatial Assignment</span>
                     <span className="text-base font-bold text-gray-900 dark:text-white capitalize">{currentMoodboard.roomType}</span>
                  </div>
               </div>
@@ -312,7 +312,7 @@ const EditModal = ({ moodboard, onClose, onSave }) => {
         <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white relative z-10">Refine <span className="text-[#8d775e] italic">Vision.</span></h2>
         <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} className="w-full h-40 bg-gray-50 dark:bg-white/5 p-6 rounded-3xl border border-gray-100 dark:border-white/10 focus:ring-2 focus:ring-[#8d775e]/20 mb-6 relative z-10 transition-all font-medium" placeholder="Describe adjustments..." />
         <div className="flex gap-4 relative z-10">
-          <button onClick={onClose} className="flex-1 py-4 font-bold text-gray-400 hover:text-gray-900 transition-all">Cancel</button>
+          <button onClick={onClose} className="flex-1 py-4 font-bold text-readable-muted hover:text-readable-primary transition-all">Cancel</button>
           <button onClick={handleEdit} disabled={isEditing || !editPrompt} className="flex-[2] py-4 bg-[#8d775e] text-white font-bold rounded-2xl disabled:opacity-50 shadow-lg shadow-[#8d775e]/20 flex items-center justify-center gap-3">
             {isEditing && <RefreshCw className="w-4 h-4 animate-spin" />}
             {isEditing ? "Synthesizing..." : "Apply Refinement"}

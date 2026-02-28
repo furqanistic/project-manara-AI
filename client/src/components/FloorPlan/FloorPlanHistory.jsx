@@ -40,14 +40,14 @@ const DeleteConfirmationDialog = ({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Discard Record?</h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-8 text-sm leading-relaxed">
+            <p className="text-readable-secondary mb-8 text-sm leading-relaxed">
               This will permanently remove the snapshot from your architectural vault. This action is irreversible.
             </p>
 
             <div className="flex gap-4">
               <button
                 onClick={onCancel}
-                className="flex-1 px-4 py-3 rounded-2xl font-bold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 transition-all border border-gray-100 dark:border-white/5 text-sm"
+                className="btn-secondary-readable flex-1 px-4 py-3 rounded-2xl font-bold transition-all text-sm"
               >
                 Cancel
               </button>
@@ -154,7 +154,7 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem, projectId = null
               </div>
               <button
                 onClick={onClose}
-                className="p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 rounded-2xl transition-all text-gray-400 group"
+                className="p-3 bg-white dark:bg-white/5 border border-gray-100 dark:border-white/5 hover:bg-gray-50 dark:hover:bg-white/10 rounded-2xl transition-all text-readable-muted group"
               >
                 <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
               </button>
@@ -163,7 +163,7 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem, projectId = null
             {/* Search */}
             <div className="p-6">
                <div className="relative group">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#8d775e] transition-colors" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-readable-muted group-focus-within:text-[#8d775e] transition-colors" />
                   <input 
                     type="text" 
                     placeholder="Search your vault..." 
@@ -212,7 +212,7 @@ export const FloorPlanHistory = ({ isOpen, onClose, onLoadItem, projectId = null
                   onClose();
                   window.location.href = '/projects';
                 }}
-                className="w-full py-3.5 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-black text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 group"
+                className="btn-primary-readable w-full py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl flex items-center justify-center gap-2 group"
               >
                 View Full Projects Vault
                 <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
@@ -319,20 +319,20 @@ const HistoryCard = ({ item, dateText, onLoad, onDelete }) => {
             <p className="text-[13px] font-bold text-gray-800 dark:text-gray-200 line-clamp-1 leading-none group-hover:text-[#8d775e] transition-colors">
               {item.name?.split(' - ')[0] || item.prompt}
             </p>
-            <span className='text-[10px] font-medium text-gray-400'>{dateText}</span>
+            <span className='text-[10px] font-medium text-readable-muted'>{dateText}</span>
           </div>
           
           <div className="flex gap-2 mt-3">
              <button 
                onClick={(e) => { e.stopPropagation(); setDeleteOpen(true); }}
-               className="p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-red-500 transition-all rounded-lg"
+               className="p-2 bg-gray-50 dark:bg-white/5 text-readable-muted hover:text-red-500 transition-all rounded-lg"
                title="Discard Snapshot"
              >
                <Trash2 className="w-3.5 h-3.5" />
              </button>
              <button 
                onClick={handleDownload}
-               className="p-2 bg-gray-50 dark:bg-white/5 text-gray-400 hover:text-[#8d775e] transition-all rounded-lg"
+               className="p-2 bg-gray-50 dark:bg-white/5 text-readable-muted hover:text-[#8d775e] transition-all rounded-lg"
                title="Download Assets"
              >
                <Download className="w-3.5 h-3.5" />

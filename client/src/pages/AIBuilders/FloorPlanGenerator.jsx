@@ -446,13 +446,13 @@ const FloorPlanGenerator = () => {
             <div className='flex items-center gap-1'>
               <button 
                 onClick={() => setHistoryOpen(true)}
-                className='p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-400'
+                className='p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-readable-muted'
               >
                 <History size={16} />
               </button>
               <button 
                 onClick={handleNewProject}
-                className='p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-400'
+                className='p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-readable-muted'
               >
                 <Plus size={16} />
               </button>
@@ -460,7 +460,7 @@ const FloorPlanGenerator = () => {
               {/* Mobile Close Button */}
               <button 
                 onClick={() => setIsMobileChatOpen(false)}
-                className={`md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-gray-400 ${step === 'result' ? 'block' : 'hidden'}`}
+                className={`md:hidden p-1.5 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors text-readable-muted ${step === 'result' ? 'block' : 'hidden'}`}
               >
                 <X size={16} />
               </button>
@@ -477,7 +477,7 @@ const FloorPlanGenerator = () => {
               >
                 {/* Building Type */}
                 <section className='space-y-3'>
-                  <label className='text-[10px] font-black uppercase tracking-widest text-gray-400'>Type</label>
+                  <label className='text-[10px] font-black uppercase tracking-widest text-readable-muted'>Type</label>
                   <div className='grid grid-cols-2 gap-2'>
                     {BUILDING_TYPES.map((type) => (
                       <button
@@ -499,7 +499,7 @@ const FloorPlanGenerator = () => {
 
                 {/* Dynamic Scale */}
                 <section className='space-y-3'>
-                  <label className='text-[10px] font-black uppercase tracking-widest text-gray-400'>Select Size</label>
+                  <label className='text-[10px] font-black uppercase tracking-widest text-readable-muted'>Select Size</label>
                   <div className='grid grid-cols-1 gap-1.5'>
                     {SCALES_BY_TYPE[config.buildingType].map((scale) => (
                       <button
@@ -514,7 +514,7 @@ const FloorPlanGenerator = () => {
                       >
                         <div className='text-left'>
                           <p className='font-bold text-[11px]'>{scale.label}</p>
-                          <p className='text-[9px] text-gray-400'>{scale.description}</p>
+                          <p className='text-[9px] text-readable-muted'>{scale.description}</p>
                         </div>
                         {config.scale === scale.id && <Check size={12} className='text-[#8d775e]' />}
                       </button>
@@ -524,7 +524,7 @@ const FloorPlanGenerator = () => {
 
                 {/* Style */}
                 <section className='space-y-3'>
-                  <label className='text-[10px] font-black uppercase tracking-widest text-gray-400'>Style</label>
+                  <label className='text-[10px] font-black uppercase tracking-widest text-readable-muted'>Style</label>
                   <div className='flex flex-wrap gap-1.5'>
                     {STYLES.map((st) => (
                       <button
@@ -534,7 +534,7 @@ const FloorPlanGenerator = () => {
                           px-3 py-1.5 rounded-full text-[10px] font-bold transition-all border
                           ${config.style === st.id 
                             ? 'border-[#8d775e] bg-[#8d775e] text-white' 
-                            : 'border-transparent bg-gray-100 dark:bg-white/5 text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10'}
+                            : 'border-transparent bg-gray-100 dark:bg-white/5 text-readable-muted hover:bg-gray-200 dark:hover:bg-white/10'}
                         `}
                       >
                         {st.label}
@@ -562,7 +562,7 @@ const FloorPlanGenerator = () => {
                         ${msg.role === 'user' 
                           ? 'bg-[#8d775e] text-white rounded-tr-none shadow-lg shadow-[#8d775e]/10' 
                           : msg.role === 'system'
-                            ? 'bg-transparent text-gray-400 text-[9px] uppercase tracking-widest border border-dashed border-gray-200 dark:border-white/10 w-full text-center rounded-lg py-1.5'
+                            ? 'bg-transparent text-readable-muted text-[9px] uppercase tracking-widest border border-dashed border-gray-200 dark:border-white/10 w-full text-center rounded-lg py-1.5'
                             : 'bg-gray-50 dark:bg-white/5 text-gray-700 dark:text-gray-300 rounded-tl-none border border-gray-100 dark:border-white/5'}
                       `}>
                         {msg.content}
@@ -583,7 +583,7 @@ const FloorPlanGenerator = () => {
                   value={config.prompt}
                   onChange={(e) => setConfig({ ...config, prompt: e.target.value })}
                   placeholder={step === 'config' ? `Tell us more about your ${config.buildingType}...` : "What would you like to change?"}
-                  className='w-full bg-gray-100 dark:bg-white/5 border-none rounded-xl pl-4 pr-10 py-3 h-11 text-[12px] placeholder:text-gray-400 focus:ring-1 focus:ring-[#8d775e]/50 transition-all font-medium'
+                  className='w-full bg-gray-100 dark:bg-white/5 border-none rounded-xl pl-4 pr-10 py-3 h-11 text-[12px] text-readable-primary placeholder:text-readable-muted focus:ring-1 focus:ring-[#8d775e]/50 transition-all font-medium'
                   onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
                 />
                 <button 
@@ -602,7 +602,7 @@ const FloorPlanGenerator = () => {
                       <button 
                         key={tag}
                         onClick={() => handleGenerate(`Requesting ${tag}`)}
-                        className='shrink-0 px-2.5 py-1 bg-gray-100 dark:bg-white/10 rounded-lg text-[9px] font-black text-gray-400 hover:text-[#8d775e] transition-colors whitespace-nowrap'
+                        className='shrink-0 px-2.5 py-1 bg-gray-100 dark:bg-white/10 rounded-lg text-[9px] font-black text-readable-muted hover:text-[#8d775e] transition-colors whitespace-nowrap'
                       >
                         {tag}
                       </button>
@@ -677,7 +677,7 @@ const FloorPlanGenerator = () => {
                     </div>
                     <div className='space-y-2'>
                       <h3 className='text-xl font-black italic tracking-tighter'>Let's design your space.</h3>
-                      <p className='text-gray-400 text-xs leading-relaxed'>
+                      <p className='text-readable-secondary text-xs leading-relaxed'>
                         Select your {config.buildingType} details on the left to get started.
                       </p>
                       <div className='pt-3 space-y-2'>
@@ -687,7 +687,7 @@ const FloorPlanGenerator = () => {
                         >
                           Upload floor plan image
                         </button>
-                        <p className='text-[10px] text-gray-400'>
+                        <p className='text-[10px] text-readable-muted'>
                           Or press Ctrl/Cmd + V to paste from clipboard
                         </p>
                         <input
@@ -725,7 +725,7 @@ const FloorPlanGenerator = () => {
                 {step === 'result' && (
                   <button 
                      onClick={() => setIsMobileChatOpen(true)}
-                     className='h-12 flex-1 bg-white dark:bg-[#1a1a1a] text-black dark:text-white border border-gray-200 dark:border-white/10 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2'
+                     className='h-12 flex-1 bg-white dark:bg-[#1a1a1a] text-readable-primary dark:text-white border border-gray-200 dark:border-white/10 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2'
                   >
                      <MessageSquare size={16} />
                      Chat

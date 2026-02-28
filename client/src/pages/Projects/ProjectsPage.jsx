@@ -22,8 +22,8 @@ const BuilderButton = ({ title, subtitle, ctaLabel, onClick, featured = false })
   >
     <div className='flex items-start justify-between gap-3'>
       <div>
-        <p className='text-sm font-semibold text-gray-900 dark:text-white'>{title}</p>
-        <p className='mt-1 text-xs text-gray-500 dark:text-gray-400'>{subtitle}</p>
+        <p className='text-sm font-semibold text-readable-primary'>{title}</p>
+        <p className='mt-1 text-xs text-readable-secondary'>{subtitle}</p>
       </div>
       {featured && (
         <div className='rounded-full bg-[#8d775e] p-1.5 text-white'>
@@ -150,8 +150,8 @@ const ProjectsPage = () => {
         <div className='mb-7 flex flex-wrap items-end justify-between gap-4'>
           <div>
             <p className='text-xs font-semibold uppercase tracking-[0.3em] text-[#8d775e]'>Projects</p>
-            <h1 className='text-3xl font-bold text-gray-900 dark:text-white'>Project-first Studio</h1>
-            <p className='text-sm text-gray-500 dark:text-gray-400'>
+            <h1 className='text-3xl font-bold text-readable-primary'>Project-first Studio</h1>
+            <p className='text-sm text-readable-secondary'>
               Create a project, select it, then open a builder page for that project.
             </p>
           </div>
@@ -161,12 +161,12 @@ const ProjectsPage = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder='New project name'
-              className='w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 outline-none focus:border-[#8d775e] dark:border-white/10 dark:bg-white/5 dark:text-white'
+              className='w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm text-readable-primary outline-none focus:border-[#8d775e] dark:border-white/10 dark:bg-white/5'
             />
             <button
               type='submit'
               disabled={createMutation.isPending}
-              className='inline-flex items-center gap-2 rounded-xl bg-[#8d775e] px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60'
+              className='btn-primary-readable inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold disabled:opacity-60'
             >
               {createMutation.isPending ? <Loader2 size={16} className='animate-spin' /> : <Plus size={16} />}
               Create
@@ -176,12 +176,12 @@ const ProjectsPage = () => {
 
         <section className='mb-6 rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/5'>
           <div className='mb-3 flex items-center justify-between'>
-            <h2 className='text-sm font-semibold text-gray-900 dark:text-white'>Your Projects</h2>
-            {isLoading && <Loader2 size={14} className='animate-spin text-gray-400' />}
+            <h2 className='text-sm font-semibold text-readable-primary'>Your Projects</h2>
+            {isLoading && <Loader2 size={14} className='animate-spin text-readable-muted' />}
           </div>
 
           {!isLoading && projects.length === 0 && (
-            <div className='rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-500 dark:border-white/10 dark:text-gray-400'>
+            <div className='rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-readable-secondary dark:border-white/10'>
               No projects found yet. Create your first project above.
             </div>
           )}
@@ -213,7 +213,7 @@ const ProjectsPage = () => {
                   }`}
                 >
                   <div className='flex items-start justify-between gap-2'>
-                    <p className='line-clamp-1 text-sm font-semibold text-gray-900 dark:text-white'>
+                    <p className='line-clamp-1 text-sm font-semibold text-readable-primary'>
                       {project.name}
                     </p>
                     <button
@@ -229,7 +229,7 @@ const ProjectsPage = () => {
                       Last viewed
                     </p>
                   )}
-                  <p className='mt-2 text-xs text-gray-500 dark:text-gray-400'>
+                  <p className='mt-2 text-xs text-readable-secondary'>
                     {project.counts?.total || 0} outputs • {formatDate(project.createdAt)}
                   </p>
                   <p className='mt-2 text-[11px] font-medium uppercase tracking-[0.12em] text-[#8d775e]'>
@@ -244,8 +244,8 @@ const ProjectsPage = () => {
         <section className='rounded-3xl border border-gray-200 bg-white p-5 shadow-sm dark:border-white/10 dark:bg-white/5'>
           {!activeProjectId && (
             <div className='flex h-full min-h-[360px] flex-col items-center justify-center text-center'>
-              <h3 className='text-lg font-semibold text-gray-900 dark:text-white'>Select a project workspace</h3>
-              <p className='mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400'>
+              <h3 className='text-lg font-semibold text-readable-primary'>Select a project workspace</h3>
+              <p className='mt-2 max-w-md text-sm text-readable-secondary'>
                 Pick a project above. Then choose one builder below to open its dedicated page.
               </p>
             </div>
@@ -292,11 +292,11 @@ const ProjectsPage = () => {
               <div className='mb-5 flex flex-wrap items-start justify-between gap-3'>
                 <div>
                   <p className='text-xs uppercase tracking-[0.25em] text-[#8d775e]'>Active Workspace</p>
-                  <h2 className='text-2xl font-bold text-gray-900 dark:text-white'>
+                  <h2 className='text-2xl font-bold text-readable-primary'>
                     {activeProject?.name || 'Project'}
                   </h2>
                 </div>
-                {workspaceLoading && <Loader2 className='animate-spin text-gray-400' size={16} />}
+                {workspaceLoading && <Loader2 className='animate-spin text-readable-muted' size={16} />}
               </div>
 
               <div className='mb-6 grid gap-3 md:grid-cols-3'>
@@ -323,22 +323,22 @@ const ProjectsPage = () => {
 
               <div className='grid gap-4 md:grid-cols-3'>
                 <div className='rounded-2xl border border-gray-200 p-4 dark:border-white/10'>
-                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-gray-500'>Moodboards</p>
-                  <p className='text-2xl font-bold text-gray-900 dark:text-white'>{assets.moodboards.length}</p>
+                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-readable-secondary'>Moodboards</p>
+                  <p className='text-2xl font-bold text-readable-primary'>{assets.moodboards.length}</p>
                 </div>
                 <div className='rounded-2xl border border-gray-200 p-4 dark:border-white/10'>
-                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-gray-500'>Floor Plans</p>
-                  <p className='text-2xl font-bold text-gray-900 dark:text-white'>{assets.floorplans.length}</p>
+                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-readable-secondary'>Floor Plans</p>
+                  <p className='text-2xl font-bold text-readable-primary'>{assets.floorplans.length}</p>
                 </div>
                 <div className='rounded-2xl border border-gray-200 p-4 dark:border-white/10'>
-                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-gray-500'>3D Renders</p>
-                  <p className='text-2xl font-bold text-gray-900 dark:text-white'>{assets.threed.length}</p>
+                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-readable-secondary'>3D Renders</p>
+                  <p className='text-2xl font-bold text-readable-primary'>{assets.threed.length}</p>
                 </div>
               </div>
 
               <div className='mt-5 grid gap-3 md:grid-cols-3'>
                 <div className='rounded-2xl border border-gray-200 p-4 dark:border-white/10'>
-                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-gray-500'>Recent Moodboards</p>
+                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-readable-secondary'>Recent Moodboards</p>
                   {assets.moodboards.slice(0, 3).map((item) => (
                     <button
                       key={item._id}
@@ -351,7 +351,7 @@ const ProjectsPage = () => {
                 </div>
 
                 <div className='rounded-2xl border border-gray-200 p-4 dark:border-white/10'>
-                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-gray-500'>Recent Floor Plans</p>
+                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-readable-secondary'>Recent Floor Plans</p>
                   {assets.floorplans.slice(0, 3).map((item) => (
                     <button
                       key={item._id || item.id}
@@ -372,7 +372,7 @@ const ProjectsPage = () => {
                 </div>
 
                 <div className='rounded-2xl border border-gray-200 p-4 dark:border-white/10'>
-                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-gray-500'>Recent 3D Renders</p>
+                  <p className='mb-2 text-xs font-semibold uppercase tracking-[0.15em] text-readable-secondary'>Recent 3D Renders</p>
                   {assets.threed.slice(0, 3).map((item) => (
                     <button
                       key={item._id}
