@@ -811,7 +811,7 @@ const ThreedGenerator = () => {
 
   const proxiedModelUrl = buildProxyUrl(meshyModelUrl)
   const shouldShowProjectModal =
-    !workspaceProjectId && !id && !location.state?.project && !currentProjectId
+    !workspaceProjectId && !id && !location.state?.project && !currentProjectId && !location.state?.fromStudio
   const loadingPhase =
     LOADING_PHASES[Math.min(LOADING_PHASES.length - 1, Math.floor(uploadProgress / 20))]
   const isMeshyBundlingPhase = isConvertingTo3D && meshyProgress >= 49 && meshyProgress < 55

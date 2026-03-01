@@ -8,6 +8,7 @@ import {
     Box,
     Check,
     ChevronDown,
+    CircleHelp,
     Download,
     History,
     Home,
@@ -96,6 +97,8 @@ const FloorPlanGenerator = () => {
   const [showHistoryMobile, setShowHistoryMobile] = useState(false)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
   const [showExportActions, setShowExportActions] = useState(false)
+  const [showUploadTooltip, setShowUploadTooltip] = useState(false)
+  const [showScrollHint, setShowScrollHint] = useState(false)
   const [guardrails, setGuardrails] = useState({
     dimensions: '',
     ceilingHeight: '',
@@ -130,6 +133,8 @@ const FloorPlanGenerator = () => {
   
   const chatContainerRef = useRef(null)
   const referenceInputRef = useRef(null)
+  const uploadTooltipWrapRef = useRef(null)
+  const configScrollRef = useRef(null)
   const initialGenerationCost = 4
   const revisionCost = 1
 
@@ -173,6 +178,41 @@ const FloorPlanGenerator = () => {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight
     }
   }, [chatHistory])
+
+  useEffect(() => {
+    if (!showUploadTooltip) return
+    const handleOutsideClick = (event) => {
+      if (!uploadTooltipWrapRef.current?.contains(event.target)) {
+        setShowUploadTooltip(false)
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => document.removeEventListener('mousedown', handleOutsideClick)
+  }, [showUploadTooltip])
+
+  useEffect(() => {
+    if (step !== 'config') {
+      setShowScrollHint(false)
+      return
+    }
+
+    const el = configScrollRef.current
+    if (!el) return
+
+    const updateHint = () => {
+      const hasOverflow = el.scrollHeight > el.clientHeight + 8
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 8
+      setShowScrollHint(hasOverflow && !atBottom)
+    }
+
+    updateHint()
+    el.addEventListener('scroll', updateHint)
+    window.addEventListener('resize', updateHint)
+    return () => {
+      el.removeEventListener('scroll', updateHint)
+      window.removeEventListener('resize', updateHint)
+    }
+  }, [step, referenceImage, config.buildingType, config.scale, config.style, guardrails])
 
   const processReferenceImageFile = (file) => {
     if (!file) return
@@ -245,6 +285,7 @@ const FloorPlanGenerator = () => {
     }
 
     if (location.state?.reset) {
+        setWorkspaceProjectId(null);
         handleNewProject();
         // Clear the state so refreshing doesn't keep resetting if we implement that
         window.history.replaceState({}, document.title);
@@ -479,7 +520,8 @@ const FloorPlanGenerator = () => {
     }
   }
 
-  const shouldShowProjectModal = !workspaceProjectId && !id && !location.state?.project
+  const shouldShowProjectModal =
+    !workspaceProjectId && !id && !location.state?.project && !location.state?.fromStudio
 
   return (
     <>
@@ -570,30 +612,39 @@ const FloorPlanGenerator = () => {
           </div>
           <div className='flex-1 overflow-hidden relative flex flex-col'>
             {step === 'config' ? (
-              <div className='flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide'>
+              <div ref={configScrollRef} className='relative flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide'>
               <motion.div  
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className='space-y-6'
               >
                 <section className='space-y-2'>
-                  <p className='text-[10px] font-black uppercase tracking-widest text-readable-muted'>Upload Guidance</p>
-                  <div className='rounded-xl border border-dashed border-gray-200 p-3 text-[11px] text-readable-secondary dark:border-white/10'>
-                    Supported inputs: empty 2D floor plan, sketch, or blueprint image.
-                  </div>
-                </section>
-
-                <section className='space-y-2'>
-                  <div className='flex items-center justify-between gap-2'>
+                  <div className='relative flex items-center justify-between gap-2'>
                     <p className='text-[10px] font-black uppercase tracking-widest text-readable-muted'>Reference Image</p>
-                    <button
-                      type='button'
-                      onClick={() => referenceInputRef.current?.click()}
-                      className='inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-readable-primary hover:bg-gray-50 dark:border-white/10 dark:bg-white/5'
-                    >
-                      <Upload size={12} />
-                      Upload
-                    </button>
+                    <div ref={uploadTooltipWrapRef} className='flex items-center gap-1.5'>
+                      <button
+                        type='button'
+                        onClick={() => setShowUploadTooltip((prev) => !prev)}
+                        className='inline-flex items-center justify-center text-readable-muted hover:text-readable-primary'
+                        aria-label='Show upload guidance'
+                      >
+                        <CircleHelp size={16} />
+                      </button>
+                      <button
+                        type='button'
+                        onClick={() => referenceInputRef.current?.click()}
+                        className='inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-readable-primary hover:bg-gray-50 dark:border-white/10 dark:bg-white/5'
+                      >
+                        <Upload size={12} />
+                        Upload
+                      </button>
+                    </div>
+                    {showUploadTooltip && (
+                      <div className='absolute right-0 top-7 z-20 w-64 rounded-lg border border-gray-200 bg-white p-2.5 text-[10px] text-readable-secondary shadow-xl dark:border-white/10 dark:bg-[#111]'>
+                        Supported inputs: empty 2D floor plan, sketch, or blueprint image.
+                        You can also paste directly with Ctrl/Cmd + V.
+                      </div>
+                    )}
                   </div>
                   <input
                     ref={referenceInputRef}
@@ -623,7 +674,7 @@ const FloorPlanGenerator = () => {
                     </div>
                   ) : (
                     <p className='text-[10px] text-readable-secondary'>
-                      Add a floor-plan/sketch reference here. It will be sent to Gemini during generation.
+                      Add a floor-plan/sketch reference here, or press Ctrl/Cmd + V to paste.
                     </p>
                   )}
                 </section>
@@ -702,6 +753,13 @@ const FloorPlanGenerator = () => {
                   errors={guardrailErrors}
                 />
               </motion.div>
+              {showScrollHint && (
+                <div className='pointer-events-none sticky bottom-0 mt-2 flex justify-center'>
+                  <span className='rounded-full bg-white/90 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-readable-muted shadow dark:bg-black/60'>
+                    Scroll for more
+                  </span>
+                </div>
+              )}
               </div>
             ) : (
               <div 

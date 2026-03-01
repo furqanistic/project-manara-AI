@@ -1,13 +1,13 @@
 import TopBar from '@/components/Layout/Topbar'
-import { PROJECT_FLOW_STEPS, STEP_ROUTE_MAP } from '@/lib/projectFlow'
+import { useProjectFlow } from '@/hooks/useProjectFlow'
 import {
   useCreateProject,
   useDeleteProject,
   useProjects,
-  useUpdateProject,
   useProjectWorkspace,
+  useUpdateProject,
 } from '@/hooks/useProjects'
-import { useProjectFlow } from '@/hooks/useProjectFlow'
+import { PROJECT_FLOW_STEPS, STEP_ROUTE_MAP } from '@/lib/projectFlow'
 import { motion } from 'framer-motion'
 import { Loader2, Plus, Trash2 } from 'lucide-react'
 import React, { useMemo, useState } from 'react'
@@ -503,14 +503,14 @@ const ProjectsPage = () => {
                 <div className='flex flex-wrap items-center gap-2'>
                   {activeProjectId && (
                     <>
-                      <button
+                     <button
                         type='button'
-                        onClick={() => goToBuilder('threed')}
+                        onClick={() => goToBuilder('moodboard')}
                         className='rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-[10px] font-medium text-readable-primary hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 sm:px-3 sm:py-1.5 sm:text-[11px]'
                       >
-                        Create 3D Renders
+                        Create AI Designs
                       </button>
-                      <button
+                       <button
                         type='button'
                         onClick={() => goToBuilder('floorplan')}
                         className='rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-[10px] font-medium text-readable-primary hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 sm:px-3 sm:py-1.5 sm:text-[11px]'
@@ -519,11 +519,13 @@ const ProjectsPage = () => {
                       </button>
                       <button
                         type='button'
-                        onClick={() => goToBuilder('moodboard')}
+                        onClick={() => goToBuilder('threed')}
                         className='rounded-lg border border-gray-300 bg-white px-2.5 py-1 text-[10px] font-medium text-readable-primary hover:bg-gray-50 dark:border-white/10 dark:bg-white/5 sm:px-3 sm:py-1.5 sm:text-[11px]'
                       >
-                        Create AI Designs
+                        Create 3D Renders
                       </button>
+                     
+                     
                     </>
                   )}
                   {workspaceLoading && <Loader2 className='animate-spin text-readable-muted' size={16} />}

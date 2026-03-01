@@ -94,6 +94,30 @@ const MoodboardGenerator = () => {
     }
   }, [location.state, location.search, workspaceProjectId]);
 
+  useEffect(() => {
+    if (!location.state?.reset) return;
+    setWorkspaceProjectId(null);
+    setCurrentStep(0);
+    setSelectedSpace("");
+    setSelectedStyle("");
+    setSelectedColor("Neutral Tones");
+    setChanges("");
+    setCurrentMoodboard(null);
+    setShowImageModal(false);
+    setShowEditModal(false);
+    setLoadingState(null);
+    setProgressSteps([]);
+    setGenerationPhase(null);
+    setShowHistory(false);
+    setRefinementFields({
+      budgetRange: "",
+      stylePreference: "",
+      lightingMood: "",
+      colorPreference: "",
+    });
+    window.history.replaceState({}, document.title);
+  }, [location.state?.reset]);
+
   const confirmCreditSpend = async (cost, actionLabel) => {
     if (!currentUser) {
       toast.error("Please sign up or log in to use this tool.");
@@ -618,7 +642,7 @@ const MoodboardGenerator = () => {
   return (
     <>
       <ProjectSelectionModal
-        open={!workspaceProjectId}
+        open={!workspaceProjectId && !location.state?.fromStudio}
         title='Select Project For AI Design Builder'
         description='Choose an existing project or create a new one before generating AI designs.'
         onSelect={(project) => {
