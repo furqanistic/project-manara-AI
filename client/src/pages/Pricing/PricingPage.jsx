@@ -2,23 +2,22 @@ import AvatarOnboardingPopup from '@/components/AddOns/AvatarOnboardingPopup'
 import TopBar from '@/components/Layout/Topbar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { motion } from 'framer-motion'
-import { Crown, Sparkles, Star } from 'lucide-react'
+import { ArrowRight, CreditCard, Crown, Sparkles, Star } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { useSelector } from 'react-redux'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { addCredits } from '@/lib/credits'
 import { stripeService } from '@/services/stripeService'
-
-const CREDIT_DEFINITIONS = [
-  { label: '3D Render Set (1 room)', credits: 3 },
-  { label: 'Extra style / variation', credits: 1 },
-  { label: '2D Floor Plan / Cut', credits: 4 },
-  { label: 'Shopping List + Supplier Suggestions', credits: 2 },
-  { label: 'Small revision', credits: 1 },
-  { label: 'Full Room Package (all of the above)', credits: 8 },
-]
 
 const CREDIT_PACKAGES = [
   {
@@ -29,15 +28,15 @@ const CREDIT_PACKAGES = [
     price: '199',
     unit: 'AED',
     color: '#b8a58c',
-    description: 'Starter credits to explore the builders.',
+    description: 'Perfect to get started with room design.',
     credits: 20,
     priceId: import.meta.env.VITE_STRIPE_PRICE_ID_STARTER,
     features: [
       'Best for single room experiments',
       'Mix and match outputs',
-      'Credits never expire (for now)',
+      'Includes starter credit pack',
     ],
-    cta: 'Add 20 Credits',
+    cta: 'Buy Plan',
   },
   {
     id: 'home',
@@ -48,15 +47,15 @@ const CREDIT_PACKAGES = [
     unit: 'AED',
     color: '#937c60',
     popular: true,
-    description: 'Balanced package for multi-room projects.',
+    description: 'Balanced plan for multi-room projects.',
     credits: 50,
     priceId: import.meta.env.VITE_STRIPE_PRICE_ID_HOME,
     features: [
       'Enough for full room packages',
       'Great for multiple iterations',
-      'Credits never expire (for now)',
+      'Includes home credit pack',
     ],
-    cta: 'Add 50 Credits',
+    cta: 'Buy Plan',
   },
   {
     id: 'plus',
@@ -66,21 +65,26 @@ const CREDIT_PACKAGES = [
     price: '799',
     unit: 'AED',
     color: '#7a654f',
-    description: 'Best value for big renovations.',
+    description: 'Best fit for large or frequent projects.',
     credits: 100,
     priceId: import.meta.env.VITE_STRIPE_PRICE_ID_PLUS,
     features: [
       'Best value per credit',
       'Ideal for teams',
-      'Credits never expire (for now)',
+      'Includes plus credit pack',
     ],
-    cta: 'Add 100 Credits',
+    cta: 'Buy Plan',
   },
 ]
 const PLAN_CREDITS = {
   starter: 20,
   home: 50,
   plus: 100,
+}
+const PLAN_ORDER = {
+  starter: 1,
+  home: 2,
+  plus: 3,
 }
 const CREDIT_GRANT_PREFIX = 'manara_credit_grant'
 
@@ -182,6 +186,10 @@ const PricingPage = () => {
   const [isProcessingPlanId, setIsProcessingPlanId] = useState(null)
   const [cardsCount, setCardsCount] = useState(0)
   const [isCardsLoading, setIsCardsLoading] = useState(false)
+  const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
+  const [activePlanId, setActivePlanId] = useState(null)
+  const [isBillingLoading, setIsBillingLoading] = useState(false)
+  const [showCardLinkPopup, setShowCardLinkPopup] = useState(false)
   const { currentUser } = useSelector((state) => state.user)
   const location = useLocation()
   const navigate = useNavigate()
@@ -201,22 +209,45 @@ const PricingPage = () => {
     localStorage.setItem(storageKey, '1')
   }
 
+  const loadPaymentMethods = async () => {
+    setIsCardsLoading(true)
+    try {
+      const response = await stripeService.getPaymentMethods()
+      const nextCardsCount = response?.data?.cards?.length || 0
+      setCardsCount(nextCardsCount)
+      return nextCardsCount
+    } catch (error) {
+      console.error('Unable to load cards:', error)
+      return 0
+    } finally {
+      setIsCardsLoading(false)
+    }
+  }
+
+  const loadBillingStatus = async () => {
+    setIsBillingLoading(true)
+    try {
+      const response = await stripeService.getBillingStatus()
+      const subscription = response?.data?.subscription || null
+      const isActive =
+        Boolean(subscription?.stripeSubscriptionId) &&
+        ['trialing', 'active', 'past_due', 'unpaid'].includes(subscription?.subscriptionStatus)
+      setHasActiveSubscription(isActive)
+      setActivePlanId(subscription?.activePlanId || null)
+      return isActive
+    } catch (error) {
+      console.error('Unable to load billing status:', error)
+      setHasActiveSubscription(false)
+      setActivePlanId(null)
+      return false
+    } finally {
+      setIsBillingLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!currentUser) return
-
-    const loadPaymentMethods = async () => {
-      setIsCardsLoading(true)
-      try {
-        const response = await stripeService.getPaymentMethods()
-        setCardsCount(response?.data?.cards?.length || 0)
-      } catch (error) {
-        console.error('Unable to load cards:', error)
-      } finally {
-        setIsCardsLoading(false)
-      }
-    }
-
-    loadPaymentMethods()
+    Promise.all([loadPaymentMethods(), loadBillingStatus()])
   }, [currentUser])
 
   useEffect(() => {
@@ -269,30 +300,57 @@ const PricingPage = () => {
     }
 
     if (currentUser?.isOnboarded) {
+      if (isBillingLoading) {
+        await loadBillingStatus()
+      }
+
       if (isCardsLoading) {
-        toast.error('Loading your payment methods. Please wait a moment.')
-        return
+        const refreshedCards = await loadPaymentMethods()
+        if (refreshedCards === 0) {
+          setShowCardLinkPopup(true)
+          return
+        }
       }
 
       if (cardsCount === 0) {
-        toast.error('Please link your card first from the subscription page.')
-        navigate('/subscription')
+        setShowCardLinkPopup(true)
         return
       }
 
       setIsProcessingPlanId(plan.id)
       try {
-        const response = await stripeService.createCheckoutSession({
-          planId: plan.id,
-          purchaseType: 'topup',
-        })
+        let response
+        if (!hasActiveSubscription) {
+          response = await stripeService.createCheckoutSession({
+            planId: plan.id,
+            priceId: plan.priceId,
+          })
+        } else {
+          response = await stripeService.changeSubscriptionPlan({
+            planId: plan.id,
+            priceId: plan.priceId,
+            renewNow: activePlanId === plan.id,
+          })
+          const grantedCredits = Number(response?.grantedCredits) || 0
+          const creditGrantKey = response?.creditGrantKey || null
+          if (grantedCredits > 0) {
+            applyCreditsGrant(creditGrantKey, grantedCredits, `Plan change (${plan.name})`)
+            toast.success(`${grantedCredits} credits added to your account.`, {
+              id: `credits-granted-pricing-change-${plan.id}`,
+            })
+          }
+          toast.success(response?.message || 'Plan updated successfully.')
+          await loadBillingStatus()
+        }
 
-        if (response?.url) {
+        if (!hasActiveSubscription && response?.url) {
           window.location.href = response.url
           return
         }
 
-        throw new Error('Stripe checkout URL is missing')
+        if (!hasActiveSubscription) {
+          throw new Error('Stripe checkout URL is missing')
+        }
       } catch (error) {
         console.error('Stripe checkout error:', error)
         toast.error(error?.response?.data?.message || 'Unable to start checkout.')
@@ -320,7 +378,7 @@ const PricingPage = () => {
               transition={{ duration: 0.5 }}
               className='inline-flex items-center px-4 py-1 rounded-full bg-[#937c60]/10 dark:bg-[#937c60]/20 text-[#937c60] text-[11px] font-bold mb-6 tracking-wider'
             >
-              CREDIT PACKAGES (TEST MODE)
+              SUBSCRIPTION PLANS
             </motion.div>
             
             <motion.h1 
@@ -329,8 +387,8 @@ const PricingPage = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
               className='text-5xl md:text-7xl font-black text-gray-900 dark:text-white mb-6 tracking-tight leading-[1.05]'
             >
-              Simple Credits, <br />
-              <span className='text-[#937c60]'>Transparent</span> Pricing.
+              Choose Your <br />
+              <span className='text-[#937c60]'>Manara Plan</span>.
             </motion.h1>
             
             <motion.p 
@@ -339,12 +397,26 @@ const PricingPage = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
               className='text-lg text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto'
             >
-              Buy credit packages and spend them on outputs. Credits represent deliverables, not technical usage.
+              Buy a plan, renew your current plan, or switch tiers directly from this page.
             </motion.p>
 
-            <div className='mt-8 flex flex-wrap justify-center gap-3 text-[11px] font-bold uppercase tracking-widest text-gray-400'>
-              <span>{isCardsLoading ? 'Checking Card Status...' : `${cardsCount} Card(s) Linked`}</span>
-              <span>Card Required Before Purchase</span>
+            <div className='mt-8 flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-widest'>
+              <span
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 ${
+                  hasActiveSubscription
+                    ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'border border-blue-200 bg-blue-50 text-blue-700'
+                }`}
+              >
+                <Crown size={13} />
+                {hasActiveSubscription ? 'Active Plan Enabled' : 'No Active Plan'}
+              </span>
+              {!isCardsLoading && cardsCount > 0 && (
+                <span className='inline-flex items-center gap-2 rounded-full border border-[#937c60]/30 bg-[#937c60]/5 px-4 py-2 text-[#937c60]'>
+                  <CreditCard size={13} />
+                  {cardsCount} Card(s) Linked
+                </span>
+              )}
             </div>
           </div>
 
@@ -356,7 +428,16 @@ const PricingPage = () => {
                 className={plan.popular ? 'lg:scale-105 z-10' : 'lg:scale-95'}
               >
                 <PricingCard 
-                  plan={plan} 
+                  plan={{
+                    ...plan,
+                    cta: !hasActiveSubscription
+                      ? 'Buy Plan'
+                      : activePlanId === plan.id
+                        ? 'Renew Now'
+                        : (PLAN_ORDER[plan.id] || 0) < (PLAN_ORDER[activePlanId] || 0)
+                          ? 'Downgrade at Renewal'
+                          : 'Upgrade Now',
+                  }}
                   onSelect={() => handleSelectPlan(plan)}
                   isLoading={isProcessingPlanId === plan.id}
                 />
@@ -371,7 +452,7 @@ const PricingPage = () => {
             <div className='bg-white/80 dark:bg-[#111] border border-gray-100 dark:border-white/5 rounded-[32px] p-8 md:p-12 shadow-xl'>
               <div className='flex items-center gap-3 mb-6'>
                 <div className='w-10 h-[1px] bg-[#937c60] opacity-40'></div>
-                <span className='text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase'>Credit Definitions</span>
+                <span className='text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase'>Plan Inclusions</span>
               </div>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                 {CREDIT_DEFINITIONS.map((item) => (
@@ -382,7 +463,7 @@ const PricingPage = () => {
                 ))}
               </div>
               <p className='mt-6 text-xs text-gray-400'>
-                Credits are applied per output and shown before you confirm an action.
+                Plan purchase and renew actions follow the same billing logic as the subscription page.
               </p>
             </div>
           </div>
@@ -438,6 +519,39 @@ const PricingPage = () => {
           console.log('Avatar data:', data)
         }}
       />
+
+      <Dialog open={showCardLinkPopup} onOpenChange={setShowCardLinkPopup}>
+        <DialogContent className='max-w-md border border-[#937c60]/20 bg-white p-0 dark:bg-[#111]'>
+          <div className='relative overflow-hidden rounded-xl'>
+            <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(147,124,96,0.18),transparent_60%)]' />
+            <div className='relative p-7'>
+              <div className='mb-4 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#937c60]/10 text-[#937c60]'>
+                <CreditCard size={22} />
+              </div>
+              <DialogHeader>
+                <DialogTitle className='text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white'>
+                  Link your card first
+                </DialogTitle>
+                <DialogDescription className='pt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300'>
+                  Link at least one card in billing before buying or renewing a plan.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter className='mt-7'>
+                <Button
+                  onClick={() => {
+                    setShowCardLinkPopup(false)
+                    navigate('/subscription')
+                  }}
+                  className='group h-11 w-full rounded-xl bg-[#937c60] text-white hover:bg-[#866f54]'
+                >
+                  Open Billing
+                  <ArrowRight size={14} className='ml-2 transition-transform group-hover:translate-x-0.5' />
+                </Button>
+              </DialogFooter>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

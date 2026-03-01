@@ -34,8 +34,8 @@ import { toast } from "react-hot-toast";
 import { useNavigate, useLocation } from "react-router-dom";
 import { getCreditsBalance, spendCredits } from "@/lib/credits";
 import { useSelector } from "react-redux";
-import CreditConfirmModal from "@/components/Common/CreditConfirmModal";
 import ProjectSelectionModal from "@/components/Common/ProjectSelectionModal";
+import { stripeService } from "@/services/stripeService";
 import {
     BRAND_COLOR,
     BRAND_COLOR_DARK,
@@ -59,7 +59,7 @@ const MoodboardGenerator = () => {
   const [progressSteps, setProgressSteps] = useState([]);
   const [generationPhase, setGenerationPhase] = useState(null); // 'image' or 'descriptions'
   const [showHistory, setShowHistory] = useState(false); // NEW: History modal state
-  const [confirmState, setConfirmState] = useState(null);
+  const [billingModel, setBillingModel] = useState(null);
   const [showExportActions, setShowExportActions] = useState(false);
   const [refinementFields, setRefinementFields] = useState({
     budgetRange: "",
@@ -67,7 +67,6 @@ const MoodboardGenerator = () => {
     lightingMood: "",
     colorPreference: "",
   });
-  const confirmResolverRef = React.useRef(null);
   const createMutation = useCreateMoodboard();
   const generateMutation = useGenerateMoodboard();
   const generateDescriptionsMutation = useGenerateMoodboardDescriptions();
@@ -118,23 +117,35 @@ const MoodboardGenerator = () => {
     window.history.replaceState({}, document.title);
   }, [location.state?.reset]);
 
-  const confirmCreditSpend = async (cost, actionLabel) => {
+  const ensureGenerationAccess = async (cost, actionLabel) => {
     if (!currentUser) {
       toast.error("Please sign up or log in to use this tool.");
       navigate("/auth?type=signup", { state: { from: location.pathname } });
       return false;
     }
+
+    let resolvedBillingModel = billingModel;
+    if (!resolvedBillingModel) {
+      try {
+        const billingStatus = await stripeService.getBillingStatus();
+        resolvedBillingModel = billingStatus?.data?.billingModel || "v1_credits";
+        setBillingModel(resolvedBillingModel);
+      } catch (_error) {
+        resolvedBillingModel = "v1_credits";
+      }
+    }
+
+    if (resolvedBillingModel === "v2_subscription_usage") {
+      return true;
+    }
+
     const balance = getCreditsBalance();
     if (balance < cost) {
-      toast.error("Not enough credits. Please add more credits to continue.");
+      toast.error("Not enough credits right now. Upgrade your plan to keep generating.");
       navigate("/subscription");
       return false;
     }
-    const confirmed = await new Promise((resolve) => {
-      confirmResolverRef.current = resolve;
-      setConfirmState({ cost, actionLabel, balance });
-    });
-    if (!confirmed) return false;
+
     const result = spendCredits(cost, {
       action: actionLabel,
       tool: "moodboard",
@@ -146,12 +157,24 @@ const MoodboardGenerator = () => {
     return true;
   };
 
+  const handleBillingLimitError = (error) => {
+    const code = error?.response?.data?.code;
+    if (code !== "USAGE_LIMIT_REACHED" && code !== "NO_ACTIVE_PLAN") return false;
+
+    const message =
+      error?.response?.data?.message ||
+      "You reached your current plan limit. Upgrade to continue generating.";
+    toast.error(message, { id: "billing-limit" });
+    navigate("/subscription");
+    return true;
+  };
+
   const handleGenerate = async () => {
     if (!changes.trim()) {
       toast.error("Please describe your design requirements", { id: 'missing-requirements' });
       return;
     }
-    if (!(await confirmCreditSpend(generationCost, "Moodboard generation"))) return;
+    if (!(await ensureGenerationAccess(generationCost, "Moodboard generation"))) return;
 
     try {
       // ========== PHASE 1: Generate Image (Fast) ==========
@@ -266,6 +289,12 @@ const MoodboardGenerator = () => {
         });
       }
     } catch (error) {
+      if (handleBillingLimitError(error)) {
+        setProgressSteps([]);
+        setLoadingState(null);
+        setGenerationPhase(null);
+        return;
+      }
       console.error("Generation error:", error);
       setProgressSteps([]);
       setLoadingState(null);
@@ -284,7 +313,7 @@ const MoodboardGenerator = () => {
       toast.error("No moodboard to regenerate", { id: 'no-moodboard' });
       return;
     }
-    if (!(await confirmCreditSpend(revisionCost, "Moodboard revision"))) return;
+    if (!(await ensureGenerationAccess(revisionCost, "Moodboard revision"))) return;
 
     try {
       setLoadingState("generating");
@@ -331,6 +360,10 @@ const MoodboardGenerator = () => {
         })
       }
     } catch (error) {
+      if (handleBillingLimitError(error)) {
+        setLoadingState(null);
+        return;
+      }
       console.error("Regeneration error:", error);
       setLoadingState(null);
       toast.error("Failed to regenerate moodboard", { id: 'regen-error' });
@@ -654,20 +687,6 @@ const MoodboardGenerator = () => {
               workspaceProjectName: project.name,
             },
           });
-        }}
-      />
-      <CreditConfirmModal
-        isOpen={!!confirmState}
-        cost={confirmState?.cost}
-        balance={confirmState?.balance}
-        actionLabel={confirmState?.actionLabel}
-        onCancel={() => {
-          setConfirmState(null);
-          if (confirmResolverRef.current) confirmResolverRef.current(false);
-        }}
-        onConfirm={() => {
-          setConfirmState(null);
-          if (confirmResolverRef.current) confirmResolverRef.current(true);
         }}
       />
       <TopBar />

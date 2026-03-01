@@ -1,4 +1,6 @@
 import User from '../models/User.js';
+import StripeWebhookEvent from '../models/StripeWebhookEvent.js';
+import { billingUsageService } from '../services/billingUsageService.js';
 import { stripeService } from '../services/stripeService.js';
 
 const getFrontendUrl = () => process.env.FRONTEND_URL || 'http://localhost:5173';
@@ -83,6 +85,17 @@ export const createCheckoutSession = async (req, res, next) => {
     }
 
     if (purchaseType === 'topup') {
+      const hasActiveSubscription = Boolean(
+        user.stripeSubscriptionId && ACTIVE_SUBSCRIPTION_STATUSES.includes(user.subscriptionStatus)
+      );
+      if (!hasActiveSubscription) {
+        return res.status(400).json({
+          status: 'error',
+          code: 'ACTIVE_PLAN_REQUIRED',
+          message: 'You need an active plan before buying additional credits.',
+        });
+      }
+
       const topupPlanId = planId && PLAN_CREDITS[planId] ? planId : null;
       if (!topupPlanId) {
         return res.status(400).json({
@@ -320,11 +333,15 @@ export const getBillingStatus = async (req, res, next) => {
       resolvedPlanName = priceToPlanName[stripePriceId] || 'Custom Plan';
     }
 
+    const usageSnapshot = await billingUsageService.getCurrentUsageStatus(user);
+
     return res.status(200).json({
       status: 'success',
       data: {
         customerId,
         cards,
+        billingModel: usageSnapshot?.billingModel || 'v1_credits',
+        usage: usageSnapshot?.usage || null,
         subscription: {
           subscriptionStatus: user.subscriptionStatus,
           stripeSubscriptionId: user.stripeSubscriptionId,
@@ -643,17 +660,57 @@ export const changeSubscriptionPlan = async (req, res, next) => {
 
 export const stripeWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   let event;
+
+  if (!webhookSecret) {
+    return res.status(500).json({
+      received: false,
+      message: 'STRIPE_WEBHOOK_SECRET is not configured.',
+    });
+  }
+
+  if (!sig) {
+    return res.status(400).json({
+      received: false,
+      message: 'Missing stripe-signature header.',
+    });
+  }
 
   try {
     event = stripeService.constructEvent(
       req.body,
       sig,
-      process.env.STRIPE_WEBHOOK_SECRET
+      webhookSecret
     );
   } catch (err) {
     console.error(`❌ Webhook Error: ${err.message}`);
     return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  let webhookEvent = await StripeWebhookEvent.findOne({ eventId: event.id });
+  if (webhookEvent?.status === 'success') {
+    return res.json({ received: true, duplicate: true });
+  }
+
+  if (!webhookEvent) {
+    try {
+      webhookEvent = await StripeWebhookEvent.create({
+        eventId: event.id,
+        type: event.type,
+        status: 'pending',
+      });
+    } catch (error) {
+      if (error?.code === 11000) {
+        webhookEvent = await StripeWebhookEvent.findOne({ eventId: event.id });
+        if (webhookEvent?.status === 'success') {
+          return res.json({ received: true, duplicate: true });
+        }
+      } else {
+        console.error('Webhook idempotency persistence error:', error);
+        return res.status(500).json({ received: false, message: 'Failed to persist webhook event.' });
+      }
+    }
   }
 
   try {
@@ -717,8 +774,25 @@ export const stripeWebhook = async (req, res) => {
       default:
         console.log(`Unhandled event type ${event.type}`);
     }
+
+    await StripeWebhookEvent.findOneAndUpdate(
+      { eventId: event.id },
+      {
+        status: 'success',
+        processedAt: new Date(),
+        error: null,
+      }
+    );
   } catch (err) {
     console.error('❌ Webhook processing error:', err);
+    await StripeWebhookEvent.findOneAndUpdate(
+      { eventId: event.id },
+      {
+        status: 'failed',
+        processedAt: new Date(),
+        error: String(err.message || err),
+      }
+    );
     return res.status(500).json({ received: false, message: err.message });
   }
 
@@ -762,12 +836,26 @@ async function handleCheckoutSessionCompleted(session) {
 }
 
 async function updateSubscription(subscription) {
+  const normalized = normalizeSubscriptionPayload(subscription);
+  if (!normalized.customerId) return;
+
+  await User.findOneAndUpdate(
+    { stripeCustomerId: normalized.customerId },
+    {
+      stripeSubscriptionId: normalized.stripeSubscriptionId,
+      stripePriceId: normalized.stripePriceId,
+      subscriptionStatus: normalized.subscriptionStatus,
+      subscriptionCurrentPeriodEnd: normalized.subscriptionCurrentPeriodEnd,
+      cancelAtPeriodEnd: normalized.cancelAtPeriodEnd,
+    }
+  );
+}
+
+const normalizeSubscriptionPayload = (subscription) => {
   const customerId =
     typeof subscription?.customer === 'string'
       ? subscription.customer
       : subscription?.customer?.id;
-  if (!customerId) return;
-
   const status = subscription?.status || 'none';
   const priceId = subscription?.items?.data?.[0]?.price?.id || null;
   const cancelAtPeriodEnd = Boolean(subscription?.cancel_at_period_end);
@@ -783,26 +871,29 @@ async function updateSubscription(subscription) {
       ? new Date(unixPeriodEnd * 1000)
       : null;
 
-  await User.findOneAndUpdate(
-    { stripeCustomerId: customerId },
-    {
-      stripeSubscriptionId: subscription.id,
-      stripePriceId: priceId,
-      subscriptionStatus: status,
-      subscriptionCurrentPeriodEnd: currentPeriodEnd,
-      cancelAtPeriodEnd: cancelAtPeriodEnd,
-    }
-  );
-}
+  return {
+    customerId,
+    stripeSubscriptionId: subscription?.id || null,
+    stripePriceId: priceId,
+    subscriptionStatus: status,
+    subscriptionCurrentPeriodEnd: currentPeriodEnd,
+    cancelAtPeriodEnd,
+  };
+};
 
 async function cancelSubscription(subscription) {
-  const customerId = subscription.customer;
+  const customerId =
+    typeof subscription?.customer === 'string'
+      ? subscription.customer
+      : subscription?.customer?.id;
+  if (!customerId) return;
   await User.findOneAndUpdate(
     { stripeCustomerId: customerId },
     {
       subscriptionStatus: 'canceled',
       stripeSubscriptionId: null,
       stripePriceId: null,
+      cancelAtPeriodEnd: false,
     }
   );
 }

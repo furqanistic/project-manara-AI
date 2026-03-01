@@ -1,9 +1,77 @@
 import dotenv from 'dotenv';
 import Stripe from 'stripe';
+import User from '../models/User.js';
 
 dotenv.config();
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+const stringifySafe = (value) => String(value || '').trim();
+
+const buildCustomerMetadata = (user) => {
+  const billingProfile = user?.onboardingData?.requiredProfile || {};
+  const onboardingStripeMetadata = user?.onboardingData?.stripeMetadata || {};
+
+  return {
+    userId: stringifySafe(user?._id),
+    userType: stringifySafe(onboardingStripeMetadata.userType || user?.onboardingData?.userType),
+    country: stringifySafe(onboardingStripeMetadata.country || billingProfile.country),
+    city: stringifySafe(onboardingStripeMetadata.city || billingProfile.city),
+    billingRegion: stringifySafe(onboardingStripeMetadata.billingRegion || billingProfile.billingRegion),
+  };
+};
+
+const attachCustomerIdToUser = async (user, customerId, options = {}) => {
+  const { force = false } = options;
+  if (!user?._id || !customerId) return customerId;
+  if (user.stripeCustomerId === customerId) return customerId;
+
+  try {
+    await User.updateOne(
+      force
+        ? { _id: user._id }
+        : {
+            _id: user._id,
+            $or: [
+              { stripeCustomerId: null },
+              { stripeCustomerId: { $exists: false } },
+              { stripeCustomerId: '' },
+            ],
+          },
+      {
+        $set: { stripeCustomerId: customerId },
+      }
+    );
+  } catch (error) {
+    if (error?.code !== 11000) throw error;
+  }
+
+  const refreshed = await User.findById(user._id).select('stripeCustomerId');
+  return refreshed?.stripeCustomerId || customerId;
+};
+
+const findCustomerByMetadataUserId = async (userId) => {
+  if (!userId) return null;
+  try {
+    const result = await stripe.customers.search({
+      query: `metadata['userId']:'${userId}'`,
+      limit: 1,
+    });
+    return result?.data?.[0] || null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const findCustomerByEmail = async (email) => {
+  if (!email) return null;
+  const result = await stripe.customers.list({
+    email,
+    limit: 10,
+  });
+  const activeCustomer = (result?.data || []).find((item) => !item.deleted);
+  return activeCustomer || null;
+};
 
 export const stripeService = {
   /**
@@ -50,6 +118,16 @@ export const stripeService = {
     );
   },
 
+  syncCustomerMetadata: async (user, customerId) => {
+    if (!user || !customerId) return;
+    const metadata = buildCustomerMetadata(user);
+    await stripe.customers.update(customerId, {
+      email: user.email || undefined,
+      name: user.name || undefined,
+      metadata,
+    });
+  },
+
   /**
    * Create or retrieve a Stripe customer for a user
    */
@@ -58,6 +136,7 @@ export const stripeService = {
       try {
         const existingCustomer = await stripe.customers.retrieve(user.stripeCustomerId);
         if (!existingCustomer.deleted) {
+          await stripeService.syncCustomerMetadata(user, user.stripeCustomerId);
           return user.stripeCustomerId;
         }
       } catch (error) {
@@ -65,27 +144,34 @@ export const stripeService = {
       }
     }
 
-    const billingProfile = user?.onboardingData?.requiredProfile || {};
-    const onboardingStripeMetadata = user?.onboardingData?.stripeMetadata || {};
+    const metadata = buildCustomerMetadata(user);
 
+    const metadataMatch = await findCustomerByMetadataUserId(metadata.userId);
+    if (metadataMatch?.id) {
+      const linkedCustomerId = await attachCustomerIdToUser(user, metadataMatch.id, { force: true });
+      await stripeService.syncCustomerMetadata(user, linkedCustomerId);
+      return linkedCustomerId;
+    }
+
+    const emailMatch = await findCustomerByEmail(user.email);
+    if (emailMatch?.id) {
+      const linkedCustomerId = await attachCustomerIdToUser(user, emailMatch.id, { force: true });
+      await stripeService.syncCustomerMetadata(user, linkedCustomerId);
+      return linkedCustomerId;
+    }
+
+    const idempotencyKey = `customer_create_user_${metadata.userId || user.email || Date.now()}`;
     const customer = await stripe.customers.create({
       email: user.email,
       name: user.name,
-      metadata: {
-        userId: user._id.toString(),
-        userType: String(onboardingStripeMetadata.userType || user?.onboardingData?.userType || ''),
-        country: String(onboardingStripeMetadata.country || billingProfile.country || ''),
-        city: String(onboardingStripeMetadata.city || billingProfile.city || ''),
-        billingRegion: String(
-          onboardingStripeMetadata.billingRegion || billingProfile.billingRegion || ''
-        ),
-      },
+      metadata,
+    }, {
+      idempotencyKey,
     });
 
-    user.stripeCustomerId = customer.id;
-    await user.save({ validateBeforeSave: false });
-    
-    return customer.id;
+    const linkedCustomerId = await attachCustomerIdToUser(user, customer.id);
+    await stripeService.syncCustomerMetadata(user, linkedCustomerId);
+    return linkedCustomerId;
   },
 
   /**

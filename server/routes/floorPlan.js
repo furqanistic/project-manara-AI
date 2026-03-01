@@ -1,6 +1,7 @@
 // File: server/routes/floorPlan.js
 import express from 'express'
 import multer from 'multer'
+import { consumeUsage } from '../middleware/billingUsageMiddleware.js'
 import {
     autoSave,
     createFloorPlan,
@@ -64,8 +65,16 @@ router.post('/:id/export', exportFloorPlan)
 
 // AI Generation
 router.post('/generate', generateWithAI)
-router.post('/generate-image', generateFloorPlanImage) // New image-based generation
-router.post('/edit-image', editFloorPlanImage) // New image-based editing
+router.post(
+  '/generate-image',
+  consumeUsage({ actionKey: 'floorplan_generate_image', shouldConsume: (req) => Boolean(req.body?.prompt) }),
+  generateFloorPlanImage
+) // New image-based generation
+router.post(
+  '/edit-image',
+  consumeUsage({ actionKey: 'floorplan_edit_image', shouldConsume: (req) => Boolean(req.body?.prompt && req.body?.image) }),
+  editFloorPlanImage
+) // New image-based editing
 
 // Import
 router.post('/import-image', upload.single('image'), importFromImage)

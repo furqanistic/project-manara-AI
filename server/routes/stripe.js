@@ -31,7 +31,7 @@ router.post('/subscription/resume', verifyToken, resumeSubscription);
 router.post('/subscription/change-plan', verifyToken, changeSubscriptionPlan);
 router.post('/sync-checkout-session', verifyToken, syncCheckoutSession);
 
-// Webhook must be handled with raw body - we'll config this in index.js
-router.post('/webhook', express.raw({ type: 'application/json' }), stripeWebhook);
+// Webhook raw-body handling is configured in server bootstrap (index.js)
+router.post('/webhook', stripeWebhook);
 
 export default router;

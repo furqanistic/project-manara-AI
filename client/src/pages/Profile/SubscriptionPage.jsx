@@ -98,6 +98,7 @@ const SubscriptionPage = () => {
   const [processingPlanId, setProcessingPlanId] = useState(null);
   const [subscriptionActionBusy, setSubscriptionActionBusy] = useState(null);
   const [busyCardId, setBusyCardId] = useState(null);
+  const [showAddCardPrompt, setShowAddCardPrompt] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     title: '',
@@ -253,16 +254,20 @@ const SubscriptionPage = () => {
   }, [location.pathname, location.search, navigate]);
 
   const handleAddCard = async () => {
+    const toastId = 'stripe-card-setup-loading';
     setIsAddingCard(true);
+    toast.loading('Preparing secure card setup...', { id: toastId });
     try {
       const response = await stripeService.createSetupSession();
       if (response?.url) {
+        toast.loading('Redirecting to Stripe...', { id: toastId });
         window.location.href = response.url;
         return;
       }
       throw new Error('Missing setup session URL');
     } catch (error) {
       console.error('Setup session error:', error);
+      toast.dismiss(toastId);
       toast.error(error?.response?.data?.message || 'Unable to start card setup.');
     } finally {
       setIsAddingCard(false);
@@ -305,7 +310,7 @@ const SubscriptionPage = () => {
 
   const handlePlanOperation = async (plan) => {
     if (!hasCard) {
-      toast.error('Please add at least one card before purchasing a plan.');
+      setShowAddCardPrompt(true);
       return;
     }
 
@@ -381,6 +386,11 @@ const SubscriptionPage = () => {
   };
 
   const handleChangePlan = async (plan) => {
+    if (!hasCard) {
+      setShowAddCardPrompt(true);
+      return;
+    }
+
     if (!hasSubscription) {
       await handlePlanOperation(plan);
       return;
@@ -676,6 +686,8 @@ const SubscriptionPage = () => {
                   >
                     {(subscriptionActionBusy === 'cancel_period' || subscriptionActionBusy === 'resume')
                       ? 'Updating...'
+                      : !hasSubscription
+                        ? 'No Active Plan'
                       : isCancelScheduled
                         ? 'Resume Subscription'
                         : 'Cancel At Period End'}
@@ -739,7 +751,7 @@ const SubscriptionPage = () => {
                   disabled={isAddingCard}
                   className='w-full bg-gray-900 text-white py-4 rounded-lg font-bold text-xs'
                 >
-                  {isAddingCard ? 'Opening Stripe...' : 'Add Card'}
+                  {isAddingCard ? 'Redirecting to secure checkout...' : 'Add Card'}
                 </Button>
               </div>
             </div>
@@ -815,6 +827,38 @@ const SubscriptionPage = () => {
               {Boolean(processingPlanId) || isUpdatingSubscription
                 ? 'Processing...'
                 : confirmDialog.confirmLabel || 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddCardPrompt} onOpenChange={setShowAddCardPrompt}>
+        <DialogContent className='max-w-md rounded-2xl border border-gray-200 dark:border-white/20 bg-white dark:bg-[#0f0f0f] p-6'>
+          <DialogHeader>
+            <DialogTitle className='text-lg font-bold text-gray-900 dark:text-white'>
+              Add a card to continue
+            </DialogTitle>
+            <DialogDescription className='text-sm text-gray-600 dark:text-gray-300'>
+              A payment method is required before buying, renewing, or changing your plan.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className='mt-4 gap-2 sm:justify-end'>
+            <Button
+              onClick={() => setShowAddCardPrompt(false)}
+              disabled={isAddingCard}
+              className='h-9 px-4 rounded-lg bg-transparent border border-gray-300 dark:border-white/20 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'
+            >
+              Not now
+            </Button>
+            <Button
+              onClick={async () => {
+                setShowAddCardPrompt(false);
+                await handleAddCard();
+              }}
+              disabled={isAddingCard}
+              className='h-9 px-4 rounded-lg bg-gray-900 hover:bg-black text-white'
+            >
+              {isAddingCard ? 'Preparing...' : 'Add a card'}
             </Button>
           </DialogFooter>
         </DialogContent>

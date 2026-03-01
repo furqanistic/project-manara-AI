@@ -41,10 +41,10 @@ import { toast } from 'react-hot-toast'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { getCreditsBalance, spendCredits } from '@/lib/credits'
 import { useSelector } from 'react-redux'
-import CreditConfirmModal from '@/components/Common/CreditConfirmModal'
 import BrandSpinner from '@/components/Common/BrandSpinner'
 import { useProjectFlow } from '@/hooks/useProjectFlow'
 import { useProjectWorkspace, useUpdateProject } from '@/hooks/useProjects'
+import { stripeService } from '@/services/stripeService'
 
 const STYLES = [
   { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors', color: '#de7c7c' },
@@ -143,9 +143,8 @@ const ThreedGenerator = () => {
   const [viewerExposure, setViewerExposure] = useState(1.2)
   const [viewerShadow, setViewerShadow] = useState(1)
   const [viewerRotateSpeed, setViewerRotateSpeed] = useState(30)
-  const [confirmState, setConfirmState] = useState(null)
+  const [billingModel, setBillingModel] = useState(null)
   const [showExportActions, setShowExportActions] = useState(false)
-  const confirmResolverRef = useRef(null)
   
   const fileInputRef = useRef(null)
   const chatContainerRef = useRef(null)
@@ -174,28 +173,53 @@ const ThreedGenerator = () => {
     comparisonPosition.set(percentage)
   }
 
-  const confirmCreditSpend = async (cost, actionLabel) => {
+  const ensureGenerationAccess = async (cost, actionLabel) => {
     if (!currentUser) {
       toast.error('Please sign up or log in to use this tool.')
       navigate('/auth?type=signup', { state: { from: location.pathname } })
       return false
     }
+
+    let resolvedBillingModel = billingModel
+    if (!resolvedBillingModel) {
+      try {
+        const billingStatus = await stripeService.getBillingStatus()
+        resolvedBillingModel = billingStatus?.data?.billingModel || 'v1_credits'
+        setBillingModel(resolvedBillingModel)
+      } catch (_error) {
+        resolvedBillingModel = 'v1_credits'
+      }
+    }
+
+    if (resolvedBillingModel === 'v2_subscription_usage') {
+      return true
+    }
+
     const balance = getCreditsBalance()
     if (balance < cost) {
-      toast.error('Not enough credits. Please add more credits to continue.')
+      toast.error('Not enough credits right now. Upgrade your plan to keep generating.')
       navigate('/subscription')
       return false
     }
-    const confirmed = await new Promise((resolve) => {
-      confirmResolverRef.current = resolve
-      setConfirmState({ cost, actionLabel, balance })
-    })
-    if (!confirmed) return false
+
     const result = spendCredits(cost, { action: actionLabel, tool: 'threed' })
     if (!result.ok) {
       toast.error('Not enough credits. Please add more credits to continue.')
       return false
     }
+    return true
+  }
+
+  const handleBillingLimitError = (error) => {
+    const code = error?.response?.data?.code
+    if (code !== 'USAGE_LIMIT_REACHED' && code !== 'NO_ACTIVE_PLAN') return false
+
+    toast.error(
+      error?.response?.data?.message ||
+        'You reached your current plan limit. Upgrade to continue generating.',
+      { id: 'billing-limit-3d' }
+    )
+    navigate('/subscription')
     return true
   }
 
@@ -338,7 +362,7 @@ const ThreedGenerator = () => {
     const isStyleRevision = selectedStyleHasVariant
     const cost = isStyleRevision ? revisionCost : initialRenderCost
     const actionLabel = isStyleRevision ? '3D render revision' : '3D render generation'
-    if (!(await confirmCreditSpend(cost, actionLabel))) return
+    if (!(await ensureGenerationAccess(cost, actionLabel))) return
 
     setIsGenerating(true)
     setUploadProgress(0)
@@ -441,6 +465,10 @@ const ThreedGenerator = () => {
         }
       }
     } catch (err) {
+      if (handleBillingLimitError(err)) {
+        if (isIteration) setChatHistory(prev => [...prev, { role: 'error', content: 'Your plan limit was reached.' }])
+        return
+      }
       toast.error(err.response?.data?.message || 'Synthesis failed', { id: 'gen-error' })
       if (isIteration) setChatHistory(prev => [...prev, { role: 'error', content: 'Neural engine error.' }])
     } finally {
@@ -591,6 +619,10 @@ const ThreedGenerator = () => {
         startPolling(meshyTaskId, currentProjectId)
       }
     } catch (err) {
+      if (handleBillingLimitError(err)) {
+        setIsConvertingTo3D(false)
+        return
+      }
       toast.error(err.response?.data?.message || '3D conversion failed', { id: 'meshy-error' })
       setIsConvertingTo3D(false)
     }
@@ -855,20 +887,6 @@ const ThreedGenerator = () => {
               workspaceProjectName: project.name,
             },
           })
-        }}
-      />
-      <CreditConfirmModal
-        isOpen={!!confirmState}
-        cost={confirmState?.cost}
-        balance={confirmState?.balance}
-        actionLabel={confirmState?.actionLabel}
-        onCancel={() => {
-          setConfirmState(null)
-          if (confirmResolverRef.current) confirmResolverRef.current(false)
-        }}
-        onConfirm={() => {
-          setConfirmState(null)
-          if (confirmResolverRef.current) confirmResolverRef.current(true)
         }}
       />
       <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>

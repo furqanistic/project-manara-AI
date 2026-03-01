@@ -1,6 +1,7 @@
 // File: server/routes/moodboard.js - ADD THIS ROUTE
 
 import express from 'express'
+import { consumeUsage } from '../middleware/billingUsageMiddleware.js'
 import {
   createMoodboard,
   deleteMoodboard,
@@ -56,7 +57,7 @@ router.get('/:id', getMoodboardById)
  * POST /api/moodboards/:id/generate
  * Generate moodboard image (Phase 1 - fast, returns image immediately)
  */
-router.post('/:id/generate', generateMoodboardImages)
+router.post('/:id/generate', consumeUsage({ actionKey: 'moodboard_generate' }), generateMoodboardImages)
 
 /**
  * POST /api/moodboards/:id/generate-descriptions
@@ -68,7 +69,7 @@ router.post('/:id/generate-descriptions', generateMoodboardDescriptions)
  * POST /api/moodboards/:id/regenerate
  * Regenerate specific images in a moodboard (creates new variation)
  */
-router.post('/:id/regenerate', regenerateMoodboardImages)
+router.post('/:id/regenerate', consumeUsage({ actionKey: 'moodboard_regenerate' }), regenerateMoodboardImages)
 
 /**
  * POST /api/moodboards/:id/edit

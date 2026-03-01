@@ -1,5 +1,6 @@
 import express from 'express'
 import multer from 'multer'
+import { consumeUsage } from '../middleware/billingUsageMiddleware.js'
 import {
     deleteThreeDModel,
     generate3D,
@@ -38,9 +39,23 @@ router.get('/meshy/proxy', proxyMeshyModel)
 
 router.use(verifyToken)
 
-router.post('/generate', upload.single('image'), generate3D)
-router.post('/visualize', upload.single('image'), generateVisualization)
-router.post('/meshy/generate', generateMeshy3D)
+router.post(
+  '/generate',
+  upload.single('image'),
+  consumeUsage({ actionKey: 'threed_generate', shouldConsume: (req) => Boolean(req.file || req.body?.image) }),
+  generate3D
+)
+router.post(
+  '/visualize',
+  upload.single('image'),
+  consumeUsage({ actionKey: 'threed_visualize', shouldConsume: (req) => Boolean(req.file || req.body?.image) }),
+  generateVisualization
+)
+router.post(
+  '/meshy/generate',
+  consumeUsage({ actionKey: 'threed_meshy_generate', shouldConsume: (req) => Boolean(req.body?.image) }),
+  generateMeshy3D
+)
 router.get('/meshy/status/:taskId', getMeshyStatus)
 router.get('/my-models', getMyThreeDModels)
 router.get('/projects/:id', getThreeDModel)

@@ -38,9 +38,9 @@ import TopBar from '../../components/Layout/Topbar'
 import api from '../../config/config'
 import { getCreditsBalance, spendCredits } from '@/lib/credits'
 import { useSelector } from 'react-redux'
-import CreditConfirmModal from '@/components/Common/CreditConfirmModal'
 import ProjectSelectionModal from '@/components/Common/ProjectSelectionModal'
 import BrandSpinner from '@/components/Common/BrandSpinner'
+import { stripeService } from '@/services/stripeService'
 
 const BUILDING_TYPES = [
   { id: 'apartment', label: 'Apartment', icon: Layout },
@@ -105,8 +105,7 @@ const FloorPlanGenerator = () => {
     windowPlacements: '',
   })
   const [guardrailErrors, setGuardrailErrors] = useState({})
-  const [confirmState, setConfirmState] = useState(null)
-  const confirmResolverRef = useRef(null)
+  const [billingModel, setBillingModel] = useState(null)
   const location = useLocation()
   const navigate = useNavigate()
   const { id } = useParams()
@@ -138,28 +137,52 @@ const FloorPlanGenerator = () => {
   const initialGenerationCost = 4
   const revisionCost = 1
 
-  const confirmCreditSpend = async (cost, actionLabel) => {
+  const ensureGenerationAccess = async (cost, actionLabel) => {
     if (!currentUser) {
       toast.error('Please sign up or log in to use this tool.')
       navigate('/auth?type=signup', { state: { from: location.pathname } })
       return false
     }
+
+    let resolvedBillingModel = billingModel
+    if (!resolvedBillingModel) {
+      try {
+        const billingStatus = await stripeService.getBillingStatus()
+        resolvedBillingModel = billingStatus?.data?.billingModel || 'v1_credits'
+        setBillingModel(resolvedBillingModel)
+      } catch (_error) {
+        resolvedBillingModel = 'v1_credits'
+      }
+    }
+
+    if (resolvedBillingModel === 'v2_subscription_usage') {
+      return true
+    }
+
     const balance = getCreditsBalance()
     if (balance < cost) {
-      toast.error('Not enough credits. Please add more credits to continue.')
+      toast.error('Not enough credits right now. Upgrade your plan to keep generating.')
       navigate('/subscription')
       return false
     }
-    const confirmed = await new Promise((resolve) => {
-      confirmResolverRef.current = resolve
-      setConfirmState({ cost, actionLabel, balance })
-    })
-    if (!confirmed) return false
+
     const result = spendCredits(cost, { action: actionLabel, tool: 'floorplan' })
     if (!result.ok) {
       toast.error('Not enough credits. Please add more credits to continue.')
       return false
     }
+    return true
+  }
+
+  const handleBillingLimitError = (error) => {
+    const code = error?.response?.data?.code
+    if (code !== 'USAGE_LIMIT_REACHED' && code !== 'NO_ACTIVE_PLAN') return false
+    toast.error(
+      error?.response?.data?.message ||
+        'You reached your current plan limit. Upgrade to continue generating.',
+      { id: 'billing-limit-floorplan' }
+    )
+    navigate('/subscription')
     return true
   }
 
@@ -354,7 +377,7 @@ const FloorPlanGenerator = () => {
 
     const cost = generatedImage ? revisionCost : initialGenerationCost
     const actionLabel = generatedImage ? 'Floor plan revision' : 'Floor plan generation'
-    if (!(await confirmCreditSpend(cost, actionLabel))) return
+    if (!(await ensureGenerationAccess(cost, actionLabel))) return
 
     setIsGenerating(true)
     if (step === 'config') setStep('result')
@@ -412,6 +435,10 @@ const FloorPlanGenerator = () => {
         content: generatedImage ? "I've updated the layout for you." : `Your ${config.buildingType} plan is ready!` 
       }])
     } catch (err) {
+      if (handleBillingLimitError(err)) {
+        setChatHistory(prev => [...prev, { role: 'error', content: 'Your plan limit was reached.' }])
+        return
+      }
       toast.error(err.response?.data?.message || 'Synthesis failed', { id: 'gen-error' })
       setChatHistory(prev => [...prev, { role: 'error', content: 'Connection to AI designer interrupted.' }])
     } finally {
@@ -545,20 +572,6 @@ const FloorPlanGenerator = () => {
               workspaceProjectName: project.name,
             },
           })
-        }}
-      />
-      <CreditConfirmModal
-        isOpen={!!confirmState}
-        cost={confirmState?.cost}
-        balance={confirmState?.balance}
-        actionLabel={confirmState?.actionLabel}
-        onCancel={() => {
-          setConfirmState(null)
-          if (confirmResolverRef.current) confirmResolverRef.current(false)
-        }}
-        onConfirm={() => {
-          setConfirmState(null)
-          if (confirmResolverRef.current) confirmResolverRef.current(true)
         }}
       />
       <div className='h-screen overflow-hidden bg-[#FDFCFB] dark:bg-[#070707] text-[#1D1D1F] dark:text-[#F5F5F7] font-sans transition-colors duration-500 flex flex-col'>
