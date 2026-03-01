@@ -1,6 +1,7 @@
 import TopBar from '@/components/Layout/Topbar'
 import { ThreeDRenderHistory } from '@/components/ThreeDRender/ThreeDRenderHistory'
 import ProjectSelectionModal from '@/components/Common/ProjectSelectionModal'
+import PostExportActionsModal from '@/components/ProjectFlow/PostExportActionsModal'
 import api from '@/config/config'
 import { downloadImage } from '@/lib/downloadUtils'
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
@@ -42,6 +43,8 @@ import { getCreditsBalance, spendCredits } from '@/lib/credits'
 import { useSelector } from 'react-redux'
 import CreditConfirmModal from '@/components/Common/CreditConfirmModal'
 import BrandSpinner from '@/components/Common/BrandSpinner'
+import { useProjectFlow } from '@/hooks/useProjectFlow'
+import { useProjectWorkspace, useUpdateProject } from '@/hooks/useProjects'
 
 const STYLES = [
   { id: 'colorful', label: 'Vibrant Color', description: 'Distinct colors', color: '#de7c7c' },
@@ -67,6 +70,29 @@ const LOADING_PHASES = [
   "Simulating lighting...",
   "Rendering textures...",
   "Finalizing design..."
+]
+
+const REFINE_PRESETS = [
+  {
+    id: 'wall_alignment',
+    label: 'Wall alignment',
+    prompt: 'Refine wall alignment to match the floor plan precisely. Correct offsets and make wall joins clean.'
+  },
+  {
+    id: 'zone_proportion',
+    label: 'Zone proportion',
+    prompt: 'Adjust room zone proportions to better reflect intended dimensions and circulation paths.'
+  },
+  {
+    id: 'openings_windows',
+    label: 'Openings focus',
+    prompt: 'Improve openings accuracy with emphasis on window and door placements from the provided plan.'
+  },
+  {
+    id: 'material_detail',
+    label: 'Material detail',
+    prompt: 'Refine material realism and architectural detailing while keeping overall layout unchanged.'
+  },
 ]
 
 const ThreedGenerator = () => {
@@ -104,6 +130,9 @@ const ThreedGenerator = () => {
   const [chatHistory, setChatHistory] = useState([])
   const [currentProjectId, setCurrentProjectId] = useState(null)
   const [workspaceProjectId, setWorkspaceProjectId] = useState(initialWorkspaceProjectId)
+  const { data: workspaceData } = useProjectWorkspace(workspaceProjectId)
+  const { flow } = useProjectFlow(workspaceProjectId, workspaceData)
+  const updateProjectMutation = useUpdateProject()
   
   // 3D Viewer Control States
   const [showHelp, setShowHelp] = useState(false)
@@ -115,6 +144,7 @@ const ThreedGenerator = () => {
   const [viewerShadow, setViewerShadow] = useState(1)
   const [viewerRotateSpeed, setViewerRotateSpeed] = useState(30)
   const [confirmState, setConfirmState] = useState(null)
+  const [showExportActions, setShowExportActions] = useState(false)
   const confirmResolverRef = useRef(null)
   
   const fileInputRef = useRef(null)
@@ -286,6 +316,17 @@ const ThreedGenerator = () => {
       return
     }
 
+    const guardrails = flow?.floorPlanGuardrails || {}
+    const missingGuardrails = []
+    if (!guardrails.dimensions?.trim()) missingGuardrails.push('dimensions')
+    if (!guardrails.ceilingHeight?.trim()) missingGuardrails.push('ceiling height')
+    if (!guardrails.windowPlacements?.trim()) missingGuardrails.push('window placements')
+
+    if (missingGuardrails.length > 0) {
+      toast.error(`Complete required guardrails before 3D generation: ${missingGuardrails.join(', ')}`)
+      return
+    }
+
     const isIteration = step === 'result' || !!overriddenPrompt || !!prompt.trim();
     const currentPrompt = overriddenPrompt || prompt;
 
@@ -311,9 +352,10 @@ const ThreedGenerator = () => {
 
     try {
       const stylePrompt = STYLE_PROMPTS[selectedStyle] || STYLE_PROMPTS.architectural
+      const guardrailContext = `Accuracy guardrails: dimensions ${guardrails.dimensions}; ceiling height ${guardrails.ceilingHeight}; window placements ${guardrails.windowPlacements}.`
       const composedPrompt = currentPrompt.trim()
-        ? `${currentPrompt}\n\n${BASE_3D_PROMPT}\n${stylePrompt}`
-        : `${BASE_3D_PROMPT}\n${stylePrompt}`
+        ? `${currentPrompt}\n\n${BASE_3D_PROMPT}\n${stylePrompt}\n${guardrailContext}`
+        : `${BASE_3D_PROMPT}\n${stylePrompt}\n${guardrailContext}`
 
       const payload = {
         image: sourceImage,
@@ -379,9 +421,23 @@ const ThreedGenerator = () => {
         
         if (isIteration && currentPrompt.trim() && step === 'result') {
           setChatHistory(prev => [...prev, { role: 'assistant', content: 'Design updated based on your request.' }])
+          if (workspaceProjectId) {
+            const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), 'refine_3d'])
+            updateProjectMutation.mutate({
+              id: workspaceProjectId,
+              data: { flow: { completedStepIds: Array.from(completedStepIds) } },
+            })
+          }
         } else {
           setStep('result')
           toast.success('3D visualization ready', { id: 'gen-success' })
+          if (workspaceProjectId) {
+            const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), 'generate_3d'])
+            updateProjectMutation.mutate({
+              id: workspaceProjectId,
+              data: { flow: { completedStepIds: Array.from(completedStepIds) } },
+            })
+          }
         }
       }
     } catch (err) {
@@ -560,6 +616,22 @@ const ThreedGenerator = () => {
     
     if (success) {
       toast.success("Download started", { id: toastId })
+      setShowExportActions(true)
+      if (workspaceProjectId) {
+        const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), 'export_outputs'])
+        updateProjectMutation.mutate({
+          id: workspaceProjectId,
+          data: {
+            flow: {
+              completedStepIds: Array.from(completedStepIds),
+              export: {
+                exportedAt: new Date().toISOString(),
+                exportedFrom: 'threed',
+              },
+            },
+          },
+        })
+      }
     } else {
       toast.error("Download failed", { id: toastId })
     }
@@ -586,6 +658,22 @@ const ThreedGenerator = () => {
       document.body.removeChild(link)
       window.URL.revokeObjectURL(url)
       toast.success('Download started!', { id: 'download-glb' })
+      setShowExportActions(true)
+      if (workspaceProjectId) {
+        const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), 'export_outputs'])
+        updateProjectMutation.mutate({
+          id: workspaceProjectId,
+          data: {
+            flow: {
+              completedStepIds: Array.from(completedStepIds),
+              export: {
+                exportedAt: new Date().toISOString(),
+                exportedFrom: 'threed',
+              },
+            },
+          },
+        })
+      }
     } catch (err) {
       console.error('Download error:', err)
       // Fallback
@@ -601,6 +689,22 @@ const ThreedGenerator = () => {
       link.target = "_blank"
       link.click()
       toast.success('Download opened in new tab', { id: 'download-glb' })
+      setShowExportActions(true)
+      if (workspaceProjectId) {
+        const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), 'export_outputs'])
+        updateProjectMutation.mutate({
+          id: workspaceProjectId,
+          data: {
+            flow: {
+              completedStepIds: Array.from(completedStepIds),
+              export: {
+                exportedAt: new Date().toISOString(),
+                exportedFrom: 'threed',
+              },
+            },
+          },
+        })
+      }
     }
   }
 
@@ -731,6 +835,13 @@ const ThreedGenerator = () => {
 
   return (
     <>
+      <PostExportActionsModal
+        open={showExportActions}
+        onClose={() => setShowExportActions(false)}
+        onContinueRefining={() => setShowExportActions(false)}
+        onCreateNewProject={() => navigate('/projects')}
+        onUpgrade={() => navigate('/subscription')}
+      />
       <ProjectSelectionModal
         open={shouldShowProjectModal}
         title='Select Project For 3D Builder'
@@ -796,7 +907,6 @@ const ThreedGenerator = () => {
               </button>
             </div>
           </div>
-
           <div className='flex-1 overflow-hidden relative flex flex-col'>
             {step === 'config' ? (
               <div className='flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide'>
@@ -922,6 +1032,21 @@ const ThreedGenerator = () => {
                   >
                     {isGenerating ? 'Generating...' : selectedStyleHasVariant ? `Regenerate ${selectedStyle}` : `Generate ${selectedStyle}`}
                   </button>
+                </div>
+                <div className='rounded-xl border border-[#E5E5E7] dark:border-white/10 bg-white dark:bg-white/5 p-3 space-y-2'>
+                  <p className='text-[10px] font-black uppercase tracking-widest text-gray-500'>Refine Presets</p>
+                  <div className='grid grid-cols-2 gap-2'>
+                    {REFINE_PRESETS.map((preset) => (
+                      <button
+                        key={preset.id}
+                        onClick={() => handleGenerate(preset.prompt)}
+                        disabled={isGenerating || !sourceImage || !selectedStyleHasVariant}
+                        className='rounded-lg border border-gray-200 px-2 py-2 text-[10px] font-semibold text-gray-700 transition hover:border-[#8d775e]/50 hover:bg-[#8d775e]/5 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:text-gray-200'
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 {chatHistory.length === 0 ? (
                   <div className='flex-1 flex flex-col items-center justify-center text-center p-6 space-y-4 opacity-50'>

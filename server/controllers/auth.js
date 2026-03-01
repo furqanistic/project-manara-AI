@@ -595,10 +595,118 @@ export const logout = async (req, res, next) => {
   }
 };
 
+const ONBOARDING_QUESTION_IDS_BY_USER_TYPE = {
+  homeowner: ["owner_status", "volume", "duration"],
+  interior_designer: ["owner_status", "volume", "duration"],
+  business_developer: ["owner_status", "volume", "duration"],
+};
+
+const ALLOWED_USER_TYPES = Object.keys(ONBOARDING_QUESTION_IDS_BY_USER_TYPE);
+
 export const completeOnboarding = async (req, res, next) => {
   try {
     const userId = req.user._id;
-    const onboardingData = req.body;
+    const {
+      userType,
+      qualification = {},
+      requiredProfile = {},
+      stripeMetadata = {},
+      flow = {},
+    } = req.body || {};
+
+    if (!ALLOWED_USER_TYPES.includes(userType)) {
+      return next(
+        createError(
+          400,
+          "Please choose a valid user type: homeowner, interior_designer, or business_developer"
+        )
+      );
+    }
+
+    const questions = Array.isArray(qualification.questions)
+      ? qualification.questions
+      : [];
+
+    if (questions.length !== 3) {
+      return next(createError(400, "Exactly 3 qualification questions are required"));
+    }
+
+    const expectedQuestionIds =
+      ONBOARDING_QUESTION_IDS_BY_USER_TYPE[userType] || [];
+    const receivedQuestionIds = questions.map((question) => question?.id);
+    const hasExpectedQuestionSet =
+      expectedQuestionIds.length === 3 &&
+      expectedQuestionIds.every((id) => receivedQuestionIds.includes(id));
+
+    if (!hasExpectedQuestionSet) {
+      return next(createError(400, "Qualification questions do not match selected user type"));
+    }
+
+    const allQuestionsAnswered = questions.every(
+      (question) =>
+        question &&
+        typeof question.prompt === "string" &&
+        question.prompt.trim().length > 0 &&
+        typeof question.answer === "string" &&
+        question.answer.trim().length > 0
+    );
+
+    if (!allQuestionsAnswered) {
+      return next(createError(400, "All qualification questions must be answered"));
+    }
+
+    const country = String(requiredProfile.country || "").trim();
+    const city = String(requiredProfile.city || "").trim();
+    const billingRegion = String(requiredProfile.billingRegion || "").trim();
+    const emailConfirmed = requiredProfile.emailConfirmed === true;
+
+    if (!country || !city || !billingRegion) {
+      return next(createError(400, "Country, city, and intended billing region are required"));
+    }
+
+    if (!emailConfirmed) {
+      return next(
+        createError(400, "Email confirmation is required before finishing onboarding")
+      );
+    }
+
+    const completionSeconds = Number(qualification.completionSeconds || 0);
+    const sanitizedCompletionSeconds =
+      Number.isFinite(completionSeconds) && completionSeconds > 0
+        ? Math.round(completionSeconds)
+        : null;
+
+    const onboardingData = {
+      userType,
+      qualification: {
+        questions: questions.map((question) => ({
+          id: question.id,
+          prompt: String(question.prompt).trim(),
+          answer: String(question.answer).trim(),
+        })),
+        completionSeconds: sanitizedCompletionSeconds,
+      },
+      requiredProfile: {
+        country,
+        city,
+        billingRegion,
+        emailConfirmed: true,
+      },
+      stripeMetadata: {
+        userType,
+        country,
+        city,
+        billingRegion,
+        ...(stripeMetadata && typeof stripeMetadata === "object" ? stripeMetadata : {}),
+      },
+      flow: {
+        version: flow.version || "onboarding-v2",
+        basicComplete: true,
+        qualificationComplete: true,
+        billingComplete: true,
+        avatarComplete: false,
+      },
+    };
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -647,6 +755,7 @@ export const uploadAvatar = async (req, res, next) => {
       style: meta.style || "",
       seed: meta.seed || "",
       palette: meta.palette || "",
+      accessory: meta.accessory || "",
       url: cloudinaryResult.secure_url,
       publicId: cloudinaryResult.public_id,
       completed: true,
@@ -663,7 +772,7 @@ export const uploadAvatar = async (req, res, next) => {
             ...(existingOnboarding.flow || {}),
             avatarComplete: true,
             basicComplete: true,
-            version: "simplified-v1",
+            version: existingOnboarding.flow?.version || "onboarding-v2",
           },
         },
       },

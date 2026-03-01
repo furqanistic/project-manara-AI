@@ -4,11 +4,14 @@ import BeautifulLoader from "@/components/Moodboard/BeautifulLoader.jsx";
 import { MoodboardHistory } from "@/components/Moodboard/MoodboardHistory";
 import { ResultView } from "@/components/Moodboard/ResultView.jsx";
 import { StepSpace } from "@/components/Moodboard/StepSpace.jsx";
+import MoodboardRefinementFields from "@/components/ProjectFlow/MoodboardRefinementFields";
+import PostExportActionsModal from "@/components/ProjectFlow/PostExportActionsModal";
 import {
     useCreateMoodboard,
     useGenerateMoodboard,
     useGenerateMoodboardDescriptions,
 } from "@/hooks/useMoodboard";
+import { useProjectWorkspace, useUpdateProject } from "@/hooks/useProjects";
 import { downloadImage } from '@/lib/downloadUtils';
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -57,10 +60,18 @@ const MoodboardGenerator = () => {
   const [generationPhase, setGenerationPhase] = useState(null); // 'image' or 'descriptions'
   const [showHistory, setShowHistory] = useState(false); // NEW: History modal state
   const [confirmState, setConfirmState] = useState(null);
+  const [showExportActions, setShowExportActions] = useState(false);
+  const [refinementFields, setRefinementFields] = useState({
+    budgetRange: "",
+    stylePreference: "",
+    lightingMood: "",
+    colorPreference: "",
+  });
   const confirmResolverRef = React.useRef(null);
   const createMutation = useCreateMoodboard();
   const generateMutation = useGenerateMoodboard();
   const generateDescriptionsMutation = useGenerateMoodboardDescriptions();
+  const updateProjectMutation = useUpdateProject();
   const navigate = useNavigate();
   const location = useLocation();
   const initialWorkspaceProjectId =
@@ -68,6 +79,7 @@ const MoodboardGenerator = () => {
     new URLSearchParams(location.search).get("projectId") ||
     null;
   const [workspaceProjectId, setWorkspaceProjectId] = useState(initialWorkspaceProjectId);
+  const { data: workspaceData } = useProjectWorkspace(workspaceProjectId);
   const { currentUser } = useSelector((state) => state.user);
   const generationCost = 1;
   const revisionCost = 1;
@@ -142,6 +154,17 @@ const MoodboardGenerator = () => {
       );
       const paletteColors = selectedPalette ? selectedPalette.colors : [];
 
+      const refinementPromptParts = [
+        refinementFields.budgetRange ? `Budget range: ${refinementFields.budgetRange}` : "",
+        refinementFields.stylePreference ? `Style preference: ${refinementFields.stylePreference}` : "",
+        refinementFields.lightingMood ? `Lighting mood: ${refinementFields.lightingMood}` : "",
+        refinementFields.colorPreference ? `Color preference: ${refinementFields.colorPreference}` : "",
+      ].filter(Boolean)
+
+      const refinementPrompt = refinementPromptParts.length
+        ? `Refinement constraints: ${refinementPromptParts.join(". ")}.`
+        : ""
+
       const createPayload = {
         title: `${selectedStyle || "Modern"} ${selectedSpace}`,
         style: styleValue,
@@ -149,7 +172,7 @@ const MoodboardGenerator = () => {
         projectId: workspaceProjectId,
         colorPreferences: [selectedColor],
         paletteColors: paletteColors, // Pass the hex colors
-        customPrompt: changes.trim(),
+        customPrompt: `${changes.trim()} ${refinementPrompt}`.trim(),
         layout: "collage",
         imageCount: 1,
         // Let AI choose aspect ratio naturally
@@ -160,7 +183,7 @@ const MoodboardGenerator = () => {
 
       setProgressSteps(["Moodboard created", "Generating image..."]);
 
-      const enhancedCustomPrompt = `${changes.trim()}. Color scheme: ${colorDescription}`;
+      const enhancedCustomPrompt = `${changes.trim()}. Color scheme: ${colorDescription}. ${refinementPrompt}`.trim();
 
       const generatePayload = {
         customPrompt: enhancedCustomPrompt,
@@ -184,6 +207,19 @@ const MoodboardGenerator = () => {
       setGenerationPhase(null);
       toast.success("Moodboard image ready! Loading details...", { id: 'image-ready' });
       navigate(`/moodboards/${moodboardId}`);
+
+      if (workspaceProjectId) {
+        const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), "generate_moodboard"])
+        await updateProjectMutation.mutateAsync({
+          id: workspaceProjectId,
+          data: {
+            flow: {
+              completedStepIds: Array.from(completedStepIds),
+              moodboardRefinement: refinementFields,
+            },
+          },
+        })
+      }
 
       // ========== PHASE 2: Generate Descriptions (Background) ==========
       // Start Phase 2 immediately but don't block the UI
@@ -219,7 +255,7 @@ const MoodboardGenerator = () => {
     }
   };
 
-  const handleRegenerate = async () => {
+  const handleRegenerate = async (extraPrompt = "") => {
     if (!currentMoodboard) {
       toast.error("No moodboard to regenerate", { id: 'no-moodboard' });
       return;
@@ -230,8 +266,17 @@ const MoodboardGenerator = () => {
       setLoadingState("generating");
 
       const colorDescription = getColorDescriptionForPalette(selectedColor);
+      const refinementPromptParts = [
+        refinementFields.budgetRange ? `Budget range: ${refinementFields.budgetRange}` : "",
+        refinementFields.stylePreference ? `Style preference: ${refinementFields.stylePreference}` : "",
+        refinementFields.lightingMood ? `Lighting mood: ${refinementFields.lightingMood}` : "",
+        refinementFields.colorPreference ? `Color preference: ${refinementFields.colorPreference}` : "",
+      ].filter(Boolean)
+      const refinementPrompt = refinementPromptParts.length
+        ? `Refinement constraints: ${refinementPromptParts.join(". ")}.`
+        : ""
       const enhancedCustomPrompt = changes.trim()
-        ? `${changes.trim()}. Color scheme: ${colorDescription}`
+        ? `${changes.trim()}. Color scheme: ${colorDescription}. ${refinementPrompt} ${extraPrompt}`.trim()
         : currentMoodboard.prompt;
 
       const generatePayload = {
@@ -248,6 +293,19 @@ const MoodboardGenerator = () => {
       setCurrentMoodboard(generateResult.data.moodboard);
       setLoadingState(null);
       toast.success("Moodboard regenerated successfully!");
+
+      if (workspaceProjectId) {
+        const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), "refine_moodboard"])
+        await updateProjectMutation.mutateAsync({
+          id: workspaceProjectId,
+          data: {
+            flow: {
+              completedStepIds: Array.from(completedStepIds),
+              moodboardRefinement: refinementFields,
+            },
+          },
+        })
+      }
     } catch (error) {
       console.error("Regeneration error:", error);
       setLoadingState(null);
@@ -271,6 +329,22 @@ const MoodboardGenerator = () => {
     
     if (success) {
       toast.success("Image downloaded successfully!", { id: toastId });
+      setShowExportActions(true);
+      if (workspaceProjectId) {
+        const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), "export_outputs"])
+        updateProjectMutation.mutate({
+          id: workspaceProjectId,
+          data: {
+            flow: {
+              completedStepIds: Array.from(completedStepIds),
+              export: {
+                exportedAt: new Date().toISOString(),
+                exportedFrom: "moodboard",
+              },
+            },
+          },
+        })
+      }
     } else {
       toast.error("Download failed", { id: toastId });
     }
@@ -459,6 +533,7 @@ const MoodboardGenerator = () => {
         .replace(/^_+|_+$/g, "");
       pdf.save(`Manara_Project_${safeLabel || "Project"}.pdf`);
       toast.success("PDF downloaded successfully!", { id: "pdf-generation" });
+      setShowExportActions(true);
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error("Failed to generate PDF", { id: "pdf-generation" });
@@ -572,6 +647,13 @@ const MoodboardGenerator = () => {
         }}
       />
       <TopBar />
+      <PostExportActionsModal
+        open={showExportActions}
+        onClose={() => setShowExportActions(false)}
+        onContinueRefining={() => setShowExportActions(false)}
+        onCreateNewProject={() => navigate('/projects')}
+        onUpgrade={() => navigate('/subscription')}
+      />
       {loadingState === "generating" && (
         <BeautifulLoader
           progressSteps={progressSteps}
@@ -601,6 +683,8 @@ const MoodboardGenerator = () => {
             setSelectedColor={setSelectedColor}
             changes={changes}
             setChanges={setChanges}
+            refinementFields={refinementFields}
+            setRefinementFields={setRefinementFields}
             onGenerate={handleGenerate}
             isGenerating={isGenerating}
           />
@@ -608,6 +692,9 @@ const MoodboardGenerator = () => {
           <ResultView
             currentMoodboard={currentMoodboard}
             onRegenerate={handleRegenerate}
+            onRegenerateElement={(element) =>
+              handleRegenerate(`Focus this regeneration on ${element} while preserving overall composition.`)
+            }
             onDownload={downloadMoodboardImage}
             onDownloadPDF={downloadMoodboardPDF}
             onBackToCreate={() => setCurrentStep(0)}
@@ -661,6 +748,8 @@ const WizardFlow = ({
   setSelectedColor,
   changes,
   setChanges,
+  refinementFields,
+  setRefinementFields,
   onGenerate,
   isGenerating,
 }) => {
@@ -746,6 +835,8 @@ const WizardFlow = ({
                     setSelectedColor={setSelectedColor}
                     changes={changes}
                     setChanges={setChanges}
+                    refinementFields={refinementFields}
+                    setRefinementFields={setRefinementFields}
                   />
                 )}
               </div>
@@ -860,6 +951,8 @@ const StepColorsAndVision = ({
   setSelectedColor,
   changes,
   setChanges,
+  refinementFields,
+  setRefinementFields,
 }) => {
   const suggestions = [
     "Natural lighting", "Minimalist furniture", "Indoor plants",
@@ -934,6 +1027,15 @@ const StepColorsAndVision = ({
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-bold text-gray-900 mb-3">
+              Optional Refinement Questions
+            </label>
+            <MoodboardRefinementFields
+              value={refinementFields}
+              onChange={setRefinementFields}
+            />
+          </div>
           <div>
             <label className="block text-sm font-bold text-gray-900 mb-3">
               Your Design Vision *

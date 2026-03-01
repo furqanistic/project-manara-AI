@@ -15,6 +15,45 @@ import {
     processFloorPlanImage,
 } from '../services/imageProcessingService.js'
 
+const DATA_URI_REGEX = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/i
+
+const normalizeGeminiImageInput = async (image, fallbackMimeType = 'image/png') => {
+  if (!image || typeof image !== 'string') {
+    throw new Error('Invalid image payload')
+  }
+
+  const trimmed = image.trim()
+
+  const dataUriMatch = trimmed.match(DATA_URI_REGEX)
+  if (dataUriMatch) {
+    return {
+      mimeType: dataUriMatch[1] || fallbackMimeType,
+      base64Data: dataUriMatch[2],
+    }
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    const response = await fetch(trimmed)
+    if (!response.ok) {
+      throw new Error('Failed to fetch source image URL for editing')
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    const contentType = response.headers.get('content-type') || fallbackMimeType
+    const base64Data = Buffer.from(arrayBuffer).toString('base64')
+
+    return {
+      mimeType: contentType,
+      base64Data,
+    }
+  }
+
+  return {
+    mimeType: fallbackMimeType,
+    base64Data: trimmed.replace(/\s/g, ''),
+  }
+}
+
 export const createFloorPlan = async (req, res, next) => {
   try {
     const { name, data, projectId } = req.body
@@ -378,7 +417,14 @@ export const autoSave = async (req, res, next) => {
 
 export const generateFloorPlanImage = async (req, res, next) => {
   try {
-    const { prompt, aspectRatio = '1:1', projectId, name } = req.body
+    const {
+      prompt,
+      aspectRatio = '1:1',
+      projectId,
+      name,
+      referenceImage = null,
+      referenceMimeType = 'image/png',
+    } = req.body
 
     if (!prompt) {
       return next(createError(400, 'Prompt is required'))
@@ -397,7 +443,29 @@ export const generateFloorPlanImage = async (req, res, next) => {
 
     console.log('Generating floor plan image with prompt:', enhancedPrompt)
 
-    const result = await generateImage(enhancedPrompt, [], aspectRatio)
+    let referenceImages = []
+    if (referenceImage) {
+      const normalizedReference = await normalizeGeminiImageInput(referenceImage, referenceMimeType)
+      const referenceLooksLikeUrl = /^https?:\/\//i.test((referenceImage || '').trim())
+
+      if (!referenceLooksLikeUrl) {
+        try {
+          const sourceDataUri = `data:${normalizedReference.mimeType};base64,${normalizedReference.base64Data}`
+          await uploadImage(sourceDataUri, 'manara-ai/floorplans/source-images')
+        } catch (uploadErr) {
+          console.warn('Reference floor plan upload skipped:', uploadErr?.message || uploadErr)
+        }
+      }
+
+      referenceImages = [
+        {
+          data: normalizedReference.base64Data,
+          mimeType: normalizedReference.mimeType,
+        },
+      ]
+    }
+
+    const result = await generateImage(enhancedPrompt, referenceImages, aspectRatio)
 
 
     if (!result.images || result.images.length === 0) {
@@ -440,7 +508,7 @@ export const generateFloorPlanImage = async (req, res, next) => {
 
 export const editFloorPlanImage = async (req, res, next) => {
   try {
-    const { prompt, image, aspectRatio = '1:1' } = req.body
+    const { prompt, image, aspectRatio = '1:1', mimeType = 'image/png' } = req.body
 
     if (!prompt) {
       return next(createError(400, 'Prompt is required'))
@@ -450,14 +518,26 @@ export const editFloorPlanImage = async (req, res, next) => {
     }
 
     console.log('Editing floor plan image with prompt:', prompt)
-    
-    // image comes as base64 string usually from frontend
-    // remove data:image/png;base64, prefix if present
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
+    const normalizedInput = await normalizeGeminiImageInput(image, mimeType)
+    const sourceLooksLikeUrl = /^https?:\/\//i.test((image || '').trim())
 
-    const strictEditPrompt = `STRICT: Modify this 2D FLOOR PLAN only. Keep the top-down architectural view. User Request: ${prompt}`
+    if (!sourceLooksLikeUrl) {
+      try {
+        const sourceDataUri = `data:${normalizedInput.mimeType};base64,${normalizedInput.base64Data}`
+        await uploadImage(sourceDataUri, 'manara-ai/floorplans/source-images')
+      } catch (uploadErr) {
+        console.warn('Source floor plan upload skipped:', uploadErr?.message || uploadErr)
+      }
+    }
 
-    const result = await editImage(strictEditPrompt, base64Data, 'image/png', aspectRatio)
+    const strictEditPrompt = `STRICT: Modify this 2D FLOOR PLAN only. Keep the top-down architectural view and preserve architectural readability. User Request: ${prompt}`
+
+    const result = await editImage(
+      strictEditPrompt,
+      normalizedInput.base64Data,
+      normalizedInput.mimeType,
+      aspectRatio
+    )
 
     if (!result.images || result.images.length === 0) {
       throw new Error('No image generated')

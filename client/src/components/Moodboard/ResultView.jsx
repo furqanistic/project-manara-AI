@@ -150,6 +150,7 @@ const UnifiedView = ({ moodboard, generationPhase }) => {
 export const ResultView = ({
   currentMoodboard,
   onRegenerate,
+  onRegenerateElement,
   onDownload,
   onBackToCreate,
   loadingState,
@@ -256,6 +257,21 @@ export const ResultView = ({
                 </button>
               </div>
 
+              <div className="mt-6">
+                <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#8d775e]">Regenerate Element</p>
+                <div className="flex flex-wrap gap-2">
+                  {['walls', 'furniture', 'textiles', 'lighting', 'decor'].map((element) => (
+                    <button
+                      key={element}
+                      onClick={() => onRegenerateElement?.(element)}
+                      className="rounded-full border border-gray-200 px-3 py-1.5 text-[11px] font-semibold text-readable-secondary transition hover:border-[#8d775e] hover:text-[#8d775e] dark:border-white/10"
+                    >
+                      {element}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="mt-12 space-y-6 pt-10 border-t border-gray-50 dark:border-white/5">
                  <div>
                     <span className="text-[9px] font-bold text-readable-muted uppercase tracking-widest block mb-1">Architecture</span>
@@ -285,16 +301,26 @@ export const ResultView = ({
 
 const EditModal = ({ moodboard, onClose, onSave }) => {
   const [editPrompt, setEditPrompt] = useState("");
+  const [stylePreference, setStylePreference] = useState("");
+  const [lightingMood, setLightingMood] = useState("");
+  const [colorPreference, setColorPreference] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
   const handleEdit = async () => {
     if (!editPrompt.trim()) return toast.error("Description required");
     setIsEditing(true);
     try {
+      const scopedPrompt = [
+        editPrompt.trim(),
+        stylePreference ? `Style preference: ${stylePreference}` : "",
+        lightingMood ? `Lighting mood: ${lightingMood}` : "",
+        colorPreference ? `Color preference: ${colorPreference}` : "",
+      ].filter(Boolean).join(". ")
+
       const resp = await fetch(`/api/moodboards/${moodboard._id}/edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imageIndex: 0, editPrompt: editPrompt.trim() }),
+        body: JSON.stringify({ imageIndex: 0, editPrompt: scopedPrompt }),
       });
       const data = await resp.json();
       if (data.status === "success") {
@@ -310,7 +336,12 @@ const EditModal = ({ moodboard, onClose, onSave }) => {
       <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} onClick={e => e.stopPropagation()} className="bg-white dark:bg-[#111] rounded-[40px] p-10 max-w-xl w-full border border-white/5 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-[#8d775e]/10 rounded-full blur-[80px] -mr-32 -mt-32 pointer-events-none" />
         <h2 className="text-3xl font-bold mb-6 text-gray-900 dark:text-white relative z-10">Refine <span className="text-[#8d775e] italic">Vision.</span></h2>
-        <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} className="w-full h-40 bg-gray-50 dark:bg-white/5 p-6 rounded-3xl border border-gray-100 dark:border-white/10 focus:ring-2 focus:ring-[#8d775e]/20 mb-6 relative z-10 transition-all font-medium" placeholder="Describe adjustments..." />
+        <textarea value={editPrompt} onChange={e => setEditPrompt(e.target.value)} className="w-full h-32 bg-gray-50 dark:bg-white/5 p-4 rounded-2xl border border-gray-100 dark:border-white/10 focus:ring-2 focus:ring-[#8d775e]/20 mb-4 relative z-10 transition-all font-medium" placeholder="Describe adjustments..." />
+        <div className="mb-6 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <input value={stylePreference} onChange={(e) => setStylePreference(e.target.value)} placeholder="Style preference" className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5" />
+          <input value={lightingMood} onChange={(e) => setLightingMood(e.target.value)} placeholder="Lighting mood" className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5" />
+          <input value={colorPreference} onChange={(e) => setColorPreference(e.target.value)} placeholder="Color preference" className="rounded-xl border border-gray-100 bg-gray-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5" />
+        </div>
         <div className="flex gap-4 relative z-10">
           <button onClick={onClose} className="flex-1 py-4 font-bold text-readable-muted hover:text-readable-primary transition-all">Cancel</button>
           <button onClick={handleEdit} disabled={isEditing || !editPrompt} className="flex-[2] py-4 bg-[#8d775e] text-white font-bold rounded-2xl disabled:opacity-50 shadow-lg shadow-[#8d775e]/20 flex items-center justify-center gap-3">

@@ -65,11 +65,20 @@ export const stripeService = {
       }
     }
 
+    const billingProfile = user?.onboardingData?.requiredProfile || {};
+    const onboardingStripeMetadata = user?.onboardingData?.stripeMetadata || {};
+
     const customer = await stripe.customers.create({
       email: user.email,
       name: user.name,
       metadata: {
         userId: user._id.toString(),
+        userType: String(onboardingStripeMetadata.userType || user?.onboardingData?.userType || ''),
+        country: String(onboardingStripeMetadata.country || billingProfile.country || ''),
+        city: String(onboardingStripeMetadata.city || billingProfile.city || ''),
+        billingRegion: String(
+          onboardingStripeMetadata.billingRegion || billingProfile.billingRegion || ''
+        ),
       },
     });
 

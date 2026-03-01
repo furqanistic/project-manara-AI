@@ -3,6 +3,13 @@ import FloorPlan from '../models/FloorPlan.js'
 import Moodboard from '../models/Moodboard.js'
 import Project from '../models/Project.js'
 import ThreeDModel from '../models/ThreeDModel.js'
+import {
+  DEFAULT_PROJECT_FLOW,
+  deriveFlowFromAssets,
+  getFlowProgress,
+  mergeProjectFlow,
+  normalizeProjectFlow,
+} from '../utils/projectFlow.js'
 
 const sanitizeName = (value = '') => value.toString().trim().replace(/\s+/g, ' ')
 
@@ -18,6 +25,7 @@ export const createProject = async (req, res, next) => {
       userId: req.user.id,
       name,
       description: req.body?.description?.trim() || '',
+      flow: normalizeProjectFlow(DEFAULT_PROJECT_FLOW),
     })
 
     res.status(201).json({
@@ -81,6 +89,8 @@ export const getUserProjects = async (req, res, next) => {
           threed,
           total: moodboards + floorplans + threed,
         },
+        flow: normalizeProjectFlow(project.flow || DEFAULT_PROJECT_FLOW),
+        flowProgress: getFlowProgress(project.flow || DEFAULT_PROJECT_FLOW),
       }
     })
 
@@ -124,12 +134,21 @@ export const getProjectWorkspace = async (req, res, next) => {
     res.status(200).json({
       status: 'success',
       data: {
-        project,
+        project: {
+          ...project,
+          flow: deriveFlowFromAssets({ flow: project.flow || DEFAULT_PROJECT_FLOW, assets: { moodboards, floorplans, threed } }),
+        },
         assets: {
           moodboards,
           floorplans,
           threed,
         },
+        flowProgress: getFlowProgress(
+          deriveFlowFromAssets({
+            flow: project.flow || DEFAULT_PROJECT_FLOW,
+            assets: { moodboards, floorplans, threed },
+          })
+        ),
       },
     })
   } catch (error) {
@@ -140,25 +159,43 @@ export const getProjectWorkspace = async (req, res, next) => {
 
 export const updateProject = async (req, res, next) => {
   try {
-    const name = sanitizeName(req.body?.name)
+    const hasName = typeof req.body?.name === 'string'
+    const name = hasName ? sanitizeName(req.body?.name) : null
 
-    if (!name) {
+    if (hasName && !name) {
       return next(createError(400, 'Project name is required'))
     }
 
-    const project = await Project.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user.id, isDeleted: false },
-      { name, description: req.body?.description?.trim() || '' },
-      { new: true }
-    )
+    const project = await Project.findOne({
+      _id: req.params.id,
+      userId: req.user.id,
+      isDeleted: false,
+    })
 
     if (!project) {
       return next(createError(404, 'Project not found'))
     }
 
+    if (hasName) {
+      project.name = name
+    }
+
+    if (typeof req.body?.description === 'string') {
+      project.description = req.body.description.trim()
+    }
+
+    if (req.body?.flow && typeof req.body.flow === 'object') {
+      project.flow = mergeProjectFlow(project.flow || DEFAULT_PROJECT_FLOW, req.body.flow)
+    }
+
+    await project.save()
+
     res.status(200).json({
       status: 'success',
-      data: project,
+      data: {
+        ...project.toObject(),
+        flow: normalizeProjectFlow(project.flow || DEFAULT_PROJECT_FLOW),
+      },
     })
   } catch (error) {
     console.error('Error updating project:', error)

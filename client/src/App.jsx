@@ -9,9 +9,11 @@ import {
     Route,
     Routes,
     useLocation,
+    useNavigate,
 } from 'react-router-dom'
 import { PersistGate } from 'redux-persist/integration/react'
 import AvatarCreationModal from './components/Auth/AvatarCreationModal'
+import FirstProjectPromptModal from './components/Auth/FirstProjectPromptModal'
 import OnboardingModal from './components/Auth/OnboardingModal'
 import ScrollToTop from './components/Layout/ScrollToTop'
 import { MoodboardHistoryDetails } from './components/Moodboard/MoodboardHistoryDetails'
@@ -70,10 +72,13 @@ const RequireAuth = ({ children, requireAdmin = false }) => {
 const OnboardingWrapper = () => {
   const { currentUser } = useSelector((state) => state.user);
   const location = useLocation();
+  const navigate = useNavigate();
+  const FIRST_PROJECT_PROMPT_KEY = 'manara_first_project_prompt_pending';
 
   const hasSimplifiedOnboarding = !!currentUser?.onboardingData?.flow?.basicComplete;
   const hasLegacyOnboarding = !!currentUser?.onboardingData?.identity;
   const hasAvatar = !!currentUser?.onboardingData?.avatar?.completed;
+  const [showFirstProjectPrompt, setShowFirstProjectPrompt] = React.useState(false);
 
   // Debug logging for troubleshooting
   useEffect(() => {
@@ -89,6 +94,20 @@ const OnboardingWrapper = () => {
     }
   }, [currentUser, location.pathname, hasSimplifiedOnboarding, hasLegacyOnboarding, hasAvatar]);
 
+  useEffect(() => {
+    if (!currentUser || !hasAvatar) {
+      setShowFirstProjectPrompt(false);
+      return;
+    }
+
+    const shouldPrompt = window.localStorage.getItem(FIRST_PROJECT_PROMPT_KEY) === '1';
+    setShowFirstProjectPrompt(shouldPrompt);
+
+    if (shouldPrompt && location.pathname === '/') {
+      navigate('/projects', { replace: true });
+    }
+  }, [currentUser, hasAvatar, location.pathname, navigate]);
+
   // Don't show if not logged in
   if (!currentUser) {
     return null;
@@ -98,6 +117,17 @@ const OnboardingWrapper = () => {
   if (location.pathname === '/auth') {
     return null;
   }
+
+  const handleAvatarComplete = () => {
+    window.localStorage.setItem(FIRST_PROJECT_PROMPT_KEY, '1');
+    setShowFirstProjectPrompt(true);
+  };
+
+  const handleStartProject = () => {
+    window.localStorage.removeItem(FIRST_PROJECT_PROMPT_KEY);
+    setShowFirstProjectPrompt(false);
+    navigate('/projects');
+  };
 
   if (!hasSimplifiedOnboarding && !hasLegacyOnboarding) {
     return (
@@ -110,7 +140,15 @@ const OnboardingWrapper = () => {
   if (!hasAvatar) {
     return (
       <React.Suspense fallback={null}>
-        <AvatarCreationModal />
+        <AvatarCreationModal onComplete={handleAvatarComplete} />
+      </React.Suspense>
+    );
+  }
+
+  if (showFirstProjectPrompt) {
+    return (
+      <React.Suspense fallback={null}>
+        <FirstProjectPromptModal onStartProject={handleStartProject} />
       </React.Suspense>
     );
   }

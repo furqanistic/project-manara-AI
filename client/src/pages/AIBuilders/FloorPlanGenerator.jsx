@@ -1,4 +1,6 @@
 import { downloadImage } from '@/lib/downloadUtils'
+import FloorPlanGuardrailsForm from '@/components/ProjectFlow/FloorPlanGuardrailsForm'
+import PostExportActionsModal from '@/components/ProjectFlow/PostExportActionsModal'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
     ArrowLeft,
@@ -22,12 +24,14 @@ import {
     Share2,
     Sparkles,
     Trash2,
+    Upload,
     Wand2,
     X
 } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'react-hot-toast'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { useProjectWorkspace, useUpdateProject } from '@/hooks/useProjects'
 import { FloorPlanHistory } from '../../components/FloorPlan/FloorPlanHistory'
 import TopBar from '../../components/Layout/Topbar'
 import api from '../../config/config'
@@ -91,6 +95,13 @@ const FloorPlanGenerator = () => {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [showHistoryMobile, setShowHistoryMobile] = useState(false)
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false)
+  const [showExportActions, setShowExportActions] = useState(false)
+  const [guardrails, setGuardrails] = useState({
+    dimensions: '',
+    ceilingHeight: '',
+    windowPlacements: '',
+  })
+  const [guardrailErrors, setGuardrailErrors] = useState({})
   const [confirmState, setConfirmState] = useState(null)
   const confirmResolverRef = useRef(null)
   const location = useLocation()
@@ -101,6 +112,8 @@ const FloorPlanGenerator = () => {
     new URLSearchParams(location.search).get('projectId') ||
     null
   const [workspaceProjectId, setWorkspaceProjectId] = useState(initialWorkspaceProjectId)
+  const { data: workspaceData } = useProjectWorkspace(workspaceProjectId)
+  const updateProjectMutation = useUpdateProject()
   
   const [generatedImage, setGeneratedImage] = useState(() => {
     if (location.state?.reset) return null;
@@ -113,9 +126,10 @@ const FloorPlanGenerator = () => {
     const saved = localStorage.getItem('fp_chatHistory')
     return saved ? JSON.parse(saved) : []
   })
+  const [referenceImage, setReferenceImage] = useState(null)
   
   const chatContainerRef = useRef(null)
-  const fileInputRef = useRef(null)
+  const referenceInputRef = useRef(null)
   const initialGenerationCost = 4
   const revisionCost = 1
 
@@ -160,10 +174,10 @@ const FloorPlanGenerator = () => {
     }
   }, [chatHistory])
 
-  const processImageFile = (file) => {
+  const processReferenceImageFile = (file) => {
     if (!file) return
     if (!file.type?.startsWith('image/')) {
-      toast.error('Please upload an image file')
+      toast.error('Please upload a reference image')
       return
     }
 
@@ -171,17 +185,19 @@ const FloorPlanGenerator = () => {
     reader.onload = (event) => {
       const dataUrl = event.target?.result
       if (typeof dataUrl !== 'string') return
-
-      setGeneratedImage({ url: dataUrl, mimeType: file.type || 'image/png' })
-      setStep('result')
-      toast.success('Image loaded')
+      setReferenceImage({
+        url: dataUrl,
+        mimeType: file.type || 'image/png',
+        name: file.name || 'reference-image',
+      })
+      toast.success('Reference image added')
     }
     reader.readAsDataURL(file)
   }
 
-  const handleFileSelect = (e) => {
+  const handleReferenceFileSelect = (e) => {
     const file = e.target.files?.[0]
-    processImageFile(file)
+    processReferenceImageFile(file)
     if (e.target) {
       e.target.value = ''
     }
@@ -205,7 +221,7 @@ const FloorPlanGenerator = () => {
 
       event.preventDefault()
       const file = imageItem.getAsFile()
-      processImageFile(file)
+      processReferenceImageFile(file)
     }
 
     window.addEventListener('paste', handlePaste)
@@ -238,6 +254,16 @@ const FloorPlanGenerator = () => {
     }
   }, [location.state, location.search, workspaceProjectId]);
 
+  useEffect(() => {
+    const serverGuardrails = workspaceData?.data?.project?.flow?.floorPlanGuardrails
+    if (!serverGuardrails) return
+    setGuardrails({
+      dimensions: serverGuardrails.dimensions || '',
+      ceilingHeight: serverGuardrails.ceilingHeight || '',
+      windowPlacements: serverGuardrails.windowPlacements || '',
+    })
+  }, [workspaceData?.data?.project?.flow?.floorPlanGuardrails])
+
   // Handle direct ID loading
   useEffect(() => {
     const loadProjectById = async () => {
@@ -260,6 +286,7 @@ const FloorPlanGenerator = () => {
 
   const handleNewProject = () => {
     setGeneratedImage(null)
+    setReferenceImage(null)
     setChatHistory([])
     setStep('config')
     setConfig({ ...config, prompt: '' })
@@ -272,7 +299,13 @@ const FloorPlanGenerator = () => {
   }
 
   const handleGenerate = async (overriddenPrompt = null) => {
-    const currentPrompt = overriddenPrompt || config.prompt
+    const typedPrompt = config.prompt
+    const currentPrompt = overriddenPrompt || typedPrompt
+
+    if (!overriddenPrompt) {
+      setConfig((prev) => ({ ...prev, prompt: '' }))
+    }
+
     if (!currentPrompt.trim() && !overriddenPrompt) {
       toast.error("Please describe your vision", { id: 'missing-prompt' })
       return
@@ -284,8 +317,15 @@ const FloorPlanGenerator = () => {
 
     setIsGenerating(true)
     if (step === 'config') setStep('result')
-    
-    const displayPrompt = overriddenPrompt || `${config.buildingType} ${config.scale} plan in ${config.style} style: ${currentPrompt}`
+    const guardrailsContext = [
+      guardrails.dimensions?.trim() ? `Dimensions: ${guardrails.dimensions.trim()}` : '',
+      guardrails.ceilingHeight?.trim() ? `Ceiling height: ${guardrails.ceilingHeight.trim()}` : '',
+      guardrails.windowPlacements?.trim() ? `Window placements: ${guardrails.windowPlacements.trim()}` : '',
+    ].filter(Boolean).join('. ')
+
+    const displayPrompt =
+      overriddenPrompt ||
+      `Create/refine a ${config.buildingType} ${config.scale} floor plan in ${config.style} style. Request: ${currentPrompt}. ${guardrailsContext ? `Guardrails: ${guardrailsContext}.` : ''}`.trim()
     setChatHistory(prev => [...prev, { role: 'user', content: displayPrompt }])
 
     try {
@@ -298,11 +338,14 @@ const FloorPlanGenerator = () => {
             name: workspaceProjectId
               ? `${config.buildingType} ${config.scale} Floor Plan`
               : undefined,
+            referenceImage: referenceImage?.url || undefined,
+            referenceMimeType: referenceImage?.mimeType || undefined,
         })
       } else {
         response = await api.post('/floorplans/edit-image', { 
-          prompt: currentPrompt, 
+          prompt: displayPrompt,
           image: generatedImage.url || generatedImage.data, 
+          mimeType: generatedImage.mimeType || 'image/png',
           aspectRatio: '1:1' 
         })
       }
@@ -311,6 +354,18 @@ const FloorPlanGenerator = () => {
       if (!image) throw new Error('Generation failed')
 
       setGeneratedImage(image)
+      if (workspaceProjectId && !generatedImage) {
+        const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), 'upload_floorplan'])
+        await updateProjectMutation.mutateAsync({
+          id: workspaceProjectId,
+          data: {
+            flow: {
+              completedStepIds: Array.from(completedStepIds),
+              floorPlanGuardrails: guardrails,
+            },
+          },
+        })
+      }
       setChatHistory(prev => [...prev, { 
         role: 'assistant', 
         content: generatedImage ? "I've updated the layout for you." : `Your ${config.buildingType} plan is ready!` 
@@ -320,7 +375,6 @@ const FloorPlanGenerator = () => {
       setChatHistory(prev => [...prev, { role: 'error', content: 'Connection to AI designer interrupted.' }])
     } finally {
       setIsGenerating(false)
-      setConfig(prev => ({ ...prev, prompt: '' }))
     }
   }
 
@@ -344,9 +398,34 @@ const FloorPlanGenerator = () => {
     
     if (success) {
       toast.success("Download started", { id: toastId })
+      setShowExportActions(true)
+      if (workspaceProjectId) {
+        const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), 'export_outputs'])
+        updateProjectMutation.mutate({
+          id: workspaceProjectId,
+          data: {
+            flow: {
+              completedStepIds: Array.from(completedStepIds),
+              export: {
+                exportedAt: new Date().toISOString(),
+                exportedFrom: 'floorplan',
+              },
+            },
+          },
+        })
+      }
     } else {
       toast.error("Download failed", { id: toastId })
     }
+  }
+
+  const validateGuardrails = () => {
+    const nextErrors = {}
+    if (!guardrails.dimensions.trim()) nextErrors.dimensions = 'Dimensions are required'
+    if (!guardrails.ceilingHeight.trim()) nextErrors.ceilingHeight = 'Ceiling height is required'
+    if (!guardrails.windowPlacements.trim()) nextErrors.windowPlacements = 'Window placements are required'
+    setGuardrailErrors(nextErrors)
+    return Object.keys(nextErrors).length === 0
   }
 
   const loadFromHistory = (item) => {
@@ -364,7 +443,23 @@ const FloorPlanGenerator = () => {
 
   const handleConvertTo3D = () => {
     if (!generatedImage) return
+    if (!validateGuardrails()) {
+      toast.error('Complete required guardrails before generating 3D')
+      return
+    }
     const imageUrl = generatedImage.url || `data:${generatedImage.mimeType || 'image/png'};base64,${generatedImage.data}`
+    if (workspaceProjectId) {
+      const completedStepIds = new Set([...(workspaceData?.data?.project?.flow?.completedStepIds || []), 'generate_3d'])
+      updateProjectMutation.mutate({
+        id: workspaceProjectId,
+        data: {
+          flow: {
+            completedStepIds: Array.from(completedStepIds),
+            floorPlanGuardrails: guardrails,
+          },
+        },
+      })
+    }
     navigate('/visualizer', {
       state: {
         sourceImage: imageUrl,
@@ -388,6 +483,13 @@ const FloorPlanGenerator = () => {
 
   return (
     <>
+      <PostExportActionsModal
+        open={showExportActions}
+        onClose={() => setShowExportActions(false)}
+        onContinueRefining={() => setShowExportActions(false)}
+        onCreateNewProject={() => navigate('/projects')}
+        onUpgrade={() => navigate('/subscription')}
+      />
       <ProjectSelectionModal
         open={shouldShowProjectModal}
         title='Select Project For Floor Plan Builder'
@@ -466,7 +568,6 @@ const FloorPlanGenerator = () => {
               </button>
             </div>
           </div>
-
           <div className='flex-1 overflow-hidden relative flex flex-col'>
             {step === 'config' ? (
               <div className='flex-1 overflow-y-auto p-5 space-y-6 scrollbar-hide'>
@@ -475,6 +576,58 @@ const FloorPlanGenerator = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className='space-y-6'
               >
+                <section className='space-y-2'>
+                  <p className='text-[10px] font-black uppercase tracking-widest text-readable-muted'>Upload Guidance</p>
+                  <div className='rounded-xl border border-dashed border-gray-200 p-3 text-[11px] text-readable-secondary dark:border-white/10'>
+                    Supported inputs: empty 2D floor plan, sketch, or blueprint image.
+                  </div>
+                </section>
+
+                <section className='space-y-2'>
+                  <div className='flex items-center justify-between gap-2'>
+                    <p className='text-[10px] font-black uppercase tracking-widest text-readable-muted'>Reference Image</p>
+                    <button
+                      type='button'
+                      onClick={() => referenceInputRef.current?.click()}
+                      className='inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1 text-[10px] font-semibold text-readable-primary hover:bg-gray-50 dark:border-white/10 dark:bg-white/5'
+                    >
+                      <Upload size={12} />
+                      Upload
+                    </button>
+                  </div>
+                  <input
+                    ref={referenceInputRef}
+                    type='file'
+                    accept='image/*'
+                    onChange={handleReferenceFileSelect}
+                    className='hidden'
+                  />
+                  {referenceImage ? (
+                    <div className='rounded-xl border border-gray-200 bg-white p-2 dark:border-white/10 dark:bg-white/5'>
+                      <div className='mb-2 flex items-center justify-between'>
+                        <p className='truncate text-[10px] font-semibold text-readable-primary'>{referenceImage.name || 'Reference'}</p>
+                        <button
+                          type='button'
+                          onClick={() => setReferenceImage(null)}
+                          className='rounded-md p-1 text-readable-muted hover:bg-gray-100 dark:hover:bg-white/10'
+                          aria-label='Remove reference image'
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                      <img
+                        src={referenceImage.url}
+                        alt='Reference floor plan'
+                        className='h-28 w-full rounded-lg object-cover'
+                      />
+                    </div>
+                  ) : (
+                    <p className='text-[10px] text-readable-secondary'>
+                      Add a floor-plan/sketch reference here. It will be sent to Gemini during generation.
+                    </p>
+                  )}
+                </section>
+
                 {/* Building Type */}
                 <section className='space-y-3'>
                   <label className='text-[10px] font-black uppercase tracking-widest text-readable-muted'>Type</label>
@@ -542,6 +695,12 @@ const FloorPlanGenerator = () => {
                     ))}
                   </div>
                 </section>
+
+                <FloorPlanGuardrailsForm
+                  value={guardrails}
+                  onChange={setGuardrails}
+                  errors={guardrailErrors}
+                />
               </motion.div>
               </div>
             ) : (
@@ -583,17 +742,17 @@ const FloorPlanGenerator = () => {
                   value={config.prompt}
                   onChange={(e) => setConfig({ ...config, prompt: e.target.value })}
                   placeholder={step === 'config' ? `Tell us more about your ${config.buildingType}...` : "What would you like to change?"}
-                  className='w-full bg-gray-100 dark:bg-white/5 border-none rounded-xl pl-4 pr-10 py-3 h-11 text-[12px] text-readable-primary placeholder:text-readable-muted focus:ring-1 focus:ring-[#8d775e]/50 transition-all font-medium'
+                  className='w-full bg-gray-100 dark:bg-white/5 border-none rounded-xl pl-4 pr-24 py-3 h-11 text-[12px] text-readable-primary placeholder:text-readable-muted focus:ring-1 focus:ring-[#8d775e]/50 transition-all font-medium'
                   onKeyDown={(e) => e.key === 'Enter' && handleGenerate()}
                 />
                 <button 
                   onClick={() => handleGenerate()}
                   disabled={isGenerating || (step === 'config' && !config.prompt.trim())}
                   className={`
-                    absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg flex items-center justify-center transition-all bg-[#8d775e] text-white hover:scale-105 active:scale-95 disabled:opacity-20
+                    absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg px-3 h-8 text-[10px] font-black uppercase tracking-wide flex items-center justify-center transition-all bg-[#8d775e] text-white hover:scale-105 active:scale-95 disabled:opacity-20
                   `}
                 >
-                  {isGenerating ? <Loader2 size={14} className='animate-spin' /> : <ArrowRight size={16} />}
+                  {isGenerating ? <Loader2 size={14} className='animate-spin' /> : 'Generate'}
                 </button>
                </div>
                {step === 'result' && (
@@ -601,8 +760,17 @@ const FloorPlanGenerator = () => {
                     {['Add Balcony', 'Open Plan', 'Luxury Bath'].map((tag) => (
                       <button 
                         key={tag}
-                        onClick={() => handleGenerate(`Requesting ${tag}`)}
+                       onClick={() => handleGenerate(`Requesting ${tag}`)}
                         className='shrink-0 px-2.5 py-1 bg-gray-100 dark:bg-white/10 rounded-lg text-[9px] font-black text-readable-muted hover:text-[#8d775e] transition-colors whitespace-nowrap'
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                    {['Adjust wall placement', 'Modify dimensions', 'Regenerate kitchen zone'].map((tag) => (
+                      <button
+                        key={tag}
+                        onClick={() => handleGenerate(tag)}
+                        className='shrink-0 px-2.5 py-1 bg-[#8d775e]/10 rounded-lg text-[9px] font-black text-[#8d775e] transition-colors whitespace-nowrap'
                       >
                         {tag}
                       </button>
@@ -678,26 +846,11 @@ const FloorPlanGenerator = () => {
                     <div className='space-y-2'>
                       <h3 className='text-xl font-black italic tracking-tighter'>Let's design your space.</h3>
                       <p className='text-readable-secondary text-xs leading-relaxed'>
-                        Select your {config.buildingType} details on the left to get started.
+                        Set your {config.buildingType} details and reference image on the left, then click generate.
                       </p>
-                      <div className='pt-3 space-y-2'>
-                        <button
-                          onClick={() => fileInputRef.current?.click()}
-                          className='px-4 py-2 rounded-lg bg-[#8d775e] text-white text-[11px] font-bold uppercase tracking-wide hover:opacity-90 transition'
-                        >
-                          Upload floor plan image
-                        </button>
-                        <p className='text-[10px] text-readable-muted'>
-                          Or press Ctrl/Cmd + V to paste from clipboard
-                        </p>
-                        <input
-                          ref={fileInputRef}
-                          type='file'
-                          accept='image/*'
-                          onChange={handleFileSelect}
-                          className='hidden'
-                        />
-                      </div>
+                      <p className='pt-3 text-[10px] text-readable-muted'>
+                        Tip: Ctrl/Cmd + V will add a reference image to the left panel.
+                      </p>
                     </div>
                   </motion.div>
                 )}

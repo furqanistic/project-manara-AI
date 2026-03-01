@@ -176,7 +176,7 @@ const AvatarCreationModal = ({
       <MotionDiv
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="relative w-full max-w-3xl h-[680px] max-h-[90vh] bg-white dark:bg-[#0a0a0a] rounded-[40px] shadow-2xl shadow-black/50 overflow-hidden border border-gray-100 dark:border-white/5"
+        className="relative w-full max-w-2xl h-[82vh] md:h-[600px] max-h-[90vh] bg-white dark:bg-[#0a0a0a] rounded-[40px] shadow-2xl shadow-black/50 overflow-hidden border border-gray-100 dark:border-white/5"
         onWheel={(event) => event.stopPropagation()}
         onTouchMove={(event) => event.stopPropagation()}
       >
@@ -211,21 +211,21 @@ const AvatarCreationModal = ({
           />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] h-full">
-          <div className="hidden lg:flex flex-col p-10 border-r border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02]">
-            <div className="mb-10">
-              <div className="w-12 h-12 rounded-2xl bg-[#8d775e] flex items-center justify-center text-white mb-4 shadow-lg shadow-[#8d775e]/20">
-                <User size={22} />
+        <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] h-full">
+          <div className="hidden lg:flex flex-col p-6 border-r border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-white/[0.02]">
+            <div className="mb-8">
+              <div className="w-10 h-10 rounded-xl bg-[#8d775e] flex items-center justify-center text-white mb-3 shadow-lg shadow-[#8d775e]/20">
+                <User size={18} />
               </div>
-              <h3 className="text-xl font-bold dark:text-white">Avatar Studio</h3>
+              <h3 className="text-lg font-bold dark:text-white">Avatar Studio</h3>
               <p className="text-[10px] font-bold text-[#8d775e] uppercase tracking-[0.2em] mt-1">
                 Step {step} of {totalSteps}
               </p>
             </div>
 
-            <div className="mt-auto space-y-6 text-xs text-gray-500">
-              <div className="p-4 rounded-2xl bg-white dark:bg-black/30 border border-gray-100 dark:border-white/10">
-                <Sparkles className="w-6 h-6 text-[#8d775e] mb-3" />
+            <div className="mt-auto space-y-3 text-[11px] text-gray-500">
+              <div className="p-3 rounded-xl bg-white dark:bg-black/30 border border-gray-100 dark:border-white/10">
+                <Sparkles className="w-5 h-5 text-[#8d775e] mb-2" />
                 <p className="leading-relaxed">
                   Your avatar represents your taste. We use it to personalize inspiration and AI renders.
                 </p>
@@ -237,20 +237,20 @@ const AvatarCreationModal = ({
             </div>
           </div>
 
-          <div className="flex flex-col p-6 sm:p-8 lg:p-10 h-full min-h-0">
-            <div className="flex items-center justify-between mb-4 sm:mb-6">
+          <div className="flex flex-col p-5 sm:p-6 lg:p-7 h-full min-h-0">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#8d775e]">
                   Avatar
                 </p>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                   {step === 1 && "Pick your style aura"}
-                  {step === 2 && "Choose palette + accessory"}
+                  {step === 2 && "Choose palette"}
                   {step === 3 && "Name your avatar"}
                 </h2>
               </div>
               <div className="hidden sm:flex items-center gap-4">
-                <div className="w-28 h-28 lg:w-32 lg:h-32 rounded-[28px] bg-white/70 dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-xl flex items-center justify-center overflow-hidden">
+                <div className="w-24 h-24 lg:w-28 lg:h-28 rounded-2xl bg-white/70 dark:bg-white/5 border border-gray-100 dark:border-white/10 shadow-xl flex items-center justify-center overflow-hidden">
                   {avatarDataUri ? (
                     <img src={avatarDataUri} alt="Avatar preview" className="w-full h-full object-cover" />
                   ) : (
@@ -268,39 +268,81 @@ const AvatarCreationModal = ({
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
-                  className="space-y-4 sm:space-y-6"
-                >
-                  {step === 1 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                      {styleOptions.map((style) => (
-                        <button
-                          key={style.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedStyle(style.id);
-                            setErrors((prev) => ({ ...prev, style: "" }));
-                          }}
-                          className={`p-4 rounded-3xl border text-left transition-all ${
-                            selectedStyle === style.id
-                              ? "bg-[#8d775e]/10 border-[#8d775e] shadow-xl shadow-[#8d775e]/10"
-                              : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10"
-                          }`}
-                        >
-                          <p className={`font-bold mb-1 ${selectedStyle === style.id ? "text-[#8d775e]" : "text-gray-900 dark:text-white"}`}>{style.label}</p>
-                          <p className="text-[10px] text-gray-400 uppercase tracking-widest">{style.desc}</p>
-                        </button>
-                      ))}
-                      {errors.style && (
-                        <p className="text-red-500 text-xs font-semibold uppercase">{errors.style}</p>
-                      )}
+                className="space-y-3 sm:space-y-4"
+              >
+                {step === 1 && (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                      {styleOptions.map((style) => {
+                        const isSelected = selectedStyle === style.id;
+
+                        return (
+                          <button
+                            key={style.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedStyle(style.id);
+                              setErrors((prev) => ({ ...prev, style: "" }));
+                            }}
+                            className={`group relative p-3 rounded-xl border text-left transition-all ${
+                              isSelected
+                                ? "bg-[#8d775e]/10 border-[#8d775e]/50 shadow-lg shadow-[#8d775e]/10"
+                                : "bg-white dark:bg-white/5 border-gray-100 dark:border-white/10 hover:border-[#8d775e]/25"
+                            }`}
+                          >
+                            <div className="absolute right-2.5 top-2.5">
+                              <span
+                                className={`block h-2.5 w-2.5 rounded-full border ${
+                                  isSelected
+                                    ? "bg-[#8d775e] border-[#8d775e]"
+                                    : "bg-transparent border-gray-300 dark:border-white/20"
+                                }`}
+                              />
+                            </div>
+
+                            <div className="pr-4">
+                              <p
+                                className={`text-sm font-bold mb-1 ${
+                                  isSelected ? "text-[#8d775e]" : "text-gray-900 dark:text-white"
+                                }`}
+                              >
+                                {style.label}
+                              </p>
+                              <p className="text-[10px] text-gray-500 uppercase tracking-[0.12em]">
+                                {style.desc}
+                              </p>
+                            </div>
+
+                          </button>
+                        );
+                      })}
                     </div>
+
+                    {errors.style && (
+                      <p className="text-red-500 text-xs font-semibold uppercase">{errors.style}</p>
+                    )}
+                  </div>
                   )}
 
                   {step === 2 && (
-                    <div className="space-y-6">
-                      <div className="space-y-3">
-                        <p className="text-sm font-semibold text-gray-500">Palette</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="space-y-3">
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-2.5 items-start sm:items-center sm:justify-between rounded-xl border border-gray-100 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] px-3 py-2.5">
+                        <div className="text-xs text-gray-500">
+                          Choose unique looks with shuffle.
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSeed(Math.random().toString(36).slice(2, 10))}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold shadow-md hover:bg-black transition-all"
+                        >
+                          <RefreshCw size={14} />
+                          Shuffle
+                        </button>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-semibold text-gray-500">Palette</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
                           {paletteOptions.map((palette) => (
                             <button
                               key={palette.id}
@@ -309,19 +351,19 @@ const AvatarCreationModal = ({
                                 setSelectedPalette(palette.id);
                                 setErrors((prev) => ({ ...prev, palette: "" }));
                               }}
-                              className={`p-4 rounded-2xl border transition-all ${
+                              className={`p-3 rounded-xl border transition-all ${
                                 selectedPalette === palette.id
                                   ? "border-[#8d775e] shadow-lg shadow-[#8d775e]/10"
                                   : "border-gray-100 dark:border-white/10"
                               }`}
                             >
                               <div
-                                className="h-16 w-full rounded-xl mb-3"
+                                className="h-10 w-full rounded-lg mb-2.5"
                                 style={{
                                   background: palette.color,
                                 }}
                               />
-                              <p className="text-xs font-bold text-gray-700 dark:text-gray-200">
+                              <p className="text-[11px] font-bold text-gray-700 dark:text-gray-200">
                                 {palette.label}
                               </p>
                             </button>
@@ -331,32 +373,18 @@ const AvatarCreationModal = ({
                           <p className="text-red-500 text-xs font-semibold uppercase">{errors.palette}</p>
                         )}
                       </div>
-
-                      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start sm:items-center">
-                        <div className="text-sm text-gray-500">
-                          Want a different look? Shuffle the seed.
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setSeed(Math.random().toString(36).slice(2, 10))}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-gray-900 text-white text-xs font-semibold shadow-md hover:bg-black transition-all"
-                        >
-                          <RefreshCw size={14} />
-                          Shuffle
-                        </button>
-                      </div>
                     </div>
                   )}
 
                   {step === 3 && (
-                    <div className="space-y-6">
-                      <div className="p-5 sm:p-6 rounded-3xl bg-[#8d775e]/5 border border-[#8d775e]/10 text-center">
-                        <div className="w-28 h-28 sm:w-32 sm:h-32 lg:w-36 lg:h-36 mx-auto rounded-[28px] bg-white shadow-xl flex items-center justify-center overflow-hidden">
+                    <div className="space-y-4">
+                      <div className="p-4 sm:p-5 rounded-2xl bg-[#8d775e]/5 border border-[#8d775e]/10 text-center">
+                        <div className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 mx-auto rounded-2xl bg-white shadow-xl flex items-center justify-center overflow-hidden">
                           {avatarDataUri && (
                             <img src={avatarDataUri} alt="Final avatar" className="w-full h-full object-cover" />
                           )}
                         </div>
-                        <p className="text-xs uppercase tracking-[0.2em] text-[#8d775e] mt-4">
+                        <p className="text-[11px] uppercase tracking-[0.15em] text-[#8d775e] mt-3">
                           Style: {selectedStyle || "Custom"}
                         </p>
                       </div>
@@ -369,7 +397,7 @@ const AvatarCreationModal = ({
                           value={avatarName}
                           onChange={(e) => setAvatarName(e.target.value)}
                           placeholder="e.g. Nova, Oasis"
-                          className="w-full mt-3 px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 focus:ring-2 focus:ring-[#8d775e]/20 outline-none transition-all dark:text-white"
+                          className="w-full mt-2 px-3.5 py-2.5 rounded-xl text-sm bg-gray-50 dark:bg-white/5 border border-gray-100 dark:border-white/10 focus:ring-2 focus:ring-[#8d775e]/20 outline-none transition-all dark:text-white"
                         />
                       </div>
                     </div>
@@ -378,11 +406,11 @@ const AvatarCreationModal = ({
               </AnimatePresence>
             </div>
 
-            <div className="pt-8 mt-8 border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
+            <div className="pt-5 mt-5 border-t border-gray-100 dark:border-white/5 flex items-center justify-between">
               <button
                 onClick={handleBack}
                 disabled={step === 1 || avatarMutation.isPending}
-                className={`flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                   step === 1 ? "opacity-0 pointer-events-none" : "hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500"
                 }`}
               >
@@ -393,7 +421,7 @@ const AvatarCreationModal = ({
               <button
                 onClick={handleNext}
                 disabled={avatarMutation.isPending}
-                className="flex items-center gap-3 px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-black rounded-2xl text-sm font-bold shadow-xl hover:bg-black dark:hover:bg-gray-200 transition-all disabled:opacity-50"
+                className="flex items-center gap-2.5 px-5 py-2.5 bg-gray-900 dark:bg-white text-white dark:text-black rounded-xl text-xs font-semibold shadow-xl hover:bg-black dark:hover:bg-gray-200 transition-all disabled:opacity-50"
               >
                 {avatarMutation.isPending
                   ? "Saving..."
