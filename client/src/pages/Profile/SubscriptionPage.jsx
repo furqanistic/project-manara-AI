@@ -145,6 +145,12 @@ const SubscriptionPage = () => {
     return `${scheduledPlanName} on ${scheduledDate}`;
   }, [subscription?.scheduledPlanName, subscription?.scheduledChangeAt]);
   const hasScheduledPlanChange = Boolean(subscription?.scheduledPlanId && subscription?.scheduledChangeAt);
+  const hasAnyScheduledDowngrade = hasScheduledPlanChange;
+  const activePlanRank = PLAN_ORDER[activePlanId] || 0;
+  const isDowngradeOption = (planId) => {
+    const targetRank = PLAN_ORDER[planId] || 0;
+    return activePlanRank > 0 && targetRank > 0 && targetRank < activePlanRank;
+  };
 
   const applyCreditsGrant = (grantKey, amount, description) => {
     const safeAmount = Math.max(0, Number(amount) || 0);
@@ -410,6 +416,11 @@ const SubscriptionPage = () => {
     const currentRank = PLAN_ORDER[activePlanId] || 0;
     const targetRank = PLAN_ORDER[plan.id] || 0;
     const isDowngrade = currentRank > 0 && targetRank > 0 && targetRank < currentRank;
+    if (isDowngrade && hasAnyScheduledDowngrade) {
+      toast.error('A downgrade is already scheduled. Cancel it first to choose another plan.');
+      return;
+    }
+
     openConfirmDialog({
       title: isDowngrade ? `Downgrade to ${plan.name}?` : `Upgrade to ${plan.name}?`,
       description: isDowngrade
@@ -506,6 +517,61 @@ const SubscriptionPage = () => {
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className='min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] font-["Poppins"] selection:bg-[#937c60]/10'>
+        <TopBar />
+        <main className='max-w-[1400px] mx-auto pt-40 pb-24 px-8 md:px-16 relative z-10'>
+          <div className='mb-20'>
+            <div className='flex items-center gap-3 mb-4'>
+              <div className='w-10 h-[1px] bg-[#937c60] opacity-40'></div>
+              <span className='text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase'>Account Management</span>
+            </div>
+            <h1 className='text-5xl md:text-6xl font-bold text-gray-900 dark:text-white tracking-tight'>
+              Manage <span className='text-[#937c60]'>billing</span>
+            </h1>
+          </div>
+
+          <div className='grid grid-cols-1 xl:grid-cols-12 gap-12'>
+            <div className='xl:col-span-9 grid grid-cols-1 md:grid-cols-3 gap-6'>
+              {[1, 2, 3].map((item) => (
+                <div
+                  key={item}
+                  className='animate-pulse rounded-[40px] border border-gray-100 bg-white p-8 dark:border-white/10 dark:bg-[#111]'
+                >
+                  <div className='mb-6 h-12 w-12 rounded-2xl bg-gray-200/80 dark:bg-white/10' />
+                  <div className='mb-2 h-6 w-24 rounded bg-gray-200/80 dark:bg-white/10' />
+                  <div className='mb-6 h-8 w-32 rounded bg-gray-200/80 dark:bg-white/10' />
+                  <div className='space-y-3'>
+                    <div className='h-4 w-full rounded bg-gray-200/80 dark:bg-white/10' />
+                    <div className='h-4 w-[90%] rounded bg-gray-200/80 dark:bg-white/10' />
+                    <div className='h-4 w-[85%] rounded bg-gray-200/80 dark:bg-white/10' />
+                  </div>
+                  <div className='mt-8 h-12 w-full rounded-2xl bg-gray-200/80 dark:bg-white/10' />
+                </div>
+              ))}
+            </div>
+
+            <div className='xl:col-span-3 space-y-6'>
+              <div className='animate-pulse rounded-[28px] border border-gray-100 bg-white p-8 dark:border-white/10 dark:bg-[#111]'>
+                <div className='h-4 w-24 rounded bg-gray-200/80 dark:bg-white/10 mb-6' />
+                <div className='space-y-4'>
+                  <div className='h-4 w-full rounded bg-gray-200/80 dark:bg-white/10' />
+                  <div className='h-4 w-[85%] rounded bg-gray-200/80 dark:bg-white/10' />
+                  <div className='h-4 w-[70%] rounded bg-gray-200/80 dark:bg-white/10' />
+                </div>
+              </div>
+              <div className='animate-pulse rounded-[28px] border border-gray-100 bg-white p-8 dark:border-white/10 dark:bg-[#111]'>
+                <div className='h-4 w-32 rounded bg-gray-200/80 dark:bg-white/10 mb-6' />
+                <div className='h-12 w-full rounded-xl bg-gray-200/80 dark:bg-white/10' />
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className='min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] font-["Poppins"] selection:bg-[#937c60]/10'>
       <TopBar />
@@ -554,6 +620,11 @@ const SubscriptionPage = () => {
                         Most Popular
                       </div>
                     )}
+                    {hasSubscription && activePlanId === plan.id && (
+                      <div className='absolute top-4 right-4 bg-emerald-600 text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest shadow-md'>
+                        Current Plan
+                      </div>
+                    )}
 
                     <div className='mb-8'>
                       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 ${plan.popular ? 'bg-[#937c60] text-white' : 'bg-gray-100 dark:bg-white/10 text-gray-400 dark:text-gray-300'}`}>
@@ -587,7 +658,7 @@ const SubscriptionPage = () => {
                       disabled={
                         Boolean(processingPlanId) ||
                         isLoading ||
-                        (hasScheduledPlanChange && subscription?.scheduledPlanId === plan.id)
+                        (hasAnyScheduledDowngrade && isDowngradeOption(plan.id))
                       }
                       className='w-full py-6 rounded-2xl font-bold text-sm transition-all bg-gray-900 hover:bg-black text-white disabled:opacity-60'
                     >
@@ -595,8 +666,10 @@ const SubscriptionPage = () => {
                         ? 'Processing...'
                         : hasSubscription && activePlanId === plan.id
                           ? 'Renew Now'
-                          : hasSubscription && hasScheduledPlanChange && subscription?.scheduledPlanId === plan.id
+                        : hasSubscription && hasScheduledPlanChange && subscription?.scheduledPlanId === plan.id
                             ? 'Scheduled'
+                          : hasSubscription && hasAnyScheduledDowngrade && isDowngradeOption(plan.id)
+                            ? 'Downgrade Scheduled'
                           : hasSubscription
                             ? (PLAN_ORDER[plan.id] || 0) < (PLAN_ORDER[activePlanId] || 0)
                               ? 'Downgrade at Renewal'
@@ -736,7 +809,7 @@ const SubscriptionPage = () => {
                         <Button
                           onClick={() => handleRemoveCard(card.id)}
                           disabled={isBusy || cards.length <= 1}
-                          className='h-8 px-3 text-[11px] bg-transparent border border-red-200 text-red-600 rounded-lg hover:bg-red-50'
+                          className='h-8 px-3 text-[11px] bg-transparent border border-red-200 text-red-600 rounded-lg hover:bg-red-50 dark:border-red-400/40 dark:text-red-300 dark:hover:bg-red-500/15 dark:hover:border-red-300/60'
                         >
                           <Trash2 size={12} className='mr-1' />
                           Remove

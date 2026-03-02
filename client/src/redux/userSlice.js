@@ -35,6 +35,16 @@ export const userSlice = createSlice({
         state.currentUser = action.payload
         state.token = action.payload?.token || null
       }
+
+      const userId = state.currentUser?._id || state.currentUser?.id || null
+      if (typeof window !== 'undefined') {
+        if (userId) {
+          localStorage.setItem('manara_credits_owner', userId)
+        } else {
+          localStorage.removeItem('manara_credits_owner')
+        }
+        window.dispatchEvent(new Event('manara:credits-updated'))
+      }
     },
     loginFailure: (state, action) => {
       state.loading = false
@@ -53,6 +63,10 @@ export const userSlice = createSlice({
     },
     logout: (state) => {
       localStorage.removeItem('token')
+      localStorage.removeItem('manara_credits_owner')
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('manara:credits-updated'))
+      }
       return initialState
     },
   },

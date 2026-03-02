@@ -50,6 +50,16 @@ const RequireAuth = ({ children, requireAdmin = false }) => {
 
   useEffect(() => {
     if (!currentUser) {
+      const skipToastForLogout =
+        typeof window !== 'undefined' &&
+        window.sessionStorage.getItem('manara_auth_redirect_reason') === 'logout'
+
+      if (skipToastForLogout) {
+        window.sessionStorage.removeItem('manara_auth_redirect_reason')
+        toast.dismiss('auth-error')
+        return
+      }
+
       toast.dismiss('auth-error'); // Dismiss any existing auth errors
       toast.error('Please create an account or log in to access this feature.', {
         id: 'auth-error',

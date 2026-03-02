@@ -156,6 +156,9 @@ export const useLogout = () => {
     mutationFn: authService.logout,
     onSuccess: () => {
       console.log("✅ Logout successful");
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("manara_auth_redirect_reason", "logout");
+      }
       dispatch(logoutAction());
       queryClient.clear();
       navigate("/auth");
@@ -163,6 +166,9 @@ export const useLogout = () => {
     onError: (error) => {
       console.error("❌ Logout error:", error);
       // Still logout even on error
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem("manara_auth_redirect_reason", "logout");
+      }
       dispatch(logoutAction());
       navigate("/auth");
     },

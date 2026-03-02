@@ -596,7 +596,11 @@ export const changeSubscriptionPlan = async (req, res, next) => {
 
     if (currentRank > 0 && targetRank > 0 && targetRank < currentRank) {
       if (scheduleId) {
-        await stripeService.releaseSubscriptionSchedule(scheduleId);
+        return res.status(409).json({
+          status: 'error',
+          message:
+            'A downgrade is already scheduled. Cancel the scheduled change before selecting another downgrade.',
+        });
       }
 
       const schedule = await stripeService.createSubscriptionScheduleFromSubscription(subscription.id);

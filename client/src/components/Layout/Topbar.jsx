@@ -14,6 +14,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useCredits } from "@/hooks/useCredits";
+import { stripeService } from "@/services/stripeService";
 import { useLogout } from "../../hooks/useAuth";
 
 const TopBar = () => {
@@ -22,6 +23,7 @@ const TopBar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [showStudioAuthModal, setShowStudioAuthModal] = useState(false);
+  const [planLabel, setPlanLabel] = useState("No Active Plan");
   const [isDarkMode, setIsDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       const savedTheme = localStorage.getItem("theme");
@@ -50,6 +52,38 @@ const TopBar = () => {
       localStorage.setItem("theme", "light");
     }
   }, [isDarkMode]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadBillingStatus = async () => {
+      if (!currentUser) {
+        if (isMounted) setPlanLabel("No Active Plan");
+        return;
+      }
+
+      try {
+        const response = await stripeService.getBillingStatus();
+        const subscription = response?.data?.subscription || {};
+        const activeName = subscription?.planName || "No Active Plan";
+        const scheduledName = subscription?.scheduledPlanName || null;
+        const nextLabel = scheduledName
+          ? `${activeName} (Scheduled: ${scheduledName})`
+          : activeName;
+
+        if (isMounted) setPlanLabel(nextLabel);
+      } catch (error) {
+        if (isMounted) {
+          setPlanLabel("No Active Plan");
+        }
+      }
+    };
+
+    loadBillingStatus();
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUser]);
 
   // Scroll detection for styling changes
   useEffect(() => {
@@ -297,7 +331,7 @@ const TopBar = () => {
                           </p>
                         )}
                         <p className="text-[11px] text-[#8d775e] font-bold uppercase tracking-wider mt-0.5">
-                          Pro Member
+                          {planLabel}
                         </p>
                         <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-1">
                           Credits: <span className="font-bold text-[#8d775e]">{creditBalance}</span>

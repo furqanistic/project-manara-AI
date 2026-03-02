@@ -76,6 +76,14 @@ const CREDIT_PACKAGES = [
     cta: 'Buy Plan',
   },
 ]
+const CREDIT_DEFINITIONS = [
+  { label: '3D Render Set (1 room)', credits: 3 },
+  { label: 'Extra style / variation', credits: 1 },
+  { label: '2D Floor Plan / Cut', credits: 4 },
+  { label: 'Shopping List + Supplier Suggestions', credits: 2 },
+  { label: 'Small revision', credits: 1 },
+  { label: 'Full Room Package (all of the above)', credits: 8 },
+]
 const PLAN_CREDITS = {
   starter: 20,
   home: 50,
@@ -87,6 +95,7 @@ const PLAN_ORDER = {
   plus: 3,
 }
 const CREDIT_GRANT_PREFIX = 'manara_credit_grant'
+const PLAN_SKELETON_ITEMS = [1, 2, 3]
 
 const Decorations = () => (
   <div className='absolute inset-0 overflow-hidden pointer-events-none'>
@@ -96,7 +105,7 @@ const Decorations = () => (
   </div>
 )
 
-const PricingCard = ({ plan, onSelect, isLoading }) => {
+const PricingCard = ({ plan, onSelect, isLoading, isDisabled, isCurrentPlan }) => {
   const isPopular = plan.popular
   const [isHovered, setIsHovered] = useState(false)
 
@@ -119,6 +128,13 @@ const PricingCard = ({ plan, onSelect, isLoading }) => {
         <div className='absolute -top-3 left-1/2 -translate-x-1/2 z-20'>
           <Badge className='bg-[#937c60] text-white px-5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-md'>
             Most Popular
+          </Badge>
+        </div>
+      )}
+      {isCurrentPlan && (
+        <div className='absolute top-4 right-4 z-20'>
+          <Badge className='bg-emerald-600 text-white px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow-md'>
+            Current Plan
           </Badge>
         </div>
       )}
@@ -167,7 +183,7 @@ const PricingCard = ({ plan, onSelect, isLoading }) => {
         {/* Action Button */}
         <Button
           onClick={onSelect}
-          disabled={isLoading}
+          disabled={isLoading || isDisabled}
           className={`w-full py-7 rounded-2xl font-bold text-base transition-all duration-300 border-2 shadow-none ${
             isPopular 
               ? 'bg-[#937c60] border-[#937c60] text-white hover:bg-[#867055] hover:border-[#867055]' 
@@ -188,7 +204,10 @@ const PricingPage = () => {
   const [isCardsLoading, setIsCardsLoading] = useState(false)
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false)
   const [activePlanId, setActivePlanId] = useState(null)
+  const [scheduledPlanId, setScheduledPlanId] = useState(null)
+  const [scheduledChangeAt, setScheduledChangeAt] = useState(null)
   const [isBillingLoading, setIsBillingLoading] = useState(false)
+  const [hasBillingLoaded, setHasBillingLoaded] = useState(false)
   const [showCardLinkPopup, setShowCardLinkPopup] = useState(false)
   const { currentUser } = useSelector((state) => state.user)
   const location = useLocation()
@@ -234,21 +253,42 @@ const PricingPage = () => {
         ['trialing', 'active', 'past_due', 'unpaid'].includes(subscription?.subscriptionStatus)
       setHasActiveSubscription(isActive)
       setActivePlanId(subscription?.activePlanId || null)
+      setScheduledPlanId(subscription?.scheduledPlanId || null)
+      setScheduledChangeAt(subscription?.scheduledChangeAt || null)
       return isActive
     } catch (error) {
       console.error('Unable to load billing status:', error)
       setHasActiveSubscription(false)
       setActivePlanId(null)
+      setScheduledPlanId(null)
+      setScheduledChangeAt(null)
       return false
     } finally {
       setIsBillingLoading(false)
+      setHasBillingLoaded(true)
     }
+  }
+
+  const activePlanRank = PLAN_ORDER[activePlanId] || 0
+  const hasScheduledPlanChange = Boolean(scheduledPlanId && scheduledChangeAt)
+  const isDowngradeOption = (planId) => {
+    const targetRank = PLAN_ORDER[planId] || 0
+    return activePlanRank > 0 && targetRank > 0 && targetRank < activePlanRank
+  }
+  const getProcessingMessage = (planId) => {
+    if (!hasActiveSubscription) return 'Redirecting to secure checkout...'
+    if (activePlanId === planId) return 'Renewing your plan...'
+    if (isDowngradeOption(planId)) return 'Scheduling downgrade...'
+    return 'Updating plan...'
   }
 
   useEffect(() => {
     if (!currentUser) return
+    setHasBillingLoaded(false)
     Promise.all([loadPaymentMethods(), loadBillingStatus()])
   }, [currentUser])
+
+  const showPlanSkeleton = Boolean(currentUser?.isOnboarded) && !hasBillingLoaded
 
   useEffect(() => {
     if (!location.search || processedSearchRef.current === location.search) return
@@ -314,6 +354,11 @@ const PricingPage = () => {
 
       if (cardsCount === 0) {
         setShowCardLinkPopup(true)
+        return
+      }
+
+      if (hasActiveSubscription && hasScheduledPlanChange && isDowngradeOption(plan.id)) {
+        toast.error('A downgrade is already scheduled. Cancel it first to choose another plan.')
         return
       }
 
@@ -401,51 +446,85 @@ const PricingPage = () => {
             </motion.p>
 
             <div className='mt-8 flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-widest'>
-              <span
-                className={`inline-flex items-center gap-2 rounded-full px-4 py-2 ${
-                  hasActiveSubscription
-                    ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
-                    : 'border border-blue-200 bg-blue-50 text-blue-700'
-                }`}
-              >
-                <Crown size={13} />
-                {hasActiveSubscription ? 'Active Plan Enabled' : 'No Active Plan'}
-              </span>
-              {!isCardsLoading && cardsCount > 0 && (
-                <span className='inline-flex items-center gap-2 rounded-full border border-[#937c60]/30 bg-[#937c60]/5 px-4 py-2 text-[#937c60]'>
-                  <CreditCard size={13} />
-                  {cardsCount} Card(s) Linked
-                </span>
+              {showPlanSkeleton ? (
+                <>
+                  <span className='inline-flex h-9 w-44 animate-pulse rounded-full border border-gray-200 bg-gray-100/80 dark:border-white/10 dark:bg-white/10' />
+                  <span className='inline-flex h-9 w-36 animate-pulse rounded-full border border-gray-200 bg-gray-100/80 dark:border-white/10 dark:bg-white/10' />
+                </>
+              ) : (
+                <>
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full px-4 py-2 ${
+                      hasActiveSubscription
+                        ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                        : 'border border-blue-200 bg-blue-50 text-blue-700'
+                    }`}
+                  >
+                    <Crown size={13} />
+                    {hasActiveSubscription ? 'Active Plan Enabled' : 'No Active Plan'}
+                  </span>
+                  {!isCardsLoading && cardsCount > 0 && (
+                    <span className='inline-flex items-center gap-2 rounded-full border border-[#937c60]/30 bg-[#937c60]/5 px-4 py-2 text-[#937c60]'>
+                      <CreditCard size={13} />
+                      {cardsCount} Card(s) Linked
+                    </span>
+                  )}
+                </>
               )}
             </div>
           </div>
 
           {/* Pricing Grid */}
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-24 items-center'>
-            {CREDIT_PACKAGES.map((plan) => (
-              <div 
-                key={plan.id} 
-                className={plan.popular ? 'lg:scale-105 z-10' : 'lg:scale-95'}
-              >
-                <PricingCard 
-                  plan={{
-                    ...plan,
-                    cta: !hasActiveSubscription
-                      ? 'Buy Plan'
-                      : activePlanId === plan.id
-                        ? 'Renew Now'
-                        : (PLAN_ORDER[plan.id] || 0) < (PLAN_ORDER[activePlanId] || 0)
-                          ? 'Downgrade at Renewal'
-                          : 'Upgrade Now',
-                  }}
-                  onSelect={() => handleSelectPlan(plan)}
-                  isLoading={isProcessingPlanId === plan.id}
-                />
-                {isProcessingPlanId === plan.id && (
-                  <p className='text-center text-xs font-semibold text-[#937c60] mt-3'>Redirecting to secure checkout...</p>
-                )}
-              </div>
-            ))}
+            {showPlanSkeleton
+              ? PLAN_SKELETON_ITEMS.map((item) => (
+                  <div
+                    key={item}
+                    className='animate-pulse rounded-3xl border border-gray-100 bg-white p-8 dark:border-white/10 dark:bg-[#111]'
+                  >
+                    <div className='mb-6 h-6 w-28 rounded bg-gray-200/80 dark:bg-white/10' />
+                    <div className='mb-2 h-4 w-40 rounded bg-gray-200/80 dark:bg-white/10' />
+                    <div className='mb-8 h-12 w-32 rounded bg-gray-200/80 dark:bg-white/10' />
+                    <div className='space-y-3'>
+                      <div className='h-4 w-full rounded bg-gray-200/80 dark:bg-white/10' />
+                      <div className='h-4 w-[90%] rounded bg-gray-200/80 dark:bg-white/10' />
+                      <div className='h-4 w-[85%] rounded bg-gray-200/80 dark:bg-white/10' />
+                    </div>
+                    <div className='mt-10 h-14 w-full rounded-2xl bg-gray-200/80 dark:bg-white/10' />
+                  </div>
+                ))
+              : CREDIT_PACKAGES.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className={plan.popular ? 'lg:scale-105 z-10' : 'lg:scale-95'}
+                  >
+                    <PricingCard
+                      plan={{
+                        ...plan,
+                        cta: !hasActiveSubscription
+                          ? 'Buy Plan'
+                          : activePlanId === plan.id
+                            ? 'Renew Now'
+                            : hasScheduledPlanChange && scheduledPlanId === plan.id
+                              ? 'Scheduled'
+                              : hasScheduledPlanChange && isDowngradeOption(plan.id)
+                                ? 'Downgrade Scheduled'
+                                : (PLAN_ORDER[plan.id] || 0) < (PLAN_ORDER[activePlanId] || 0)
+                                  ? 'Downgrade at Renewal'
+                                  : 'Upgrade Now',
+                      }}
+                      onSelect={() => handleSelectPlan(plan)}
+                      isLoading={isProcessingPlanId === plan.id}
+                      isDisabled={hasScheduledPlanChange && isDowngradeOption(plan.id)}
+                      isCurrentPlan={hasActiveSubscription && activePlanId === plan.id}
+                    />
+                    {isProcessingPlanId === plan.id && (
+                      <p className='text-center text-xs font-semibold text-[#937c60] mt-3'>
+                        {getProcessingMessage(plan.id)}
+                      </p>
+                    )}
+                  </div>
+                ))}
           </div>
 
           <div className='max-w-5xl mx-auto mb-24'>
