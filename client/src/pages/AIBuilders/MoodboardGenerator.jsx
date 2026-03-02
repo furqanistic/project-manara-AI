@@ -672,10 +672,12 @@ const MoodboardGenerator = () => {
 
   const isGenerating = createMutation.isPending || generateMutation.isPending;
 
+  const shouldShowProjectModal = !workspaceProjectId && !location.state?.project;
+
   return (
     <>
       <ProjectSelectionModal
-        open={!workspaceProjectId && !location.state?.fromStudio}
+        open={shouldShowProjectModal}
         title='Select Project For AI Design Builder'
         description='Choose an existing project or create a new one before generating AI designs.'
         onSelect={(project) => {

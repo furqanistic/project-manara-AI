@@ -548,7 +548,7 @@ const FloorPlanGenerator = () => {
   }
 
   const shouldShowProjectModal =
-    !workspaceProjectId && !id && !location.state?.project && !location.state?.fromStudio
+    !workspaceProjectId && !id && !location.state?.project
 
   return (
     <>

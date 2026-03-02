@@ -77,6 +77,18 @@ const TextInput = ({ label, icon: Icon, error, ...props }) => (
   </div>
 );
 
+const formatReadableValue = (value) => {
+  if (typeof value !== "string") return value;
+  const normalized = value
+    .replace(/(\d)[_-]+(\d)/g, "$1-$2")
+    .replace(/^(\d+)\s+(\d+)$/, "$1-$2")
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return normalized.replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 function Profile() {
   const currentUser = useCurrentUser();
   const updateProfileMutation = useUpdateProfile();
@@ -208,6 +220,48 @@ function Profile() {
     return days.map(({ label, credits }) => ({ label, credits }));
   }, [creditLedger]);
 
+  const onboardingSummary = useMemo(() => {
+    const data = currentUser?.onboardingData || {};
+    const requiredProfile = data?.requiredProfile || {};
+    const qualificationQuestions = Array.isArray(data?.qualification?.questions)
+      ? data.qualification.questions
+      : [];
+    const legacyIdentity = data?.identity || {};
+
+    const primaryFields = [
+      {
+        label: "User Type",
+        value: formatReadableValue(data?.userType || legacyIdentity?.userType),
+      },
+      {
+        label: "Country",
+        value: formatReadableValue(requiredProfile?.country || legacyIdentity?.country),
+      },
+      {
+        label: "City",
+        value: formatReadableValue(requiredProfile?.city || legacyIdentity?.city),
+      },
+      {
+        label: "Billing Region",
+        value: formatReadableValue(requiredProfile?.billingRegion || legacyIdentity?.billingRegion),
+      },
+      {
+        label: "Billing Email Confirmed",
+        value:
+          typeof requiredProfile?.emailConfirmed === "boolean"
+            ? requiredProfile.emailConfirmed
+              ? "Yes"
+              : "No"
+            : undefined,
+      },
+    ].filter((item) => item.value !== undefined && item.value !== null && item.value !== "");
+
+    return {
+      primaryFields,
+      qualificationQuestions,
+    };
+  }, [currentUser?.onboardingData]);
+
   return (
     <div className="min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a]">
       <TopBar />
@@ -264,7 +318,7 @@ function Profile() {
         <div className="flex flex-wrap gap-2 mb-10">
           {[
             { id: "profile", label: "Profile" },
-            { id: "password", label: "Password" },
+            { id: "security", label: "Security" },
             { id: "usage", label: "Usage" },
           ].map((tab) => (
             <button
@@ -281,7 +335,7 @@ function Profile() {
           ))}
         </div>
 
-        {creditBalance === 0 && (
+        {activeTab === "usage" && creditBalance === 0 && (
           <div className="mb-6 p-4 bg-amber-50 text-amber-900 rounded-2xl border border-amber-200 flex gap-3 items-start">
             <AlertCircle size={16} className="flex-shrink-0 mt-0.5" />
             <div>
@@ -372,15 +426,74 @@ function Profile() {
                   </div>
                 )}
               </form>
+
+              <div className="mt-8 border-t border-gray-100 dark:border-white/10 pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-8 h-[1px] bg-[#937c60] opacity-40" />
+                  <p className="text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase">
+                    Onboarding Info
+                  </p>
+                </div>
+
+                {onboardingSummary.primaryFields.length === 0 &&
+                onboardingSummary.qualificationQuestions.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    No onboarding information saved yet.
+                  </p>
+                ) : (
+                  <div className="space-y-5">
+                    {onboardingSummary.primaryFields.length > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {onboardingSummary.primaryFields.map((item) => (
+                          <div
+                            key={item.label}
+                            className="rounded-2xl border border-gray-100 dark:border-white/10 bg-[#faf8f6] dark:bg-white/5 px-4 py-3"
+                          >
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                              {item.label}
+                            </p>
+                            <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                              {item.value}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {onboardingSummary.qualificationQuestions.length > 0 && (
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                          Qualification Answers
+                        </p>
+                        <div className="space-y-2">
+                          {onboardingSummary.qualificationQuestions.map((question, index) => (
+                            <div
+                              key={question.id || index}
+                              className="rounded-2xl border border-gray-100 dark:border-white/10 px-4 py-3"
+                            >
+                              <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                                {question.prompt || `Question ${index + 1}`}
+                              </p>
+                              <p className="mt-1 text-sm font-bold text-gray-900 dark:text-white">
+                                {formatReadableValue(question.answer) || "Not answered"}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </section>
           )}
 
-          {activeTab === "password" && (
+          {activeTab === "security" && (
             <section className="bg-white dark:bg-[#111] border border-gray-100 dark:border-white/10 rounded-[32px] p-6 md:p-8 shadow-[0_10px_40px_rgba(0,0,0,0.02)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.45)]">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-8 h-[1px] bg-[#937c60] opacity-40" />
                 <p className="text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase">
-                  Password
+                  Security
                 </p>
               </div>
 
