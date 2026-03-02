@@ -1,20 +1,20 @@
+import { useCredits } from "@/hooks/useCredits";
+import { stripeService } from "@/services/stripeService";
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-    AlertCircle,
-    Banknote,
-    ChevronDown,
-    LogOut,
-    Menu,
-    Moon,
-    Sun,
-    User,
-    X
+  AlertCircle,
+  Banknote,
+  ChevronDown,
+  LogOut,
+  Menu,
+  Moon,
+  Sun,
+  User,
+  X
 } from "lucide-react";
 import React, { useEffect, useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useCredits } from "@/hooks/useCredits";
-import { stripeService } from "@/services/stripeService";
 import { useLogout } from "../../hooks/useAuth";
 
 const TopBar = () => {
@@ -68,7 +68,7 @@ const TopBar = () => {
         const activeName = subscription?.planName || "No Active Plan";
         const scheduledName = subscription?.scheduledPlanName || null;
         const nextLabel = scheduledName
-          ? `${activeName} (Scheduled: ${scheduledName})`
+          ? `${activeName}`
           : activeName;
 
         if (isMounted) setPlanLabel(nextLabel);
