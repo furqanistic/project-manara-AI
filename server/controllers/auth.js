@@ -64,17 +64,22 @@ const createSendToken = (user, statusCode, res) => {
 };
 
 const getClientConfig = (provider) => {
+  const isConfigured = (value) =>
+    !!value &&
+    typeof value === "string" &&
+    !value.trim().toUpperCase().startsWith("REPLACE_WITH_");
+
   if (provider === "google") {
-    if (!process.env.GOOGLE_CLIENT_ID) {
+    if (!isConfigured(process.env.GOOGLE_CLIENT_ID)) {
       throw createError(500, "GOOGLE_CLIENT_ID is not configured");
     }
-    return process.env.GOOGLE_CLIENT_ID;
+    return process.env.GOOGLE_CLIENT_ID.trim();
   }
 
-  if (!process.env.APPLE_CLIENT_ID) {
+  if (!isConfigured(process.env.APPLE_CLIENT_ID)) {
     throw createError(500, "APPLE_CLIENT_ID is not configured");
   }
-  return process.env.APPLE_CLIENT_ID;
+  return process.env.APPLE_CLIENT_ID.trim();
 };
 
 const getProviderName = (provider) => {

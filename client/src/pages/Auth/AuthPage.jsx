@@ -59,6 +59,12 @@ const AuthPage = () => {
   const appleClientId = import.meta.env.VITE_APPLE_CLIENT_ID
   const appleRedirectUri =
     import.meta.env.VITE_APPLE_REDIRECT_URI || `${window.location.origin}/auth`
+  const isConfiguredClientId = (value) => {
+    if (!value || typeof value !== 'string') return false
+    return !value.trim().toUpperCase().startsWith('REPLACE_WITH_')
+  }
+  const hasGoogleClientId = isConfiguredClientId(googleClientId)
+  const hasAppleClientId = isConfiguredClientId(appleClientId)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -89,7 +95,7 @@ const AuthPage = () => {
       document.body.appendChild(script)
     }
 
-    if (googleClientId) {
+    if (hasGoogleClientId) {
       loadScript(
         'https://accounts.google.com/gsi/client',
         'google-gsi-script',
@@ -97,25 +103,26 @@ const AuthPage = () => {
       )
     }
 
-    if (appleClientId) {
+    if (hasAppleClientId) {
       loadScript(
         'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js',
         'apple-js-script',
         () => setIsAppleScriptLoaded(true)
       )
     }
-  }, [appleClientId, googleClientId])
+  }, [hasAppleClientId, hasGoogleClientId])
 
   useEffect(() => {
-    if (!isAppleScriptLoaded || !window.AppleID?.auth || !appleClientId) return
+    if (!isAppleScriptLoaded || !window.AppleID?.auth || !hasAppleClientId)
+      return
 
     window.AppleID.auth.init({
-      clientId: appleClientId,
+      clientId: appleClientId.trim(),
       scope: 'name email',
       redirectURI: appleRedirectUri,
       usePopup: true,
     })
-  }, [appleClientId, appleRedirectUri, isAppleScriptLoaded])
+  }, [appleClientId, appleRedirectUri, hasAppleClientId, isAppleScriptLoaded])
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -201,7 +208,7 @@ const AuthPage = () => {
   const handleGoogleSignin = () => {
     setSocialError('')
 
-    if (!googleClientId) {
+    if (!hasGoogleClientId) {
       setSocialError('Google sign-in is not configured yet.')
       return
     }
@@ -212,7 +219,7 @@ const AuthPage = () => {
     }
 
     window.google.accounts.id.initialize({
-      client_id: googleClientId,
+      client_id: googleClientId.trim(),
       callback: async (response) => {
         try {
           if (!response?.credential) {
@@ -228,13 +235,38 @@ const AuthPage = () => {
       },
     })
 
+    const reasonMap = {
+      secure_http_required:
+        'Google Sign-In requires HTTPS (or localhost). Open this app on https://... or localhost.',
+      unregistered_origin:
+        'This origin is not allowed in Google OAuth settings. Add this exact origin in Authorized JavaScript origins.',
+      invalid_client:
+        'Google Client ID is invalid. Recheck VITE_GOOGLE_CLIENT_ID and GOOGLE_CLIENT_ID.',
+      missing_client_id:
+        'Google Client ID is missing in env settings.',
+      opt_out_or_no_session:
+        'No active Google session found. Please log into a Google account and try again.',
+      browser_not_supported:
+        'Your browser does not support this Google sign-in flow.',
+      suppressed_by_user:
+        'Google prompt was previously dismissed. Try in an incognito window or clear site data.',
+    }
+
     window.google.accounts.id.prompt((notification) => {
-      if (
-        notification?.isNotDisplayed?.() ||
-        notification?.isSkippedMoment?.()
-      ) {
+      if (notification?.isNotDisplayed?.()) {
+        const reason = notification?.getNotDisplayedReason?.() || 'unknown'
         setSocialError(
-          'Google sign-in was not shown. Please allow pop-ups and try again.'
+          reasonMap[reason] ||
+            `Google sign-in was not displayed (${reason}). Check OAuth origin + HTTPS settings.`
+        )
+        return
+      }
+
+      if (notification?.isSkippedMoment?.()) {
+        const reason = notification?.getSkippedReason?.() || 'unknown'
+        setSocialError(
+          reasonMap[reason] ||
+            `Google sign-in was skipped (${reason}). Try again or use an incognito window.`
         )
       }
     })
@@ -243,7 +275,7 @@ const AuthPage = () => {
   const handleAppleSignin = async () => {
     setSocialError('')
 
-    if (!appleClientId) {
+    if (!hasAppleClientId) {
       setSocialError('Apple sign-in is not configured yet.')
       return
     }
