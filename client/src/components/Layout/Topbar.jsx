@@ -154,6 +154,11 @@ const TopBar = () => {
       console.error("Logout error:", error);
     }
   };
+  const handleCreditsNavigation = () => {
+    setActiveDropdown(null);
+    setIsMenuOpen(false);
+    navigate("/subscription");
+  };
 
   const navItems = [
     { name: "Home", href: "/" },
@@ -284,10 +289,15 @@ const TopBar = () => {
 
             {currentUser ? (
               <>
-                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#8d775e]/20 bg-[#8d775e]/10 text-[#8d775e] dark:bg-[#8d775e]/15 dark:text-[#cdbda9]">
+                <button
+                  type="button"
+                  onClick={handleCreditsNavigation}
+                  className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full border border-[#8d775e]/20 bg-[#8d775e]/10 text-[#8d775e] dark:bg-[#8d775e]/15 dark:text-[#cdbda9] hover:bg-[#8d775e]/15 dark:hover:bg-[#8d775e]/20 transition-colors"
+                  aria-label="Open subscription"
+                >
                   <Banknote size={14} />
                   <span className="text-xs font-bold tracking-wide">{creditBalance} credits</span>
-                </div>
+                </button>
                 <div
                   className="relative"
                   ref={(el) => (dropdownRefs.current["user"] = el)}
@@ -458,10 +468,15 @@ const TopBar = () => {
                 {/* Mobile Dark Mode Toggle */}
                 <div className="pt-4 mt-2 border-t border-gray-100 dark:border-white/10">
                   {currentUser && (
-                    <div className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#8d775e]/10 dark:bg-[#8d775e]/15 text-[#8d775e] dark:text-[#cdbda9] mb-2">
+                    <button
+                      type="button"
+                      onClick={handleCreditsNavigation}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl bg-[#8d775e]/10 dark:bg-[#8d775e]/15 text-[#8d775e] dark:text-[#cdbda9] mb-2 hover:bg-[#8d775e]/15 dark:hover:bg-[#8d775e]/20 transition-colors"
+                      aria-label="Open subscription"
+                    >
                       <span className="text-[11px] font-bold uppercase tracking-widest">Credits</span>
                       <span className="text-sm font-bold">{creditBalance}</span>
-                    </div>
+                    </button>
                   )}
                   <button
                     onClick={toggleTheme}
