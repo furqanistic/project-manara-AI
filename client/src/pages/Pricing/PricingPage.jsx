@@ -506,12 +506,10 @@ const PricingPage = () => {
                           : activePlanId === plan.id
                             ? 'Renew Now'
                             : hasScheduledPlanChange && scheduledPlanId === plan.id
-                              ? 'Scheduled'
+                              ? 'Downgrade Scheduled'
                               : hasScheduledPlanChange && isDowngradeOption(plan.id)
                                 ? 'Downgrade Scheduled'
-                                : (PLAN_ORDER[plan.id] || 0) < (PLAN_ORDER[activePlanId] || 0)
-                                  ? 'Downgrade at Renewal'
-                                  : 'Upgrade Now',
+                                : 'Switch Plan',
                       }}
                       onSelect={() => handleSelectPlan(plan)}
                       isLoading={isProcessingPlanId === plan.id}

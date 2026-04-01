@@ -667,13 +667,11 @@ const SubscriptionPage = () => {
                         : hasSubscription && activePlanId === plan.id
                           ? 'Renew Now'
                         : hasSubscription && hasScheduledPlanChange && subscription?.scheduledPlanId === plan.id
-                            ? 'Scheduled'
+                            ? 'Downgrade Scheduled'
                           : hasSubscription && hasAnyScheduledDowngrade && isDowngradeOption(plan.id)
                             ? 'Downgrade Scheduled'
                           : hasSubscription
-                            ? (PLAN_ORDER[plan.id] || 0) < (PLAN_ORDER[activePlanId] || 0)
-                              ? 'Downgrade at Renewal'
-                              : 'Upgrade Now'
+                            ? 'Switch Plan'
                             : 'Buy Plan'}
                     </Button>
                   </motion.div>

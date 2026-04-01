@@ -66,6 +66,57 @@ const getPlanCatalog = async () => {
   };
 };
 
+const SUBSCRIPTION_STATUS_PRIORITY = {
+  active: 500,
+  trialing: 450,
+  past_due: 400,
+  unpaid: 350,
+  paused: 300,
+  incomplete: 200,
+  incomplete_expired: 100,
+  canceled: 0,
+};
+
+const scoreSubscription = (subscription) => {
+  const status = String(subscription?.status || '');
+  const baseScore = SUBSCRIPTION_STATUS_PRIORITY[status] ?? 50;
+  const periodEnd = Number(subscription?.current_period_end || 0);
+  return baseScore * 1_000_000_000 + periodEnd;
+};
+
+const resolveLatestStripeSubscription = async ({ customerId, preferredSubscriptionId }) => {
+  let preferredSubscription = null;
+  if (preferredSubscriptionId) {
+    try {
+      preferredSubscription = await stripeService.getSubscription(preferredSubscriptionId);
+    } catch (error) {
+      // Ignore stale Stripe subscription IDs and fall back to customer subscription listing.
+    }
+  }
+
+  const subscriptionList = await stripeService.listSubscriptions(customerId);
+  const allSubscriptions = Array.isArray(subscriptionList?.data) ? subscriptionList.data : [];
+
+  if (!allSubscriptions.length) {
+    return preferredSubscription;
+  }
+
+  const preferredFromList = preferredSubscription
+    ? allSubscriptions.find((item) => item.id === preferredSubscription.id) || preferredSubscription
+    : null;
+
+  const bestFromList = allSubscriptions.reduce((best, current) => {
+    if (!best) return current;
+    return scoreSubscription(current) > scoreSubscription(best) ? current : best;
+  }, null);
+
+  if (!preferredFromList) return bestFromList;
+
+  return scoreSubscription(preferredFromList) >= scoreSubscription(bestFromList)
+    ? preferredFromList
+    : bestFromList;
+};
+
 export const createCheckoutSession = async (req, res, next) => {
   try {
     const { planId, priceId: requestedPriceId, purchaseType } = req.body;
@@ -241,25 +292,47 @@ export const getBillingStatus = async (req, res, next) => {
 
     const customerId = await stripeService.getOrCreateCustomer(user);
     const cards = await stripeService.listCardPaymentMethods(customerId);
-    let nextBillingDate = user.subscriptionCurrentPeriodEnd || null;
+    const planCatalog = await getPlanCatalog();
+    const {
+      starterPrice,
+      homePrice,
+      plusPrice,
+      priceToPlanId,
+      priceToPlanName,
+    } = planCatalog;
+
+    let nextBillingDate = null;
     let resolvedPlanName = null;
     let activePlanId = null;
-    let stripePriceId = user.stripePriceId || null;
+    let stripePriceId = null;
     let scheduledPlanId = null;
     let scheduledPlanName = null;
     let scheduledChangeAt = null;
+    let liveSubscription = null;
 
-    if (user.stripeSubscriptionId) {
+    try {
+      liveSubscription = await resolveLatestStripeSubscription({
+        customerId,
+        preferredSubscriptionId: user.stripeSubscriptionId,
+      });
+    } catch (error) {
+      console.warn('Unable to list subscriptions from Stripe:', error.message);
+    }
+
+    if (liveSubscription) {
       try {
-        const subscription = await stripeService.getSubscription(user.stripeSubscriptionId);
-        await updateSubscription(subscription);
+        await updateSubscription(liveSubscription);
         user = await User.findById(req.user.id);
-        nextBillingDate = user.subscriptionCurrentPeriodEnd || null;
+        stripePriceId = liveSubscription?.items?.data?.[0]?.price?.id || user.stripePriceId || null;
+        nextBillingDate =
+          normalizeSubscriptionPayload(liveSubscription).subscriptionCurrentPeriodEnd ||
+          user.subscriptionCurrentPeriodEnd ||
+          null;
 
         const scheduleId =
-          typeof subscription?.schedule === 'string'
-            ? subscription.schedule
-            : subscription?.schedule?.id || null;
+          typeof liveSubscription?.schedule === 'string'
+            ? liveSubscription.schedule
+            : liveSubscription?.schedule?.id || null;
 
         if (scheduleId) {
           try {
@@ -286,7 +359,6 @@ export const getBillingStatus = async (req, res, next) => {
                   : nextPhase?.items?.[0]?.price?.id || null;
               const nextStartUnix = Number(nextPhase?.start_date || 0);
               if (nextPriceId) {
-                const { priceToPlanId, priceToPlanName } = await getPlanCatalog();
                 scheduledPlanId = priceToPlanId[nextPriceId] || null;
                 scheduledPlanName = priceToPlanName[nextPriceId] || 'Custom Plan';
               }
@@ -301,24 +373,19 @@ export const getBillingStatus = async (req, res, next) => {
       } catch (error) {
         console.warn('Unable to refresh subscription from Stripe:', error.message);
       }
+    } else if (user.stripeSubscriptionId || user.subscriptionStatus !== 'none') {
+      await User.findByIdAndUpdate(req.user.id, {
+        stripeSubscriptionId: null,
+        stripePriceId: null,
+        subscriptionStatus: 'none',
+        subscriptionCurrentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+      });
+      user = await User.findById(req.user.id);
     }
 
-    if (!user.stripeSubscriptionId || !ACTIVE_SUBSCRIPTION_STATUSES.includes(user.subscriptionStatus)) {
-      const subscriptionList = await stripeService.listSubscriptions(customerId);
-      const activeSubscription = subscriptionList.data.find((item) =>
-        ACTIVE_SUBSCRIPTION_STATUSES.includes(item.status)
-      );
-
-      if (activeSubscription) {
-        await updateSubscription(activeSubscription);
-        user = await User.findById(req.user.id);
-      }
-    }
-
-    stripePriceId = user.stripePriceId || null;
-    nextBillingDate = user.subscriptionCurrentPeriodEnd || null;
-
-    const { starterPrice, homePrice, plusPrice, priceToPlanName } = await getPlanCatalog();
+    stripePriceId = stripePriceId || user.stripePriceId || null;
+    nextBillingDate = nextBillingDate || user.subscriptionCurrentPeriodEnd || null;
 
     if (stripePriceId && starterPrice && stripePriceId === starterPrice) {
       resolvedPlanName = 'Starter';
@@ -897,6 +964,7 @@ async function cancelSubscription(subscription) {
       subscriptionStatus: 'canceled',
       stripeSubscriptionId: null,
       stripePriceId: null,
+      subscriptionCurrentPeriodEnd: null,
       cancelAtPeriodEnd: false,
     }
   );
