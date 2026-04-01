@@ -27,6 +27,14 @@ export const authQueryKeys = {
   userList: (page, limit) => [...authQueryKeys.users(), { page, limit }],
 };
 
+const shouldForceOnboardingFlow = (user) => {
+  const hasSimplifiedOnboarding = !!user?.onboardingData?.flow?.basicComplete;
+  const hasLegacyOnboarding = !!user?.onboardingData?.identity;
+  const hasAvatar = !!user?.onboardingData?.avatar?.completed;
+  const hasOnboarding = hasSimplifiedOnboarding || hasLegacyOnboarding;
+  return !hasOnboarding || !hasAvatar;
+};
+
 /**
  * useSignup - Register a new user
  * @returns {Object} Mutation object
@@ -102,8 +110,9 @@ export const useGoogleSignin = () => {
     onSuccess: (data) => {
       console.log("✅ Google signin successful");
       dispatch(loginSuccess(data));
-      queryClient.setQueryData(authQueryKeys.currentUser(), data?.data?.user);
-      navigate("/");
+      const user = data?.data?.user;
+      queryClient.setQueryData(authQueryKeys.currentUser(), user);
+      navigate(shouldForceOnboardingFlow(user) ? "/projects" : "/");
     },
     onError: (error) => {
       console.error("❌ Google signin error:", error);
@@ -131,8 +140,9 @@ export const useAppleSignin = () => {
     onSuccess: (data) => {
       console.log("✅ Apple signin successful");
       dispatch(loginSuccess(data));
-      queryClient.setQueryData(authQueryKeys.currentUser(), data?.data?.user);
-      navigate("/");
+      const user = data?.data?.user;
+      queryClient.setQueryData(authQueryKeys.currentUser(), user);
+      navigate(shouldForceOnboardingFlow(user) ? "/projects" : "/");
     },
     onError: (error) => {
       console.error("❌ Apple signin error:", error);
