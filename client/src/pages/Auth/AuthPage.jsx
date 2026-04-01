@@ -17,7 +17,6 @@ import {
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
 import {
-  useAppleSignin,
   useGoogleSignin,
   useSignin,
   useSignup,
@@ -44,7 +43,6 @@ const AuthPage = () => {
   const [isMobile, setIsMobile] = useState(false)
   const [socialError, setSocialError] = useState('')
   const [isGoogleScriptLoaded, setIsGoogleScriptLoaded] = useState(false)
-  const [isAppleScriptLoaded, setIsAppleScriptLoaded] = useState(false)
 
   const brandColor = '#947d61'
   const brandColorLight = '#a68970'
@@ -53,18 +51,13 @@ const AuthPage = () => {
   const signupMutation = useSignup()
   const signinMutation = useSignin()
   const googleSigninMutation = useGoogleSignin()
-  const appleSigninMutation = useAppleSignin()
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
-  const appleClientId = import.meta.env.VITE_APPLE_CLIENT_ID
-  const appleRedirectUri =
-    import.meta.env.VITE_APPLE_REDIRECT_URI || `${window.location.origin}/auth`
   const isConfiguredClientId = (value) => {
     if (!value || typeof value !== 'string') return false
     return !value.trim().toUpperCase().startsWith('REPLACE_WITH_')
   }
   const hasGoogleClientId = isConfiguredClientId(googleClientId)
-  const hasAppleClientId = isConfiguredClientId(appleClientId)
 
   useEffect(() => {
     const checkMobile = () => {
@@ -103,26 +96,7 @@ const AuthPage = () => {
       )
     }
 
-    if (hasAppleClientId) {
-      loadScript(
-        'https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js',
-        'apple-js-script',
-        () => setIsAppleScriptLoaded(true)
-      )
-    }
-  }, [hasAppleClientId, hasGoogleClientId])
-
-  useEffect(() => {
-    if (!isAppleScriptLoaded || !window.AppleID?.auth || !hasAppleClientId)
-      return
-
-    window.AppleID.auth.init({
-      clientId: appleClientId.trim(),
-      scope: 'name email',
-      redirectURI: appleRedirectUri,
-      usePopup: true,
-    })
-  }, [appleClientId, appleRedirectUri, hasAppleClientId, isAppleScriptLoaded])
+  }, [hasGoogleClientId])
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -272,48 +246,9 @@ const AuthPage = () => {
     })
   }
 
-  const handleAppleSignin = async () => {
-    setSocialError('')
-
-    if (!hasAppleClientId) {
-      setSocialError('Apple sign-in is not configured yet.')
-      return
-    }
-
-    if (!isAppleScriptLoaded || !window.AppleID?.auth?.signIn) {
-      setSocialError('Apple sign-in is still loading. Please try again.')
-      return
-    }
-
-    try {
-      const response = await window.AppleID.auth.signIn()
-      const idToken = response?.authorization?.id_token
-
-      if (!idToken) {
-        setSocialError('Apple did not return a valid credential.')
-        return
-      }
-
-      await appleSigninMutation.mutateAsync({
-        idToken,
-        firstName: response?.user?.name?.firstName,
-        lastName: response?.user?.name?.lastName,
-        name: [response?.user?.name?.firstName, response?.user?.name?.lastName]
-          .filter(Boolean)
-          .join(' ')
-          .trim(),
-      })
-    } catch (error) {
-      const message =
-        error?.data?.message || error?.message || 'Apple sign-in failed'
-      setSocialError(message)
-    }
-  }
-
   const reduxLoading = useSelector((state) => state.user.loading)
   const currentMutation = isLogin ? signinMutation : signupMutation
-  const isSocialLoading =
-    googleSigninMutation.isPending || appleSigninMutation.isPending
+  const isSocialLoading = googleSigninMutation.isPending
   const isLoading = reduxLoading || currentMutation.isPending || isSocialLoading
   const error = currentMutation.error
 
@@ -621,28 +556,6 @@ const AuthPage = () => {
                         )}
                       </button>
 
-                      <button
-                        type='button'
-                        onClick={handleAppleSignin}
-                        disabled={isLoading}
-                        className='w-full flex items-center justify-center gap-2.5 py-2.5 rounded-xl border border-black/10 dark:border-white/10 bg-black dark:bg-white text-white dark:text-black text-sm font-medium hover:opacity-90 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
-                      >
-                        {appleSigninMutation.isPending ? (
-                          <Loader2 className='w-4 h-4 animate-spin' />
-                        ) : (
-                          <>
-                            <svg
-                              className='w-4.5 h-4.5'
-                              viewBox='0 0 24 24'
-                              fill='currentColor'
-                              aria-hidden='true'
-                            >
-                              <path d='M17.56 12.66c.03 3.22 2.82 4.29 2.85 4.3-.02.08-.45 1.56-1.49 3.1-.9 1.33-1.83 2.65-3.31 2.68-1.46.03-1.93-.88-3.61-.88-1.68 0-2.2.85-3.57.91-1.43.05-2.52-1.43-3.43-2.75-1.86-2.72-3.29-7.69-1.38-10.97.95-1.63 2.64-2.66 4.47-2.69 1.39-.03 2.71.93 3.56.93.85 0 2.44-1.15 4.11-.98.7.03 2.67.28 3.94 2.14-.1.06-2.35 1.37-2.33 4.11zm-2.86-7.2c.75-.92 1.26-2.2 1.12-3.46-1.09.05-2.4.72-3.18 1.64-.7.81-1.32 2.11-1.16 3.35 1.22.1 2.47-.62 3.22-1.53z' />
-                            </svg>
-                            <span>Continue with Apple</span>
-                          </>
-                        )}
-                      </button>
                     </motion.div>
 
                     {/* Form */}

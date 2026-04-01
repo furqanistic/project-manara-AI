@@ -124,36 +124,6 @@ export const useGoogleSignin = () => {
 };
 
 /**
- * useAppleSignin - Sign in user via Apple identity token
- * @returns {Object} Mutation object
- */
-export const useAppleSignin = () => {
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: authService.signinWithApple,
-    onMutate: () => {
-      dispatch(loginStart());
-    },
-    onSuccess: (data) => {
-      console.log("✅ Apple signin successful");
-      dispatch(loginSuccess(data));
-      const user = data?.data?.user;
-      queryClient.setQueryData(authQueryKeys.currentUser(), user);
-      navigate(shouldForceOnboardingFlow(user) ? "/projects" : "/");
-    },
-    onError: (error) => {
-      console.error("❌ Apple signin error:", error);
-      const errorMessage =
-        error?.data?.message || error?.message || "Apple sign-in failed";
-      dispatch(loginFailure(errorMessage));
-    },
-  });
-};
-
-/**
  * useLogout - Logout user
  * @returns {Object} Mutation object
  */
@@ -396,7 +366,6 @@ export default {
   useSignup,
   useSignin,
   useGoogleSignin,
-  useAppleSignin,
   useLogout,
   useCurrentUser,
   useUserProfile,

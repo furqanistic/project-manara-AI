@@ -134,15 +134,9 @@ const verifyAppleIdToken = async (idToken) => {
   return payload;
 };
 
-const findOrCreateSocialUser = async ({
-  provider,
-  providerId,
-  email,
-  name,
-  avatarUrl,
-}) => {
+const findOrCreateGoogleUser = async ({ providerId, email, name, avatarUrl }) => {
   const normalizedEmail = email ? email.toLowerCase().trim() : null;
-  const providerField = provider === "google" ? "googleId" : "appleId";
+  const providerField = "googleId";
 
   let user = await User.findOne({ [providerField]: providerId });
 
@@ -154,13 +148,13 @@ const findOrCreateSocialUser = async ({
     user = await User.create({
       name: normalizeName({ name, email: normalizedEmail }),
       email: normalizedEmail,
-      authProvider: provider,
+      authProvider: "google",
       [providerField]: providerId,
       onboardingData: avatarUrl
         ? {
             social: {
               avatarUrl,
-              provider,
+              provider: "google",
             },
           }
         : undefined,
@@ -179,7 +173,7 @@ const findOrCreateSocialUser = async ({
   }
 
   if (!user.authProvider) {
-    updates.authProvider = provider;
+    updates.authProvider = "google";
   }
 
   if (!user.name && name) {
@@ -194,9 +188,55 @@ const findOrCreateSocialUser = async ({
       ...(user.onboardingData || {}),
       social: {
         avatarUrl,
-        provider,
+        provider: "google",
       },
     };
+  }
+
+  user = await User.findByIdAndUpdate(user._id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  return user;
+};
+
+const findOrCreateAppleUser = async ({ providerId, email, name }) => {
+  const normalizedEmail = email ? email.toLowerCase().trim() : null;
+  const providerField = "appleId";
+
+  let user = await User.findOne({ [providerField]: providerId });
+
+  if (!user && normalizedEmail) {
+    user = await User.findOne({ email: normalizedEmail });
+  }
+
+  if (!user) {
+    user = await User.create({
+      name: normalizeName({ name, email: normalizedEmail }),
+      email: normalizedEmail,
+      authProvider: "apple",
+      [providerField]: providerId,
+      lastLogin: new Date(),
+    });
+
+    return user;
+  }
+
+  const updates = {
+    lastLogin: new Date(),
+  };
+
+  if (!user[providerField]) {
+    updates[providerField] = providerId;
+  }
+
+  if (!user.authProvider) {
+    updates.authProvider = "apple";
+  }
+
+  if (!user.name && name) {
+    updates.name = normalizeName({ name, email: user.email });
   }
 
   user = await User.findByIdAndUpdate(user._id, updates, {
@@ -330,8 +370,7 @@ export const signinWithGoogle = async (req, res, next) => {
     }
 
     const payload = await verifyGoogleIdToken(idToken);
-    const user = await findOrCreateSocialUser({
-      provider: "google",
+    const user = await findOrCreateGoogleUser({
       providerId: payload.sub,
       email: payload.email,
       name: payload.name,
@@ -375,8 +414,7 @@ export const signinWithApple = async (req, res, next) => {
         );
       }
 
-      user = await findOrCreateSocialUser({
-        provider: "apple",
+      user = await findOrCreateAppleUser({
         providerId,
         email,
         name: normalizeName({ name, firstName, lastName, email }),
