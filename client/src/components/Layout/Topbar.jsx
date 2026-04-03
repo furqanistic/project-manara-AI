@@ -173,6 +173,9 @@ const TopBar = () => {
       ],
     },
     { name: "Projects", href: "/projects" },
+    ...(currentUser?.role === "admin"
+      ? [{ name: "Admin", href: "/admin" }]
+      : []),
     { name: "Pricing", href: "/pricing" },
     { name: "About", href: "/about" },
   ];

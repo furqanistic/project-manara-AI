@@ -52,8 +52,9 @@ export const useSignup = () => {
     onSuccess: (data) => {
       console.log("✅ Signup successful");
       dispatch(loginSuccess(data));
-      queryClient.setQueryData(authQueryKeys.currentUser(), data?.data?.user);
-      navigate("/");
+      const user = data?.data?.user;
+      queryClient.setQueryData(authQueryKeys.currentUser(), user);
+      navigate(user?.role === "admin" ? "/admin" : "/");
     },
     onError: (error) => {
       console.error("❌ Signup error:", error);
@@ -81,8 +82,9 @@ export const useSignin = () => {
     onSuccess: (data) => {
       console.log("✅ Signin successful");
       dispatch(loginSuccess(data));
-      queryClient.setQueryData(authQueryKeys.currentUser(), data?.data?.user);
-      navigate("/");
+      const user = data?.data?.user;
+      queryClient.setQueryData(authQueryKeys.currentUser(), user);
+      navigate(user?.role === "admin" ? "/admin" : "/");
     },
     onError: (error) => {
       console.error("❌ Signin error:", error);
@@ -112,6 +114,10 @@ export const useGoogleSignin = () => {
       dispatch(loginSuccess(data));
       const user = data?.data?.user;
       queryClient.setQueryData(authQueryKeys.currentUser(), user);
+      if (user?.role === "admin") {
+        navigate("/admin");
+        return;
+      }
       navigate(shouldForceOnboardingFlow(user) ? "/projects" : "/");
     },
     onError: (error) => {

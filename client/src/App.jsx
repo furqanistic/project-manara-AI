@@ -24,6 +24,8 @@ import ThreedGenerator from './pages/AIBuilders/ThreedGenerator'
 import AuthPage from './pages/Auth/AuthPage'
 import HomePage from './pages/Home/HomePage'
 import PricingPage from './pages/Pricing/PricingPage'
+import AdminPanel from './pages/Admin/AdminPanel'
+import AdminUserProfile from './pages/Admin/AdminUserProfile'
 import Profile from './pages/Profile/Profile'
 import SubscriptionPage from './pages/Profile/SubscriptionPage'
 import ProjectsPage from './pages/Projects/ProjectsPage'
@@ -222,15 +224,22 @@ const AppRoutes = () => {
           }
         />
 
-        {/* Example admin-only route */}
-        {/* <Route
+        <Route
           path="/admin"
           element={
             <RequireAuth requireAdmin={true}>
               <AdminPanel />
             </RequireAuth>
           }
-        /> */}
+        />
+        <Route
+          path="/admin/users/:id"
+          element={
+            <RequireAuth requireAdmin={true}>
+              <AdminUserProfile />
+            </RequireAuth>
+          }
+        />
       </Route>
     </Routes>
   );

@@ -8,8 +8,10 @@ import jwt from "jsonwebtoken";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import mongoose from "mongoose";
 import { createError } from "../error.js";
+import BillingUsage from "../models/BillingUsage.js";
 import User from "../models/User.js";
 import { uploadAvatarSvg } from "../services/cloudinaryService.js";
+import { stripeService } from "../services/stripeService.js";
 
 const googleJwks = createRemoteJWKSet(
   new URL("https://www.googleapis.com/oauth2/v3/certs")
@@ -17,6 +19,58 @@ const googleJwks = createRemoteJWKSet(
 const appleJwks = createRemoteJWKSet(
   new URL("https://appleid.apple.com/auth/keys")
 );
+
+const PLAN_LIMITS = {
+  starter: 20,
+  home: 50,
+  plus: 100,
+};
+
+let adminPlanCatalogCache = null;
+let adminPlanCatalogCachedAt = 0;
+const ADMIN_PLAN_CATALOG_TTL_MS = 5 * 60 * 1000;
+
+const getAdminPlanCatalog = async () => {
+  const now = Date.now();
+  if (
+    adminPlanCatalogCache &&
+    now - adminPlanCatalogCachedAt < ADMIN_PLAN_CATALOG_TTL_MS
+  ) {
+    return adminPlanCatalogCache;
+  }
+
+  const planEnvMap = {
+    starter: process.env.STRIPE_PRICE_ID_STARTER,
+    home: process.env.STRIPE_PRICE_ID_HOME,
+    plus: process.env.STRIPE_PRICE_ID_PLUS,
+  };
+
+  const priceIdToPlanId = {};
+
+  const planEntries = Object.entries(planEnvMap);
+  for (const [planId, configuredPriceId] of planEntries) {
+    if (!configuredPriceId) continue;
+
+    // Keep configured ID match
+    priceIdToPlanId[configuredPriceId] = planId;
+
+    // Also map Stripe canonical recurring ID (if configured via lookup key)
+    try {
+      const recurringId = await stripeService.resolveRecurringPriceId(
+        configuredPriceId
+      );
+      if (recurringId) {
+        priceIdToPlanId[recurringId] = planId;
+      }
+    } catch (error) {
+      // Non-fatal: continue with configured IDs only
+    }
+  }
+
+  adminPlanCatalogCache = { priceIdToPlanId };
+  adminPlanCatalogCachedAt = now;
+  return adminPlanCatalogCache;
+};
 
 const signToken = (id) => {
   const jwtSecret = process.env.JWT_SECRET;
@@ -275,6 +329,14 @@ export const signup = async (req, res, next) => {
       );
     }
 
+    // Only admins can create admin accounts from protected routes
+    if (role === "admin" && req.user?.role !== "admin") {
+      await session.abortTransaction();
+      return next(
+        createError(403, "Only admins can assign admin role to users")
+      );
+    }
+
     // Set default role to user if not provided
     const userRole = role || "user";
 
@@ -440,8 +502,9 @@ export const signinWithApple = async (req, res, next) => {
 
 export const updateUser = async (req, res, next) => {
   try {
-    const { role, name, email } = req.body;
+    const { role, name, email, isActive, subscriptionStatus } = req.body;
     const userId = req.params.id;
+    const isAdmin = req.user?.role === "admin";
 
     // Find the user first
     const existingUser = await User.findById(userId);
@@ -451,9 +514,30 @@ export const updateUser = async (req, res, next) => {
       return next(createError(404, "No user found with that ID"));
     }
 
+    if (!isAdmin && role) {
+      return next(createError(403, "Only admins can update roles"));
+    }
+
+    if (!isAdmin && typeof isActive !== "undefined") {
+      return next(createError(403, "Only admins can update user status"));
+    }
+
     // Validate role if being updated
     if (role && !["admin", "user"].includes(role)) {
       return next(createError(400, "Invalid role provided"));
+    }
+
+    if (typeof isActive !== "undefined" && typeof isActive !== "boolean") {
+      return next(createError(400, "isActive must be a boolean value"));
+    }
+
+    if (
+      typeof subscriptionStatus !== "undefined" &&
+      !["none", "trialing", "active", "past_due", "canceled", "unpaid"].includes(
+        subscriptionStatus
+      )
+    ) {
+      return next(createError(400, "Invalid subscription status provided"));
     }
 
     // Validate email if being updated
@@ -479,14 +563,36 @@ export const updateUser = async (req, res, next) => {
     if (role) updateData.role = role;
     if (name) updateData.name = name.trim();
     if (email) updateData.email = email.toLowerCase().trim();
+    if (typeof isActive === "boolean") {
+      updateData.isActive = isActive;
+      updateData.isDeleted = !isActive;
+      updateData.deletedAt = isActive ? null : new Date();
+    }
+    if (isAdmin && typeof subscriptionStatus === "string") {
+      updateData.subscriptionStatus = subscriptionStatus;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateData, {
       new: true,
       runValidators: true,
     });
 
-    // ✅ FIXED: Send token with profile update to prevent re-login
-    createSendToken(updatedUser, 200, res);
+    const isUpdatingSelf =
+      req.user?._id?.toString() === updatedUser?._id?.toString();
+
+    if (isUpdatingSelf) {
+      // ✅ Keep token refresh behavior for self profile edits
+      createSendToken(updatedUser, 200, res);
+      return;
+    }
+
+    // Admin updating another user should not replace their own auth session.
+    res.status(200).json({
+      status: "success",
+      data: {
+        user: updatedUser,
+      },
+    });
   } catch (error) {
     console.error("Error in updateUser:", error);
     next(error);
@@ -555,14 +661,57 @@ export const getAllUsers = async (req, res, next) => {
 
     const totalUsers = await User.countDocuments({ isDeleted: false });
 
+    const userIds = users.map((user) => user._id);
+    const usageByUser = new Map();
+
+    if (userIds.length) {
+      const latestUsage = await BillingUsage.aggregate([
+        { $match: { userId: { $in: userIds } } },
+        { $sort: { billingPeriodEnd: -1, createdAt: -1 } },
+        {
+          $group: {
+            _id: "$userId",
+            usedUnits: { $first: "$usedUnits" },
+            limitUnits: { $first: "$limitUnits" },
+          },
+        },
+      ]);
+
+      latestUsage.forEach((entry) => {
+        usageByUser.set(String(entry._id), {
+          usedUnits: Number(entry.usedUnits) || 0,
+          limitUnits: Number(entry.limitUnits) || 0,
+        });
+      });
+    }
+
+    const planCatalog = await getAdminPlanCatalog();
+
+    const usersWithCredits = users.map((userDoc) => {
+      const user = userDoc.toObject();
+      const usage = usageByUser.get(String(user._id));
+      const planId = planCatalog.priceIdToPlanId[user.stripePriceId] || null;
+      const inferredLimit = planId ? PLAN_LIMITS[planId] || 0 : 0;
+      const limitUnits = usage?.limitUnits || inferredLimit;
+      const usedUnits = usage?.usedUnits || 0;
+      const creditsAvailable = Math.max(limitUnits - usedUnits, 0);
+
+      return {
+        ...user,
+        creditsAvailable,
+        creditsUsed: usedUnits,
+        creditsLimit: limitUnits,
+      };
+    });
+
     res.status(200).json({
       status: "success",
-      results: users.length,
+      results: usersWithCredits.length,
       totalResults: totalUsers,
       totalPages: Math.ceil(totalUsers / limit),
       currentPage: page,
       data: {
-        users,
+        users: usersWithCredits,
       },
     });
   } catch (error) {

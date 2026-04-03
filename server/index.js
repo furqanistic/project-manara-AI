@@ -14,6 +14,7 @@ import moodboardRoute from './routes/moodboard.js'
 import projectRoutes from './routes/project.js'
 import stripeRoutes from './routes/stripe.js'
 import threeDRoutes from './routes/threeD.js'
+import { ensureBootstrapAdmin } from './services/adminBootstrapService.js'
 
 
 const app = express()
@@ -161,16 +162,15 @@ app.use((err, req, res, next) => {
 // Database connection
 // ============================================================================
 
-const connect = () => {
-  mongoose
-    .connect(process.env.MONGO)
-    .then(() => {
-      console.log('✅ Connected to MongoDB')
-    })
-    .catch((err) => {
-      console.error('❌ MongoDB connection error:', err)
-      process.exit(1)
-    })
+const connect = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO)
+    console.log('✅ Connected to MongoDB')
+    await ensureBootstrapAdmin()
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err)
+    process.exit(1)
+  }
 }
 
 const PORT = process.env.PORT || 8800
