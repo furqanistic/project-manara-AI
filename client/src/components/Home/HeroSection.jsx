@@ -1,266 +1,225 @@
-import {
-  AnimatePresence,
-  motion,
-  useScroll,
-  useTransform,
-} from 'framer-motion'
-import { ArrowRight, ChevronRight, Globe, Layers, Maximize2, MousePointer2, Sparkles, Zap } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ArrowRight, ChevronDown } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
-import { Button } from '../../components/ui/button'
+import { Link } from 'react-router-dom'
+import { EASE } from '@/components/Landing/ease'
+import BoomerangVideoBg from './BoomerangVideoBg'
 
-const HeroSection = () => {
-  const [activeStep, setActiveStep] = useState(0)
-  const [isMobile, setIsMobile] = useState(false)
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-  const { scrollY } = useScroll()
+const STUDIO_ITEMS = [
+  { name: '3D Renders', href: '/visualizer' },
+  { name: 'Floor Plans', href: '/floorplans' },
+  { name: 'AI Designs', href: '/moodboard' },
+]
+
+const NAV_LINKS = [
+  { label: 'Projects', href: '/projects' },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'About', href: '/about' },
+]
+
+const FEATURES = [
+  {
+    number: '01',
+    label: '3D Renders',
+    href: '/visualizer',
+    copy: 'Photorealistic visuals of your space, from any photo.',
+  },
+  {
+    number: '02',
+    label: 'Floor Plans',
+    href: '/floorplans',
+    copy: 'Precise layouts drawn to scale, ready to act on.',
+  },
+  {
+    number: '03',
+    label: 'Shop Lists',
+    href: '/moodboard',
+    copy: 'Curated furniture & finishes, buyable in one click.',
+  },
+]
+
+const TopNav = () => {
+  const [studioOpen, setStudioOpen] = useState(false)
+  const studioRef = useRef(null)
 
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 1024)
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
+    const handleClickOutside = (event) => {
+      if (studioRef.current && !studioRef.current.contains(event.target)) {
+        setStudioOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveStep((prev) => (prev + 1) % 3)
-    }, 4000)
-    return () => clearInterval(interval)
-  }, [])
-
-  const handleMouseMove = (e) => {
-    if (isMobile) return
-    const { clientX, clientY } = e
-    const { innerWidth, innerHeight } = window
-    setMousePos({
-      x: (clientX / innerWidth - 0.5) * 20,
-      y: (clientY / innerHeight - 0.5) * 20,
-    })
-  }
-
-  const yHero = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 80])
-  const opacityHero = useTransform(scrollY, [0, 400], isMobile ? [1, 1] : [1, 0])
-
-  const stages = [
-    { title: 'Neural Analysis', status: 'Scanning geometry...', color: '#937c60' },
-    { title: 'Aesthetic Search', status: 'Matching intent...', color: '#b8a58c' },
-    { title: 'HD Synthesis', status: 'Generating photorealism...', color: '#e5e7eb' },
-  ]
 
   return (
-    <section 
-      onMouseMove={handleMouseMove}
-      className='relative min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] font-["Poppins"] selection:bg-[#937c60]/10 overflow-hidden flex items-center md:pt-40 transition-colors duration-500'
-    >
-      {/* Cinematic Background Ambience */}
-      <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-        <div 
-          className='absolute top-[-10%] right-[-5%] w-[70%] h-[70%] rounded-full bg-[#937c60]/5 dark:bg-[#937c60]/10 blur-[140px] transition-transform duration-1000'
-          style={{ transform: `translate(${mousePos.x}px, ${mousePos.y}px)` }}
-        />
-        <div 
-          className='absolute bottom-[-10%] left-[-10%] w-[60%] h-[60%] rounded-full bg-[#b8a58c]/3 dark:bg-[#b8a58c]/5 blur-[120px] transition-transform duration-1000'
-          style={{ transform: `translate(${-mousePos.x}px, ${-mousePos.y}px)` }}
-        />
-        {/* Grain Overlay */}
-        <div className='absolute inset-0 opacity-[0.03] dark:opacity-[0.05] pointer-events-none' 
-             style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }} />
-      </div>
+    <header className='fixed top-0 left-0 right-0 z-50 px-6 sm:px-10 md:px-14 py-3.5 sm:py-4 bg-ivory/85 backdrop-blur-md border-b border-beige'>
+      <div className='flex items-center justify-between'>
+        <Link to='/' className='flex items-center'>
+          <img
+            src='/logoicon.png'
+            alt='Manāra logo'
+            className='h-8 w-auto object-contain'
+          />
+        </Link>
 
-      <main className='relative z-10 max-w-[1600px] mx-auto px-6 md:px-20 w-full'>
-        <div className='grid xl:grid-cols-12 gap-16 items-center'>
-          
-          {/* Left Content Column */}
-          <motion.div 
-            style={{ y: yHero, opacity: opacityHero }}
-            className='xl:col-span-7 space-y-8 md:space-y-12'
+        <nav className='hidden md:flex items-center gap-8'>
+          {/* Studio Dropdown */}
+          <div className='relative' ref={studioRef}>
+            <button
+              onClick={() => setStudioOpen((prev) => !prev)}
+              className='flex items-center gap-1.5 text-sm text-charcoal/70 hover:text-manara transition-colors duration-200'
+            >
+              Studio
+              <ChevronDown
+                size={14}
+                className={`transition-transform duration-200 ${
+                  studioOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+            {studioOpen && (
+              <div className='absolute top-full left-0 mt-2 w-52 bg-ivory border border-beige rounded-lg shadow-[0_20px_50px_rgba(24,23,21,0.1)] p-1.5'>
+                {STUDIO_ITEMS.map((item) => (
+                  <Link
+                    key={item.name}
+                    to={item.href}
+                    onClick={() => setStudioOpen(false)}
+                    className='flex items-center px-3 py-2.5 rounded text-sm font-medium text-charcoal/70 hover:text-manara hover:bg-white/60 transition-all'
+                  >
+                    {item.name}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {NAV_LINKS.map((link) => (
+            <Link
+              key={link.label}
+              to={link.href}
+              className='text-sm text-charcoal/70 hover:text-manara transition-colors duration-200'
+            >
+              {link.label}
+            </Link>
+          ))}
+        </nav>
+
+        <Link
+          to='/moodboard'
+          className="hidden md:inline-flex items-center bg-manara text-white text-sm font-medium rounded-full px-6 py-3 hover:bg-[#7a6650] transition-colors duration-200"
+        >
+          Start Creating
+        </Link>
+        <Link
+          to='/moodboard'
+          className="md:hidden bg-manara text-white text-sm font-medium rounded-full px-5 py-2.5 hover:bg-[#7a6650] transition-colors duration-200"
+        >
+          Start
+        </Link>
+      </div>
+    </header>
+  )
+}
+
+const HeroSection = () => {
+  return (
+    <>
+      <TopNav />
+
+      {/* Hero — cinematic background */}
+      <section className='relative flex flex-col items-center min-h-screen'>
+        <BoomerangVideoBg />
+
+        {/* Hero Copy */}
+        <div className='relative z-10 flex flex-col items-center text-center pt-24 sm:pt-26 md:pt-32 px-4 sm:px-6'>
+          <h1 className='font-serif text-4xl sm:text-5xl md:text-7xl lg:text-8xl leading-[1.1] tracking-tight text-charcoal font-normal [text-shadow:0_1px_2px_rgba(244,240,232,0.8),0_8px_32px_rgba(244,240,232,0.5)]'>
+            From moodboard
+            <br />
+            to move-in.
+          </h1>
+
+          <Link
+            to='/moodboard'
+            className="mt-8 sm:mt-10 md:mt-12 bg-manara text-white text-sm font-medium rounded-full px-6 sm:px-8 py-3 sm:py-3.5 hover:bg-[#7a6650] transition-colors duration-200"
           >
-            <div className='space-y-6 md:space-y-8'>
-              <motion.div 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className='flex items-center gap-4'
-              >
-                <div className='w-12 h-[1px] bg-[#937c60]'></div>
-                <span className='text-[10px] font-bold tracking-[0.5em] text-[#937c60] uppercase'>The Future of Spatial Synthesis</span>
-              </motion.div>
-              
-              <motion.h1 
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
-                className='text-5xl md:text-8xl lg:text-9xl font-bold text-gray-900 dark:text-white tracking-tightest leading-[0.95] md:leading-[0.85]'
-              >
-                Synthesize <br />
-                <span className='text-[#937c60] font-serif italic'>Your Vision.</span>
-              </motion.h1>
-              
-              <motion.p 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.4 }}
-                className='text-gray-400 dark:text-gray-500 font-medium text-base md:text-2xl max-w-xl leading-relaxed'
-              >
-                Architectural intelligence that translates raw imagination into photorealistic, executable spaces in seconds.
-              </motion.p>
+            Start Creating
+          </Link>
+        </div>
+
+        {/* Bottom Info Panel */}
+        <div className='relative z-10 mt-auto w-full max-w-6xl px-4 sm:px-6 pb-5 sm:pb-8'>
+          <motion.div
+            initial={{ opacity: 0, y: 48 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, ease: EASE, delay: 0.15 }}
+            className='bg-ivory/95 backdrop-blur-md border border-beige rounded-2xl shadow-[0_40px_90px_-30px_rgba(24,23,21,0.45)] px-5 sm:px-8 md:px-12 pt-8 sm:pt-10 md:pt-12 pb-5 sm:pb-6'
+          >
+            {/* Row 1 */}
+            <div className='grid md:grid-cols-2 gap-6 md:gap-8 lg:gap-16'>
+              <div>
+                <p className='label-arch'>What do we do?</p>
+                <h2 className='mt-3 text-3xl sm:text-4xl md:text-[44px] font-serif font-normal leading-[1.08] tracking-tight text-charcoal'>
+                  Imagination,
+                  <br className='hidden sm:inline' />
+                  executed.
+                </h2>
+              </div>
+
+              <div className='flex flex-col justify-end gap-4'>
+                <p className='text-sm md:text-[15px] text-stone leading-relaxed'>
+                  AI-powered interior design for Dubai and the UAE. Share a
+                  photo of your space and get photorealistic 3D renders,
+                  precise floor plans, and curated shop lists — in under two
+                  hours.
+                </p>
+                <p className='label-meta'>Dubai · UAE · Under 2 hours</p>
+              </div>
             </div>
 
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.6 }}
-              className='flex flex-col sm:flex-row gap-4 sm:gap-6 items-center pt-4'
-            >
-               <Button 
-                 onClick={() => window.location.href = '/moodboard'}
-                 className='w-full sm:w-auto bg-gray-900 dark:bg-white dark:text-black hover:bg-black dark:hover:bg-gray-200 text-white px-8 sm:px-10 py-6 sm:py-7 rounded-full font-bold text-lg flex items-center justify-center gap-3 shadow-2xl transition-all active:scale-95 group'
-               >
-                 Start Creating
-                 <ArrowRight size={20} className='group-hover:translate-x-1 transition-transform' />
-               </Button>
-               
-               <a href="/pricing" className='w-full sm:w-auto justify-center group flex items-center gap-3 text-gray-500 dark:text-gray-400 font-bold hover:text-gray-900 dark:hover:text-white transition-colors py-4 px-6 rounded-full hover:bg-gray-100/50 dark:hover:bg-white/5'>
-                  See Pricing
-                  <ChevronRight size={18} className='group-hover:translate-x-1 transition-transform text-[#937c60]' />
-               </a>
-            </motion.div>
+            {/* Hairline Divider */}
+            <div className='mt-8 sm:mt-10 md:mt-12 h-px bg-beige w-full' />
 
-            {/* Premium Stats Strip */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 1, delay: 1 }}
-              className='flex flex-nowrap justify-between md:justify-start gap-2 md:gap-12 pt-10 md:pt-16 border-t border-gray-100 dark:border-white/10 max-w-2xl w-full md:w-auto overflow-x-auto'
-            >
-               {[
-                 { label: 'Latency', value: '2.4ms', icon: Zap },
-                 { label: 'Generation', value: '4K HD', icon: Sparkles },
-                 { label: 'Uptime', value: '99.9%', icon: Globe }
-               ].map((stat, i) => (
-                 <div key={i} className='flex items-center gap-2 md:gap-4 group min-w-max'>
-                    <div className='w-8 h-8 md:w-10 md:h-10 rounded-xl bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 flex items-center justify-center text-[#937c60] shadow-sm transform group-hover:scale-110 transition-transform'>
-                       <stat.icon size={16} className='md:w-[18px] md:h-[18px]' />
-                    </div>
-                    <div>
-                        <p className='text-sm md:text-xl font-bold text-gray-900 dark:text-white tracking-tight'>{stat.value}</p>
-                        <p className='text-[8px] md:text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest'>{stat.label}</p>
-                    </div>
-                 </div>
-               ))}
-            </motion.div>
-          </motion.div>
-
-          {/* Right Visual Column (Architectural HUD) */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9, x: 50 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-            className='xl:col-span-5 relative hidden xl:block'
-          >
-            {/* Main Image Frame with Layered Elements */}
-            <div className='relative'>
-                <div className='absolute -inset-4 border border-gray-900/5 dark:border-white/5 rounded-[60px] pointer-events-none' />
-                <div className='absolute -inset-8 border border-gray-900/[0.02] dark:border-white/[0.02] rounded-[70px] pointer-events-none' />
-                
-                <div className='bg-white dark:bg-[#111] rounded-[56px] p-4 shadow-[0_50px_100px_rgba(147,124,96,0.12)] border border-[#937c60]/10 dark:border-white/5 overflow-hidden relative group'>
-                    {/* Editorial Image container */}
-                    <div className='aspect-[4/5] rounded-[44px] overflow-hidden relative bg-stone-100 dark:bg-stone-900'>
-                        <img 
-                            src='https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=1000&auto=format' 
-                            alt='Neural Synthesis' 
-                            className='w-full h-full object-cover transition-all duration-1000 scale-[1.02] group-hover:scale-110'
-                        />
-                        <div className='absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent' />
-                        
-                        {/* Scanning Effect */}
-                        <motion.div 
-                            animate={{ top: ['-20%', '120%'] }}
-                            transition={{ duration: 3.5, repeat: Infinity, ease: 'linear' }}
-                            className='absolute inset-x-0 h-32 bg-gradient-to-b from-[#937c60]/0 via-[#937c60]/40 to-[#937c60]/0 z-20 pointer-events-none'
-                        >
-                            <div className='w-full h-[1px] bg-white/50' />
-                        </motion.div>
-
-                        {/* Floating Interaction UI */}
-                        <div className='absolute top-8 left-8 flex flex-col gap-3'>
-                            <div className='bg-white/10 backdrop-blur-md border border-white/20 p-3 rounded-2xl flex items-center gap-3 text-white'>
-                                <Layers size={16} />
-                                <span className='text-[10px] font-bold uppercase tracking-widest'>Base.Mesh</span>
-                            </div>
-                            <div className='bg-white/10 backdrop-blur-md border border-white/20 p-3 rounded-2xl flex items-center gap-3 text-white'>
-                                <Maximize2 size={16} />
-                                <span className='text-[10px] font-bold uppercase tracking-widest'>4096px</span>
-                            </div>
-                        </div>
-
-                        {/* Status Label */}
-                        <div className='absolute bottom-8 left-8 right-8'>
-                            <div className='bg-white/10 backdrop-blur-xl border border-white/20 p-6 rounded-[32px] flex flex-col gap-4'>
-                                <div className='flex justify-between items-center'>
-                                    <div className='flex items-center gap-3'>
-                                        <div className='w-2 h-2 rounded-full bg-[#937c60] animate-pulse' />
-                                        <p className='text-[10px] font-bold text-white uppercase tracking-widest'>Synthesis Phase</p>
-                                    </div>
-                                    <span className='text-[10px] font-mono text-white/50'>v1.2.0</span>
-                                </div>
-                                <AnimatePresence mode='wait'>
-                                    <motion.p 
-                                        key={activeStep}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        className='text-2xl font-bold text-white tracking-tight'
-                                    >
-                                        {stages[activeStep].title}
-                                    </motion.p>
-                                </AnimatePresence>
-                                <div className='h-1 w-full bg-white/10 rounded-full overflow-hidden'>
-                                    <motion.div 
-                                        className='h-full bg-[#937c60]'
-                                        animate={{ width: ['0%', '100%'] }}
-                                        transition={{ duration: 4, repeat: Infinity }}
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Satellite Floating Elements */}
-                <motion.div 
-                    animate={{ y: [0, -15, 0] }}
-                    transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                    className='absolute -top-12 -right-8 bg-white dark:bg-[#1a1a1a] p-6 rounded-3xl shadow-xl border border-gray-100 dark:border-white/10 z-30'
+            {/* Row 2 — Prominent Feature Tiles */}
+            <div className='grid sm:grid-cols-3 gap-3 sm:gap-4 mt-5 sm:mt-6'>
+              {FEATURES.map((feature, i) => (
+                <motion.div
+                  key={feature.number}
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, ease: EASE, delay: 0.3 + i * 0.1 }}
                 >
-                    <div className='flex items-center gap-4'>
-                        <div className='w-12 h-12 rounded-2xl bg-[#937c60]/10 flex items-center justify-center text-[#937c60]'>
-                            <MousePointer2 size={24} />
-                        </div>
-                        <div>
-                            <p className='text-xs font-bold text-gray-900 dark:text-white'>Neural Drag</p>
-                            <p className='text-[9px] text-gray-400 dark:text-gray-500 font-bold uppercase tracking-widest'>Active Control</p>
-                        </div>
+                  <Link
+                    to={feature.href}
+                    className='group relative flex h-full flex-col overflow-hidden rounded-xl bg-charcoal px-6 py-6 sm:py-7 transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_24px_50px_-16px_rgba(24,23,21,0.5)]'
+                  >
+                    <div className='relative flex items-start justify-between'>
+                      <span className='font-serif text-2xl text-manara/80 transition-colors duration-300 group-hover:text-[#c3a886]'>
+                        {feature.number}
+                      </span>
+                      <span className='flex h-10 w-10 items-center justify-center rounded-full border border-ivory/25 text-ivory transition-all duration-300 group-hover:border-manara group-hover:bg-manara group-hover:text-white'>
+                        <ArrowRight className='h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5' />
+                      </span>
                     </div>
+
+                    <div className='relative mt-9'>
+                      <p className='text-[17px] font-semibold tracking-tight text-ivory'>
+                        {feature.label}
+                      </p>
+                      <p className='mt-2 text-[13px] leading-relaxed text-[#B5ACA0]'>
+                        {feature.copy}
+                      </p>
+                    </div>
+
+                    <div className='pointer-events-none absolute inset-0 bg-gradient-to-br from-transparent to-transparent transition-colors duration-500 group-hover:from-manara/20 group-hover:to-transparent' />
+                  </Link>
                 </motion.div>
+              ))}
             </div>
           </motion.div>
         </div>
-      </main>
-
-      {/* Aesthetic Accents */}
-      {!isMobile && (
-        <React.Fragment>
-          <div className='absolute left-10 top-1/2 -translate-y-1/2 h-64 flex flex-col items-center justify-between opacity-20 dark:opacity-40 pointer-events-none'>
-            <div className='w-[1px] h-24 bg-[#937c60]' />
-            <span className='[writing-mode:vertical-lr] text-[10px] font-bold tracking-[0.8em] uppercase text-[#937c60]'>Architectural Essence</span>
-            <div className='w-[1px] h-24 bg-[#937c60]' />
-          </div>
-          <div className='absolute right-10 bottom-10 opacity-10 dark:opacity-20 pointer-events-none'>
-            <span className='text-[12vw] font-black italic font-serif text-gray-900 dark:text-white leading-none'>2025</span>
-          </div>
-        </React.Fragment>
-      )}
-    </section>
+      </section>
+    </>
   )
 }
 

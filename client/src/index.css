@@ -3,6 +3,58 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --font-sans: 'Manrope', 'Poppins', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'Instrument Serif', 'P22 Mackinac W01 Book', 'Georgia', 'serif';
+
+  --color-ivory: #f5f2ec;
+  --color-beige: #ded6ca;
+  --color-charcoal: #171614;
+  --color-stone: #aaa196;
+  --color-manara: #8d775e;
+}
+
+body {
+  font-family: 'Manrope', 'Poppins', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer utilities {
+  .label-arch {
+    font-family: 'Manrope', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: #8d775e;
+  }
+  .label-arch-light {
+    font-family: 'Manrope', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: #c3a886;
+  }
+  .label-meta {
+    font-family: 'Manrope', sans-serif;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #aaa196;
+  }
+  .hairline {
+    height: 1px;
+    background: #ded6ca;
+  }
+  .hairline-dark {
+    height: 1px;
+    background: rgba(245, 242, 236, 0.14);
+  }
+}
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
