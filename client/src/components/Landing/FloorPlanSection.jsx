@@ -1,17 +1,6 @@
 import React from 'react'
 import { FloorPlanArt } from './FloorPlanArt'
-import { Hairline, Label, Reveal } from './primitives'
-
-const CAPABILITIES = [
-  'Room-by-room validation',
-  'Measured annotations',
-  'North orientation',
-  'Furniture placement',
-  'Original-versus-refined comparison',
-  'Branded export styles',
-]
-
-const EXPORTS = ['PORTAL READY', 'BROCHURE', 'PRESENTATION', '3D SOURCE']
+import { Label, Reveal } from './primitives'
 
 const FloorPlanSection = () => {
   return (
@@ -72,59 +61,6 @@ const FloorPlanSection = () => {
           </div>
         </Reveal>
 
-        {/* Capabilities + export styles */}
-        <div className='grid lg:grid-cols-12 gap-10 lg:gap-16 mt-16 md:mt-24'>
-          <div className='lg:col-span-5'>
-            <Reveal>
-              <Label>WHAT MANĀRA CORRECTS</Label>
-            </Reveal>
-            <div className='mt-8 flex flex-col'>
-              {CAPABILITIES.map((c, i) => (
-                <Reveal key={c} delay={i * 0.05}>
-                  <div className='flex items-baseline gap-5 py-3.5 border-b border-beige group'>
-                    <span className='text-[10px] font-semibold text-manara w-6'>
-                      0{i + 1}
-                    </span>
-                    <span className='text-[15px] text-charcoal/80 group-hover:text-manara transition-colors duration-300'>
-                      {c}
-                    </span>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-
-          <div className='lg:col-span-7'>
-            <Reveal>
-              <Label>BRANDED EXPORT STYLES</Label>
-            </Reveal>
-            <div className='grid grid-cols-2 gap-px bg-beige border border-beige mt-8'>
-              {EXPORTS.map((e, i) => (
-                <div
-                  key={e}
-                  className='bg-ivory p-6 md:p-10 flex flex-col justify-between min-h-[140px] md:min-h-[180px] group cursor-default'
-                >
-                  <span className='text-[10px] font-semibold text-manara'>
-                    STYLE 0{i + 1}
-                  </span>
-                  <span className='font-serif text-xl md:text-2xl text-charcoal group-hover:text-manara transition-colors duration-300'>
-                    {e}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <Reveal delay={0.1}>
-              <div className='flex items-center gap-5 mt-6'>
-                <span className='w-8 h-px bg-manara' />
-                <p className='text-[11px] font-semibold tracking-[0.25em] uppercase text-stone'>
-                  YOUR LOGO — YOUR SPACES — YOUR FORMATS
-                </p>
-              </div>
-            </Reveal>
-          </div>
-        </div>
-
-        <Hairline className='mt-20 md:mt-28' />
       </div>
     </section>
   )

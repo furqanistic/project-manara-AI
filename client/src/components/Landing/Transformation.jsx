@@ -1,11 +1,16 @@
-import React, { useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import {
   motion,
-  useMotionValueEvent,
   useScroll,
   useTransform,
 } from 'framer-motion'
-import { FloorPlanArt } from './FloorPlanArt'
+
+const STAGE_IMAGES = {
+  source: '/Home/transformation/stage-01-source.png',
+  floorPlan: '/Home/transformation/stage-02-floor-plan.png',
+  visualization: '/Home/transformation/stage-03-visualization.png',
+  presentation: '/Home/transformation/stage-04-presentation.png',
+}
 
 const STAGES = [
   {
@@ -26,9 +31,76 @@ const STAGES = [
   {
     no: '04',
     name: 'Buyer Presentation',
-    desc: 'A finished, shareable property page ready for the market.',
+    desc: 'A complete, branded buyer-ready sales package for the market.',
   },
 ]
+
+const StageImage = ({ src, alt, backdrop = 'bg-charcoal', shade = '' }) => (
+  <div className={`absolute inset-0 overflow-hidden ${backdrop}`}>
+    <img
+      src={src}
+      alt=''
+      aria-hidden='true'
+      className='absolute inset-0 h-full w-full scale-110 object-cover opacity-25 blur-2xl'
+    />
+    <img
+      src={src}
+      alt={alt}
+      className='relative z-10 h-full w-full object-contain'
+    />
+    {shade && <div className={`absolute inset-0 z-20 ${shade}`} />}
+  </div>
+)
+
+const MobileTransformation = () => (
+  <div className='lg:hidden py-16'>
+    <div className='px-6 mb-8'>
+      <p className='label-arch'>THE MANĀRA PIPELINE / 01 — 04</p>
+      <p className='mt-3 text-sm leading-relaxed text-stone'>
+        Swipe through one property from source file to buyer-ready presentation.
+      </p>
+    </div>
+
+    <div className='flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-6 pb-5 no-scrollbar'>
+      {STAGES.map((stage, index) => (
+        <article
+          key={stage.no}
+          className='w-[86vw] max-w-[520px] shrink-0 snap-center overflow-hidden rounded-[10px] border border-beige bg-white'
+        >
+          <div
+            className={`relative aspect-video overflow-hidden ${index === 1 ? 'bg-ivory' : 'bg-charcoal'}`}
+          >
+            <img
+              src={Object.values(STAGE_IMAGES)[index]}
+              alt=''
+              aria-hidden='true'
+              className='absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-xl'
+            />
+            <img
+              src={Object.values(STAGE_IMAGES)[index]}
+              alt={stage.name}
+              className='relative z-10 h-full w-full object-contain'
+            />
+          </div>
+          <div className='p-5'>
+            <p className='text-[10px] font-semibold uppercase tracking-[0.3em] text-manara'>
+              STAGE {stage.no}
+            </p>
+            <h3 className='mt-2 font-serif text-2xl text-charcoal'>{stage.name}</h3>
+            <p className='mt-2 text-sm leading-relaxed text-stone'>{stage.desc}</p>
+          </div>
+        </article>
+      ))}
+      <div className='w-2 shrink-0' aria-hidden='true' />
+    </div>
+
+    <div className='flex items-center justify-center gap-2 px-6' aria-hidden='true'>
+      {STAGES.map((stage) => (
+        <span key={stage.no} className='h-1 w-8 rounded-full bg-manara/30' />
+      ))}
+    </div>
+  </div>
+)
 
 const Transformation = () => {
   const ref = useRef(null)
@@ -38,35 +110,42 @@ const Transformation = () => {
     offset: ['start start', 'end end'],
   })
 
-  useMotionValueEvent(scrollYProgress, 'change', (v) => {
-    const idx = Math.min(3, Math.floor(v * 4))
-    if (idx !== active) setActive(idx)
-  })
+  useEffect(() => {
+    const updateActiveStage = (value) => {
+      const next = Math.min(3, Math.floor(value * 4))
+      setActive((current) => (current === next ? current : next))
+    }
 
-  const stage1 = useTransform(scrollYProgress, [0, 0.22], [1, 0])
-  const stage2 = useTransform(scrollYProgress, [0.18, 0.3, 0.48], [0, 1, 0])
-  const stage3 = useTransform(scrollYProgress, [0.42, 0.55, 0.74], [0, 1, 0])
-  const stage4 = useTransform(scrollYProgress, [0.68, 0.8], [0, 1])
-  const scale1 = useTransform(scrollYProgress, [0, 0.22], [1.05, 1])
-  const scale4 = useTransform(scrollYProgress, [0.68, 0.82], [1.06, 1])
+    updateActiveStage(scrollYProgress.get())
+    return scrollYProgress.on('change', updateActiveStage)
+  }, [scrollYProgress])
+
+  const stage1 = useTransform(scrollYProgress, [0, 0.18, 0.27], [1, 1, 0])
+  const stage2 = useTransform(scrollYProgress, [0.18, 0.27, 0.43, 0.52], [0, 1, 1, 0])
+  const stage3 = useTransform(scrollYProgress, [0.43, 0.52, 0.68, 0.77], [0, 1, 1, 0])
+  const stage4 = useTransform(scrollYProgress, [0.68, 0.77, 1], [0, 1, 1])
+  const scale1 = useTransform(scrollYProgress, [0, 0.27], [1.025, 1])
+  const scale4 = useTransform(scrollYProgress, [0.68, 0.82], [1.025, 1])
 
   return (
     <section id='product' className='relative bg-ivory'>
-      <div ref={ref} className='relative h-[360vh]'>
-        <div className='sticky top-0 h-[100svh] overflow-hidden'>
+      <MobileTransformation />
+
+      <div ref={ref} className='relative hidden h-[340vh] lg:block'>
+        <div className='sticky top-[76px] h-[calc(100svh-76px)] overflow-hidden'>
           {/* Stage 1 — original photo */}
           <motion.div
             style={{ opacity: stage1 }}
             className='absolute inset-0'
           >
-            <motion.img
-              style={{ scale: scale1 }}
-              src='https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=2000&q=80&auto=format'
-              alt='Original property photograph'
-              className='w-full h-full object-cover'
-            />
-            <div className='absolute inset-0 bg-charcoal/35' />
-            <div className='absolute top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-ivory/80'>
+            <motion.div style={{ scale: scale1 }} className='absolute inset-0'>
+              <StageImage
+                src={STAGE_IMAGES.source}
+                alt='Original property photograph'
+                shade='bg-charcoal/25'
+              />
+            </motion.div>
+            <div className='absolute z-30 top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-ivory/80'>
               RAW SOURCE — UPLOADED FILE 04.JPG
             </div>
           </motion.div>
@@ -76,17 +155,14 @@ const Transformation = () => {
             style={{ opacity: stage2 }}
             className='absolute inset-0 bg-ivory'
           >
-            <div className='h-full flex items-center justify-center px-6 py-24'>
-              <motion.div
-                initial={false}
-                className='w-full max-w-[1000px] bg-white border border-beige p-4 md:p-8 shadow-[0_40px_120px_-40px_rgba(23,22,20,0.25)]'
-              >
-                <div className='flex items-center justify-between px-1 pb-4 border-b border-beige mb-4'>
-                  <p className='label-arch'>SIGNATURE RESIDENCE / LEVEL 02</p>
-                  <p className='label-meta'>SCALE 1:100 — 2,130 SQ FT</p>
-                </div>
-                <FloorPlanArt refined className='w-full h-auto' />
-              </motion.div>
+            <StageImage
+              src={STAGE_IMAGES.floorPlan}
+              alt='Presentation-ready branded floor plan for the penthouse'
+              backdrop='bg-ivory'
+              shade='bg-charcoal/[0.02]'
+            />
+            <div className='absolute z-30 top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-charcoal/65'>
+              VALIDATED PLAN — SIGNATURE RESIDENCE / LEVEL 02
             </div>
           </motion.div>
 
@@ -95,14 +171,12 @@ const Transformation = () => {
             style={{ opacity: stage3 }}
             className='absolute inset-0'
           >
-            <motion.img
-              initial={false}
-              src='https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=2000&q=80&auto=format'
+            <StageImage
+              src={STAGE_IMAGES.visualization}
               alt='Photorealistic furnished 3D visualization'
-              className='w-full h-full object-cover'
+              shade='bg-charcoal/20'
             />
-            <div className='absolute inset-0 bg-charcoal/25' />
-            <div className='absolute top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-ivory/80'>
+            <div className='absolute z-30 top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-ivory/80'>
               3D VISUALIZATION — FURNISHED CONCEPT 02
             </div>
           </motion.div>
@@ -112,18 +186,17 @@ const Transformation = () => {
             style={{ opacity: stage4 }}
             className='absolute inset-0 bg-charcoal'
           >
-            <motion.img
-              initial={false}
-              style={{ scale: scale4 }}
-              src='https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=2000&q=80&auto=format'
-              alt='Finished buyer-facing property presentation'
-              className='w-full h-full object-cover'
-            />
-            <div className='absolute inset-0 bg-charcoal/60' />
-            <div className='absolute top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-ivory/80'>
-              LIVE PROPERTY PAGE — MANARA.AI/P/001
+            <motion.div style={{ scale: scale4 }} className='absolute inset-0'>
+              <StageImage
+                src={STAGE_IMAGES.presentation}
+                alt='Finished buyer-facing property presentation'
+                shade='bg-charcoal/30'
+              />
+            </motion.div>
+            <div className='absolute z-30 top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-ivory/80'>
+              BUYER PRESENTATION — SALES BROCHURE / 001
             </div>
-            <div className='absolute bottom-10 right-6 md:right-12 hidden md:block text-right'>
+            <div className='absolute z-30 bottom-10 right-6 md:right-12 hidden md:block text-right'>
               <p className='font-serif text-ivory text-2xl md:text-3xl'>
                 Skyline Penthouse
               </p>
@@ -134,21 +207,26 @@ const Transformation = () => {
           </motion.div>
 
           {/* Progress rail */}
-          <div className='absolute right-6 md:right-12 top-1/2 -translate-y-1/2 hidden md:flex flex-col gap-6'>
+          <div className='absolute z-30 right-6 md:right-12 top-1/2 -translate-y-1/2 hidden md:flex flex-col gap-6'>
             {STAGES.map((s, i) => (
-              <div key={s.no} className='flex items-center gap-4 justify-end'>
+              <div
+                key={s.no}
+                className={`flex items-center gap-4 justify-end rounded-full px-4 py-2.5 transition-all duration-500 ${
+                  i === active
+                    ? 'bg-[#8d775e] shadow-[0_12px_30px_-14px_rgba(23,22,20,0.55)]'
+                    : 'bg-transparent'
+                }`}
+              >
                 <span
                   className={`text-[9px] tracking-[0.3em] uppercase transition-all duration-500 ${
                     i === active ? 'opacity-100' : 'opacity-40'
                   }`}
                   style={{
                     color:
-                      active === 1
-                        ? i === active
+                      i === active
+                        ? '#F5F2EC'
+                        : active === 1
                           ? '#171614'
-                          : '#171614'
-                        : i === active
-                          ? '#F5F2EC'
                           : '#F5F2EC',
                   }}
                 >
@@ -161,7 +239,7 @@ const Transformation = () => {
                   style={{
                     color:
                       i === active
-                        ? '#8D775E'
+                        ? '#F5F2EC'
                         : active === 1
                           ? '#171614'
                           : '#F5F2EC',
@@ -175,8 +253,10 @@ const Transformation = () => {
 
           {/* Active caption */}
           <div
-            className={`absolute bottom-0 left-0 right-0 transition-colors duration-500 ${
-              active === 1 ? '' : 'bg-gradient-to-t from-charcoal/70 to-transparent'
+            className={`absolute z-30 bottom-0 left-0 right-0 transition-colors duration-500 ${
+              active === 1
+                ? 'bg-ivory/95'
+                : 'bg-gradient-to-t from-charcoal/75 via-charcoal/20 to-transparent'
             }`}
           >
             <div
@@ -195,7 +275,7 @@ const Transformation = () => {
                 </p>
                 <p
                   className={`mt-2.5 text-sm leading-relaxed hidden sm:block transition-colors duration-500 ${
-                    active === 1 ? 'text-stone' : 'text-ivory/75'
+                    active === 1 ? 'text-charcoal/70' : 'text-ivory/75'
                   }`}
                 >
                   {STAGES[active].desc}

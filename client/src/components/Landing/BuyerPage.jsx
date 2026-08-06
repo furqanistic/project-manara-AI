@@ -37,7 +37,7 @@ const BuyerPage = () => {
         </div>
 
         {/* Device composition */}
-        <div className='grid lg:grid-cols-12 gap-10 lg:gap-14 items-end'>
+        <div className='grid lg:grid-cols-12 gap-10 lg:gap-14 items-center'>
           {/* Desktop browser */}
           <Reveal delay={0.1} y={48} className='lg:col-span-8'>
             <div className='border border-beige rounded-[10px] bg-ivory shadow-[0_60px_140px_-60px_rgba(23,22,20,0.3)] overflow-hidden'>
