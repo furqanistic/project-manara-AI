@@ -50,7 +50,7 @@ const Workspace = () => {
       <div className='relative max-w-[1500px] mx-auto px-6 md:px-12'>
         <div className='max-w-3xl'>
           <Reveal>
-            <Label>01 / PROPERTY WORKSPACE</Label>
+            <Label>04 / PROPERTY WORKSPACE</Label>
           </Reveal>
           <Reveal delay={0.08}>
             <h2 className='mt-6 font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.06] tracking-[-0.01em] text-charcoal'>

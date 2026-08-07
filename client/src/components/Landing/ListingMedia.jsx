@@ -1,6 +1,9 @@
 import React, { useRef, useState } from 'react'
 import { Label, Reveal } from './primitives'
 
+const ORIGINAL_IMAGE = '/Home/listing-media-original.png'
+const STAGED_IMAGE = '/Home/listing-media-staged.png'
+
 const CONTROLS = [
   { name: 'Virtual Staging', on: true },
   { name: 'Decluttering', on: true },
@@ -69,20 +72,20 @@ const ListingMedia = () => {
             }}
           >
             <div className='relative aspect-[16/9] md:aspect-[21/9]'>
-              {/* Original */}
+              {/* Staged result beneath the comparison reveal */}
               <img
-                src='/Home/after.webp'
-                alt='Original unprocessed property photograph'
-                className='absolute inset-0 w-full h-full object-cover grayscale contrast-90 brightness-90'
+                src={STAGED_IMAGE}
+                alt='AI virtually staged Dubai Marina penthouse living room'
+                className='absolute inset-0 w-full h-full object-cover'
               />
-              {/* Transformed */}
+              {/* Original photo clipped over the staged result */}
               <div
                 className='absolute inset-0 overflow-hidden'
                 style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}
               >
                 <img
-                  src='/Home/before.webp'
-                  alt='AI enhanced, virtually staged property photograph'
+                  src={ORIGINAL_IMAGE}
+                  alt='Original empty Dubai Marina penthouse photograph'
                   className='absolute inset-0 w-full h-full object-cover'
                 />
               </div>

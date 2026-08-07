@@ -48,7 +48,7 @@ const ThreeDSection = () => {
         <div className='grid lg:grid-cols-12 gap-10 items-end mb-14 md:mb-20'>
           <div className='lg:col-span-8'>
             <Reveal>
-              <Label dark>04 / 3D UNDERSTANDING</Label>
+              <Label dark>02 / 3D UNDERSTANDING</Label>
             </Reveal>
             <Reveal delay={0.08}>
               <h2 className='mt-6 font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.06] tracking-[-0.01em] text-ivory'>

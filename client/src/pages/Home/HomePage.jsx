@@ -43,10 +43,10 @@ const HomePage = () => {
       <main>
         <HeroSection />
         <Transformation />
-        <Workspace />
         <FloorPlanSection />
-        <ListingMedia />
         <ThreeDSection />
+        <ListingMedia />
+        <Workspace />
         <DesignConcepts />
         <BuyerPage />
         <Agencies />

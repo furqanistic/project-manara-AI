@@ -1,6 +1,8 @@
 import React from 'react'
-import { FloorPlanArt } from './FloorPlanArt'
 import { Label, Reveal } from './primitives'
+
+const SOURCE_PLAN = '/Home/floor-plan-source-survey.png'
+const REFINED_PLAN = '/Home/transformation/stage-02-matching-floor-plan.png'
 
 const FloorPlanSection = () => {
   return (
@@ -10,7 +12,7 @@ const FloorPlanSection = () => {
         <div className='grid lg:grid-cols-12 gap-10 items-end mb-16 md:mb-24'>
           <div className='lg:col-span-8'>
             <Reveal>
-              <Label>02 / FLOOR-PLAN INTELLIGENCE</Label>
+              <Label>01 / FLOOR-PLAN INTELLIGENCE</Label>
             </Reveal>
             <Reveal delay={0.08}>
               <h2 className='mt-6 font-serif text-4xl sm:text-5xl lg:text-6xl leading-[1.06] tracking-[-0.01em] text-charcoal'>
@@ -43,9 +45,14 @@ const FloorPlanSection = () => {
                   AS RECEIVED
                 </span>
               </div>
-              <div className='rotate-[-1.2deg] opacity-80'>
-                <FloorPlanArt refined={false} className='w-full h-auto' />
-              </div>
+              <figure className='relative aspect-[16/10] overflow-hidden border border-charcoal/10 bg-[#f4f1eb] shadow-[0_16px_40px_-28px_rgba(23,22,20,0.45)]'>
+                <img
+                  src={SOURCE_PLAN}
+                  alt='Original surveyor CAD drawing of the curved Crescent Residence penthouse'
+                  className='h-full w-full object-contain'
+                  loading='lazy'
+                />
+              </figure>
             </div>
             {/* Refined */}
             <div className='relative p-5 md:p-8 border-t md:border-t-0 md:border-l border-beige'>
@@ -56,7 +63,14 @@ const FloorPlanSection = () => {
                   VALIDATED
                 </span>
               </div>
-              <FloorPlanArt refined className='w-full h-auto' />
+              <figure className='relative aspect-[16/10] overflow-hidden border border-manara/15 bg-[#f8f4ed] shadow-[0_18px_45px_-28px_rgba(23,22,20,0.35)]'>
+                <img
+                  src={REFINED_PLAN}
+                  alt='Refined presentation-ready floor plan of the same Crescent Residence penthouse'
+                  className='h-full w-full object-contain'
+                  loading='lazy'
+                />
+              </figure>
             </div>
           </div>
         </Reveal>

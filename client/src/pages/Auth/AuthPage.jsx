@@ -1,6 +1,5 @@
 // File: client/src/pages/Auth/AuthPage.jsx
 import TopBar from '@/components/Layout/Topbar'
-import { AnimatePresence, motion } from 'framer-motion'
 import {
   AlertCircle,
   ArrowRight,
@@ -16,17 +15,6 @@ import {
   useSignup,
 } from '../../hooks/useAuth'
 
-const MARQUEE_WORDS = [
-  'Creative Renders',
-  'Accurate Floor Plans',
-  'Curated Shop Lists',
-  'AI Design Intelligence',
-  'UAE · Dubai',
-  'Photorealistic Interiors',
-]
-
-const MARQUEE = MARQUEE_WORDS.join('  ·  ')
-
 const METRICS = [
   { number: '1.2M', label: 'Design assets' },
   { number: '500+', label: 'UAE partners' },
@@ -34,7 +22,6 @@ const METRICS = [
 ]
 
 const AuthPage = () => {
-  const MotionDiv = motion.div
   const [isLogin, setIsLogin] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search)
     const type = urlParams.get('type')
@@ -253,40 +240,15 @@ const AuthPage = () => {
   return (
     <>
       <TopBar />
-      <div className='min-h-screen bg-ivory text-charcoal font-sans overflow-hidden relative'>
-        {/* Giant ghost wordmark */}
-        <div className='absolute inset-0 flex items-center justify-center pointer-events-none select-none overflow-hidden'>
-          <motion.span
-            aria-hidden='true'
-            initial={{ opacity: 0, scale: 1.15 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
-            className='font-serif italic text-[24vw] leading-none whitespace-nowrap text-[#8d775e]/[0.05] tracking-tight'
-          >
-            Manāra
-          </motion.span>
-        </div>
-
+      <div className='min-h-screen bg-ivory text-charcoal font-sans relative'>
         {/* Main Content */}
         <div className='relative z-10 min-h-screen flex items-center justify-center px-4 py-8 pt-24 pb-16'>
-          <motion.div
-            className='w-full max-w-6xl mx-auto'
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className='grid lg:grid-cols-2 lg:h-[720px] overflow-hidden border border-beige bg-white shadow-[0_60px_140px_-60px_rgba(23,22,20,0.5)] rounded-2xl'>
-              {/* Left Panel — Editorial Cinematic */}
-              <motion.div
+          <div className='w-full max-w-6xl mx-auto'>
+            <div className='grid lg:grid-cols-2 lg:h-[720px] overflow-hidden border border-beige bg-white shadow-[0_24px_70px_-48px_rgba(23,22,20,0.45)] rounded-xl'>
+              {/* Left Panel — Editorial */}
+              <div
                 className='relative h-full min-h-[580px] flex flex-col justify-between overflow-hidden bg-charcoal p-8 md:p-12 hidden lg:flex'
-                initial={{ x: -50, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.2 }}
               >
-                {/* Ambient glow */}
-                <div className='absolute -top-24 -right-24 w-80 h-80 bg-[#c3a886]/20 rounded-full blur-[120px] pointer-events-none' />
-                <div className='absolute bottom-0 left-0 w-full h-40 bg-gradient-to-t from-black/30 to-transparent pointer-events-none' />
-
                 {/* Top row */}
                 <div className='relative z-10 flex items-start justify-between'>
                   <p className='label-arch-light'>The Manāra Atelier</p>
@@ -296,12 +258,7 @@ const AuthPage = () => {
                 </div>
 
                 {/* Center — big serif statement */}
-                <motion.div
-                  className='relative z-10 my-10'
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4, duration: 0.9 }}
-                >
+                <div className='relative z-10 my-10'>
                   <h2 className='font-serif font-normal text-ivory text-5xl xl:text-6xl leading-[1.02] tracking-[-0.01em]'>
                     Design your
                     <br />
@@ -311,7 +268,7 @@ const AuthPage = () => {
                     AI-powered interiors for Dubai and the UAE — from
                     moodboard to move-in, in under two hours.
                   </p>
-                </motion.div>
+                </div>
 
                 {/* Metrics */}
                 <div className='relative z-10'>
@@ -329,47 +286,18 @@ const AuthPage = () => {
                   </div>
                 </div>
 
-                {/* Marquee */}
-                <div className='relative z-10 mt-9 overflow-hidden border-t border-ivory/15'>
-                  <motion.div
-                    className='flex whitespace-nowrap'
-                    animate={{ x: ['0%', '-50%'] }}
-                    transition={{
-                      duration: 22,
-                      repeat: Infinity,
-                      ease: 'linear',
-                    }}
-                  >
-                    <span className='py-3.5 text-[9px] font-semibold uppercase tracking-[0.35em] text-ivory/55 pr-8'>
-                      {MARQUEE}
-                    </span>
-                    <span className='py-3.5 text-[9px] font-semibold uppercase tracking-[0.35em] text-ivory/55 pr-8'>
-                      {MARQUEE}
-                    </span>
-                  </motion.div>
-                </div>
-
-                {/* Column label */}
-                <p className='absolute right-4 bottom-3 z-10 text-[8px] tracking-[0.3em] uppercase text-ivory/30 rotate-90 origin-bottom-right'>
-                  Welcome
+                <p className='relative z-10 mt-9 border-t border-ivory/15 pt-5 text-[9px] font-semibold uppercase tracking-[0.3em] text-ivory/45'>
+                  Creative renders · Accurate floor plans · Curated shop lists
                 </p>
-              </motion.div>
+              </div>
 
               {/* Right Panel — Auth Form */}
-              <motion.div
+              <div
                 className='p-8 md:p-12 bg-white flex flex-col justify-center overflow-y-auto'
-                initial={{ x: 50, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                transition={{ duration: 0.8, delay: 0.3 }}
               >
                 <div className='w-full max-w-md mx-auto py-2'>
                   {/* Header */}
-                  <motion.div
-                    className='mb-8'
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.45, duration: 0.7 }}
-                  >
+                  <div className='mb-1'>
                     <p className='label-arch'>
                       {isLogin ? 'Member entry' : 'New member'}
                     </p>
@@ -389,15 +317,11 @@ const AuthPage = () => {
                         ? 'Sign in to continue your design journey.'
                         : 'Join the Manāra design workspace.'}
                     </p>
-                  </motion.div>
+                  </div>
 
                   {/* Error Display */}
                   {(error || socialError) && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className='mb-5 p-3 bg-[#fdecea] border border-[#e4a9a2]/60 rounded-xl flex items-start gap-2.5'
-                    >
+                    <div className='mb-5 p-3 bg-[#fdecea] border border-[#e4a9a2]/60 rounded-lg flex items-start gap-2.5'>
                       <AlertCircle className='w-4 h-4 text-[#c0392b] flex-shrink-0 mt-0.5' />
                       <div className='flex-1'>
                         <p className='text-[#c0392b] text-xs leading-relaxed'>
@@ -407,27 +331,24 @@ const AuthPage = () => {
                             'An error occurred. Please try again.'}
                         </p>
                       </div>
-                    </motion.div>
+                    </div>
                   )}
 
                   {/* Toggle Buttons */}
-                  <motion.div
-                    className='flex border border-beige rounded-xl p-1 mb-7'
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5, duration: 0.6 }}
-                  >
+                  <div className='grid grid-cols-2 border-b border-beige mb-8' role='tablist' aria-label='Authentication mode'>
                     <button
                       type='button'
+                      role='tab'
+                      aria-selected={isLogin}
                       onClick={() => {
                         if (isLoading) return
                         setSocialError('')
                         setIsLogin(true)
                       }}
                       disabled={isLoading}
-                      className={`flex-1 py-2.5 rounded-lg transition-all duration-300 text-xs font-semibold tracking-wide ${
+                      className={`relative py-3.5 text-[13px] font-semibold tracking-wide ${
                         isLogin
-                          ? 'bg-charcoal text-ivory'
+                          ? 'text-charcoal after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-manara'
                           : 'text-stone hover:text-charcoal'
                       } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
@@ -435,34 +356,31 @@ const AuthPage = () => {
                     </button>
                     <button
                       type='button'
+                      role='tab'
+                      aria-selected={!isLogin}
                       onClick={() => {
                         if (isLoading) return
                         setSocialError('')
                         setIsLogin(false)
                       }}
                       disabled={isLoading}
-                      className={`flex-1 py-2.5 rounded-lg transition-all duration-300 text-xs font-semibold tracking-wide ${
+                      className={`relative py-3.5 text-[13px] font-semibold tracking-wide ${
                         !isLogin
-                          ? 'bg-charcoal text-ivory'
+                          ? 'text-charcoal after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-manara'
                           : 'text-stone hover:text-charcoal'
                       } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
-                      Sign Up
+                      Create Account
                     </button>
-                  </motion.div>
+                  </div>
 
                   {/* Google */}
-                  <motion.div
-                    className='space-y-2.5 mb-7'
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.55, duration: 0.5 }}
-                  >
+                  <div className='space-y-2.5 mb-7'>
                     <button
                       type='button'
                       onClick={handleGoogleSignin}
                       disabled={isLoading}
-                      className='w-full flex items-center justify-center gap-2.5 h-[50px] rounded-xl border border-charcoal/15 bg-ivory/60 text-charcoal text-[13px] font-semibold tracking-wide hover:bg-ivory hover:border-charcoal/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed'
+                      className='w-full flex items-center justify-center gap-2.5 h-[50px] rounded-lg border border-charcoal/15 bg-ivory/60 text-charcoal text-[13px] font-semibold tracking-wide hover:bg-ivory hover:border-charcoal/30 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed'
                     >
                       {googleSigninMutation.isPending ? (
                         <Loader2 className='w-4 h-4 animate-spin' />
@@ -494,26 +412,12 @@ const AuthPage = () => {
                         </>
                       )}
                     </button>
-                  </motion.div>
-
-                  <div className='flex items-center gap-4 mb-7'>
-                    <div className='h-px flex-1 bg-beige' />
-                    <span className='text-[9px] font-semibold uppercase tracking-[0.3em] text-stone'>
-                      or
-                    </span>
-                    <div className='h-px flex-1 bg-beige' />
                   </div>
 
                   {/* Form */}
-                  <AnimatePresence mode='wait'>
-                    <motion.form
-                      key={isLogin ? 'login' : 'signup'}
+                    <form
                       onSubmit={handleSubmit}
                       className='space-y-4'
-                      initial={{ opacity: 0, x: isLogin ? -20 : 20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, x: isLogin ? 20 : -20 }}
-                      transition={{ duration: 0.5 }}
                     >
                       {/* Name fields for signup */}
                       {!isLogin && (
@@ -670,12 +574,10 @@ const AuthPage = () => {
                       )}
 
                       {/* Submit button */}
-                      <motion.button
+                      <button
                         type='submit'
                         disabled={isLoading}
-                        className='group w-full h-[54px] text-ivory text-[13px] font-semibold tracking-wide rounded-xl relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed bg-charcoal hover:bg-manara transition-colors duration-300'
-                        whileHover={!isLoading ? { y: -2 } : {}}
-                        whileTap={!isLoading ? { y: 0 } : {}}
+                        className='group w-full h-[54px] text-ivory text-[13px] font-semibold tracking-wide rounded-lg relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed bg-charcoal hover:bg-manara transition-colors duration-150'
                       >
                         <div className='relative flex items-center justify-center gap-2'>
                           {isLoading ? (
@@ -692,33 +594,24 @@ const AuthPage = () => {
                               <span>
                                 {isLogin ? 'Sign In' : 'Create Account'}
                               </span>
-                              <ArrowRight className='w-4 h-4 group-hover:translate-x-1 transition-transform' />
+                              <ArrowRight className='w-4 h-4' />
                             </>
                           )}
                         </div>
-                      </motion.button>
-                    </motion.form>
-                  </AnimatePresence>
+                      </button>
+                    </form>
                 </div>
-              </motion.div>
+              </div>
             </div>
-          </motion.div>
+          </div>
         </div>
-
-        {/* Noise texture */}
-        <div
-          className='absolute inset-0 opacity-[0.04] pointer-events-none mix-blend-multiply'
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
-          }}
-        />
       </div>
     </>
   )
 }
 
 const inputClass = (extra = '', hasError = false, loading = false) =>
-  `w-full h-[50px] px-4 ${extra} bg-[#f5f2ec]/70 border text-sm text-charcoal placeholder-stone rounded-xl focus:outline-none focus:ring-2 focus:ring-manara/30 focus:border-manara transition-all duration-300 ${
+  `w-full h-[50px] px-4 ${extra} bg-[#f5f2ec]/70 border text-sm text-charcoal placeholder-stone rounded-lg focus:outline-none focus:ring-2 focus:ring-manara/30 focus:border-manara transition-colors duration-150 ${
     hasError ? 'border-[#e4a9a2]' : 'border-beige'
   } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`
 

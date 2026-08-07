@@ -1,296 +1,286 @@
-import React, { useEffect, useRef, useState } from 'react'
-import {
-  motion,
-  useScroll,
-  useTransform,
-} from 'framer-motion'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import React, { useCallback, useEffect, useState } from 'react'
 
-const STAGE_IMAGES = {
-  source: '/Home/transformation/stage-01-source.png',
-  floorPlan: '/Home/transformation/stage-02-floor-plan.png',
-  visualization: '/Home/transformation/stage-03-visualization.png',
-  presentation: '/Home/transformation/stage-04-presentation.png',
-}
+const AUTOPLAY_DELAY = 4000
 
 const STAGES = [
   {
     no: '01',
-    name: 'Original Property File',
-    desc: 'Source photographs, uploads, and listing details as received.',
+    eyebrow: 'Property capture',
+    name: 'Every angle, one home',
+    desc: 'A complete visual survey captures the character, materials, and most marketable views of the residence.',
+    image: '/Home/transformation/stage-01-multi-angle.png',
+    alt: 'Four consistent photography angles of the same luxury Dubai Marina penthouse',
+    meta: '4 curated views',
+    imagePosition: 'center',
   },
   {
     no: '02',
-    name: 'Branded Floor Plan',
-    desc: 'Validated, measured, and refined into a presentation-ready plan.',
+    eyebrow: 'Spatial clarity',
+    name: 'The matching floor plan',
+    desc: 'The same residence is translated into a precise, presentation-ready plan that buyers can understand instantly.',
+    image: '/Home/transformation/stage-02-matching-floor-plan.png',
+    alt: 'Presentation-ready floor plan of the same curved Dubai Marina penthouse',
+    meta: '',
+    imagePosition: 'center',
   },
   {
     no: '03',
-    name: '3D Visualization',
-    desc: 'Photorealistic interiors staged to the property’s full potential.',
+    eyebrow: 'Dimensional model',
+    name: 'See the space in 3D',
+    desc: 'A detailed isometric model makes scale, circulation, furniture, and room relationships immediately tangible.',
+    image: '/Home/transformation/stage-03-isometric-3d.png',
+    alt: 'Isometric 3D dollhouse visualization of the same luxury penthouse floor plan',
+    meta: 'Full furnished model',
+    imagePosition: 'center',
   },
   {
     no: '04',
-    name: 'Buyer Presentation',
-    desc: 'A complete, branded buyer-ready sales package for the market.',
+    eyebrow: 'Ready to market',
+    name: 'A brochure worth keeping',
+    desc: 'Photography, planning, and 3D storytelling become one beautiful sales piece, ready for buyers and agents.',
+    image: '/Home/transformation/stage-04-luxury-brochure.png',
+    alt: 'Luxury sales brochure for the same Crescent Residence penthouse',
+    meta: 'Buyer-ready presentation',
+    imagePosition: 'center',
   },
 ]
 
-const StageImage = ({ src, alt, backdrop = 'bg-charcoal', shade = '' }) => (
-  <div className={`absolute inset-0 overflow-hidden ${backdrop}`}>
-    <img
-      src={src}
-      alt=''
-      aria-hidden='true'
-      className='absolute inset-0 h-full w-full scale-110 object-cover opacity-25 blur-2xl'
-    />
-    <img
-      src={src}
-      alt={alt}
-      className='relative z-10 h-full w-full object-contain'
-    />
-    {shade && <div className={`absolute inset-0 z-20 ${shade}`} />}
-  </div>
-)
-
-const MobileTransformation = () => (
-  <div className='lg:hidden py-16'>
-    <div className='px-6 mb-8'>
-      <p className='label-arch'>THE MANĀRA PIPELINE / 01 — 04</p>
-      <p className='mt-3 text-sm leading-relaxed text-stone'>
-        Swipe through one property from source file to buyer-ready presentation.
-      </p>
-    </div>
-
-    <div className='flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-6 pb-5 no-scrollbar'>
-      {STAGES.map((stage, index) => (
-        <article
-          key={stage.no}
-          className='w-[86vw] max-w-[520px] shrink-0 snap-center overflow-hidden rounded-[10px] border border-beige bg-white'
-        >
-          <div
-            className={`relative aspect-video overflow-hidden ${index === 1 ? 'bg-ivory' : 'bg-charcoal'}`}
-          >
-            <img
-              src={Object.values(STAGE_IMAGES)[index]}
-              alt=''
-              aria-hidden='true'
-              className='absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-xl'
-            />
-            <img
-              src={Object.values(STAGE_IMAGES)[index]}
-              alt={stage.name}
-              className='relative z-10 h-full w-full object-contain'
-            />
-          </div>
-          <div className='p-5'>
-            <p className='text-[10px] font-semibold uppercase tracking-[0.3em] text-manara'>
-              STAGE {stage.no}
-            </p>
-            <h3 className='mt-2 font-serif text-2xl text-charcoal'>{stage.name}</h3>
-            <p className='mt-2 text-sm leading-relaxed text-stone'>{stage.desc}</p>
-          </div>
-        </article>
-      ))}
-      <div className='w-2 shrink-0' aria-hidden='true' />
-    </div>
-
-    <div className='flex items-center justify-center gap-2 px-6' aria-hidden='true'>
-      {STAGES.map((stage) => (
-        <span key={stage.no} className='h-1 w-8 rounded-full bg-manara/30' />
-      ))}
-    </div>
-  </div>
-)
-
 const Transformation = () => {
-  const ref = useRef(null)
+  const shouldReduceMotion = useReducedMotion()
   const [active, setActive] = useState(0)
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ['start start', 'end end'],
-  })
+  const [cycle, setCycle] = useState(0)
+
+  const selectStage = useCallback((index) => {
+    setActive(index)
+    setCycle((value) => value + 1)
+  }, [])
 
   useEffect(() => {
-    const updateActiveStage = (value) => {
-      const next = Math.min(3, Math.floor(value * 4))
-      setActive((current) => (current === next ? current : next))
+    if (shouldReduceMotion) return undefined
+
+    const timer = window.setTimeout(() => {
+      setActive((current) => (current + 1) % STAGES.length)
+      setCycle((value) => value + 1)
+    }, AUTOPLAY_DELAY)
+
+    return () => window.clearTimeout(timer)
+  }, [active, cycle, shouldReduceMotion])
+
+  const handleKeyDown = (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      event.preventDefault()
+      selectStage((active + 1) % STAGES.length)
     }
 
-    updateActiveStage(scrollYProgress.get())
-    return scrollYProgress.on('change', updateActiveStage)
-  }, [scrollYProgress])
+    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      event.preventDefault()
+      selectStage((active - 1 + STAGES.length) % STAGES.length)
+    }
+  }
 
-  const stage1 = useTransform(scrollYProgress, [0, 0.18, 0.27], [1, 1, 0])
-  const stage2 = useTransform(scrollYProgress, [0.18, 0.27, 0.43, 0.52], [0, 1, 1, 0])
-  const stage3 = useTransform(scrollYProgress, [0.43, 0.52, 0.68, 0.77], [0, 1, 1, 0])
-  const stage4 = useTransform(scrollYProgress, [0.68, 0.77, 1], [0, 1, 1])
-  const scale1 = useTransform(scrollYProgress, [0, 0.27], [1.025, 1])
-  const scale4 = useTransform(scrollYProgress, [0.68, 0.82], [1.025, 1])
+  const activeStage = STAGES[active]
 
   return (
-    <section id='product' className='relative bg-ivory'>
-      <MobileTransformation />
+    <section
+      id='product'
+      aria-labelledby='transformation-title'
+      className='relative overflow-hidden bg-charcoal py-20 sm:py-24 lg:py-32'
+      onKeyDown={handleKeyDown}
+    >
+      <div
+        className='pointer-events-none absolute inset-0 opacity-70'
+        aria-hidden='true'
+        style={{
+          background:
+            'radial-gradient(circle at 84% 12%, rgba(141,119,94,0.2), transparent 30%), radial-gradient(circle at 8% 80%, rgba(195,168,134,0.08), transparent 28%)',
+        }}
+      />
 
-      <div ref={ref} className='relative hidden h-[340vh] lg:block'>
-        <div className='sticky top-[76px] h-[calc(100svh-76px)] overflow-hidden'>
-          {/* Stage 1 — original photo */}
-          <motion.div
-            style={{ opacity: stage1 }}
-            className='absolute inset-0'
+      <div className='relative mx-auto max-w-[1500px] px-5 sm:px-8 lg:px-12'>
+        <header className='mb-10 grid gap-6 lg:mb-14 lg:grid-cols-[minmax(0,0.78fr)_minmax(0,1.22fr)] lg:items-end'>
+          <div>
+            <p className='label-arch label-arch-light'>One residence / four deliverables</p>
+            <h2
+              id='transformation-title'
+              className='mt-5 max-w-xl font-serif text-4xl leading-[0.98] tracking-[-0.02em] text-ivory sm:text-5xl lg:text-6xl'
+            >
+              From first look to<br className='hidden sm:block' /> final sale.
+            </h2>
+          </div>
+          <div className='lg:justify-self-end lg:max-w-lg'>
+            <p className='text-sm leading-[1.8] text-[#b8b0a6] sm:text-[15px]'>
+              Follow one penthouse through the complete Manāra pipeline. Every
+              stage builds on the last, giving buyers a more complete way to see
+              the property.
+            </p>
+            <div className='mt-5 flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.28em] text-ivory/45'>
+              <span className='h-px w-9 bg-[#c3a886]/50' />
+              Auto-advances every 4 seconds
+            </div>
+          </div>
+        </header>
+
+        <div className='grid gap-6 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-center xl:grid-cols-[410px_minmax(0,1fr)]'>
+          <div
+            className='order-2 flex snap-x gap-3 overflow-x-auto pb-2 lg:order-1 lg:self-center lg:flex-col lg:overflow-visible lg:pb-0'
+            role='tablist'
+            aria-label='Property transformation stages'
           >
-            <motion.div style={{ scale: scale1 }} className='absolute inset-0'>
-              <StageImage
-                src={STAGE_IMAGES.source}
-                alt='Original property photograph'
-                shade='bg-charcoal/25'
-              />
-            </motion.div>
-            <div className='absolute z-30 top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-ivory/80'>
-              RAW SOURCE — UPLOADED FILE 04.JPG
-            </div>
-          </motion.div>
+            {STAGES.map((stage, stageIndex) => {
+              const isActive = stageIndex === active
+              const nextStage = STAGES[(stageIndex + 1) % STAGES.length]
 
-          {/* Stage 2 — branded floor plan */}
-          <motion.div
-            style={{ opacity: stage2 }}
-            className='absolute inset-0 bg-ivory'
-          >
-            <StageImage
-              src={STAGE_IMAGES.floorPlan}
-              alt='Presentation-ready branded floor plan for the penthouse'
-              backdrop='bg-ivory'
-              shade='bg-charcoal/[0.02]'
-            />
-            <div className='absolute z-30 top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-charcoal/65'>
-              VALIDATED PLAN — SIGNATURE RESIDENCE / LEVEL 02
-            </div>
-          </motion.div>
-
-          {/* Stage 3 — 3D visualization */}
-          <motion.div
-            style={{ opacity: stage3 }}
-            className='absolute inset-0'
-          >
-            <StageImage
-              src={STAGE_IMAGES.visualization}
-              alt='Photorealistic furnished 3D visualization'
-              shade='bg-charcoal/20'
-            />
-            <div className='absolute z-30 top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-ivory/80'>
-              3D VISUALIZATION — FURNISHED CONCEPT 02
-            </div>
-          </motion.div>
-
-          {/* Stage 4 — buyer presentation */}
-          <motion.div
-            style={{ opacity: stage4 }}
-            className='absolute inset-0 bg-charcoal'
-          >
-            <motion.div style={{ scale: scale4 }} className='absolute inset-0'>
-              <StageImage
-                src={STAGE_IMAGES.presentation}
-                alt='Finished buyer-facing property presentation'
-                shade='bg-charcoal/30'
-              />
-            </motion.div>
-            <div className='absolute z-30 top-6 left-6 md:top-10 md:left-12 text-[10px] tracking-[0.35em] uppercase text-ivory/80'>
-              BUYER PRESENTATION — SALES BROCHURE / 001
-            </div>
-            <div className='absolute z-30 bottom-10 right-6 md:right-12 hidden md:block text-right'>
-              <p className='font-serif text-ivory text-2xl md:text-3xl'>
-                Skyline Penthouse
-              </p>
-              <p className='mt-2 text-[11px] tracking-[0.25em] uppercase text-[#c3a886]'>
-                AED 4,200,000 — 3 BED / 2,130 SQ FT
-              </p>
-            </div>
-          </motion.div>
-
-          {/* Progress rail */}
-          <div className='absolute z-30 right-6 md:right-12 top-1/2 -translate-y-1/2 hidden md:flex flex-col gap-6'>
-            {STAGES.map((s, i) => (
-              <div
-                key={s.no}
-                className={`flex items-center gap-4 justify-end rounded-full px-4 py-2.5 transition-all duration-500 ${
-                  i === active
-                    ? 'bg-[#8d775e] shadow-[0_12px_30px_-14px_rgba(23,22,20,0.55)]'
-                    : 'bg-transparent'
-                }`}
-              >
-                <span
-                  className={`text-[9px] tracking-[0.3em] uppercase transition-all duration-500 ${
-                    i === active ? 'opacity-100' : 'opacity-40'
+              return (
+                <motion.button
+                  layout={!shouldReduceMotion}
+                  key={stage.no}
+                  type='button'
+                  role='tab'
+                  id={`transformation-tab-${stage.no}`}
+                  aria-selected={isActive}
+                  aria-controls='transformation-preview'
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => selectStage(stageIndex)}
+                  transition={{ type: 'spring', stiffness: 360, damping: 34 }}
+                  style={{ '--stage-order': (stageIndex - active + STAGES.length) % STAGES.length }}
+                  className={`group relative min-w-[272px] snap-start overflow-hidden rounded-xl border px-5 py-5 text-left transition-colors duration-500 sm:min-w-[320px] lg:min-w-0 lg:px-6 lg:py-5 lg:[order:var(--stage-order)] ${
+                    isActive
+                      ? 'border-[#c3a886]/55 bg-[#f5f2ec] text-charcoal shadow-[0_24px_70px_-30px_rgba(0,0,0,0.8)]'
+                      : 'border-ivory/10 bg-ivory/[0.035] text-ivory hover:border-ivory/25 hover:bg-ivory/[0.06]'
                   }`}
-                  style={{
-                    color:
-                      i === active
-                        ? '#F5F2EC'
-                        : active === 1
-                          ? '#171614'
-                          : '#F5F2EC',
-                  }}
                 >
-                  {s.name}
-                </span>
-                <span
-                  className={`text-[10px] font-semibold transition-all duration-500 ${
-                    i === active ? 'scale-110 opacity-100' : 'opacity-35'
-                  }`}
-                  style={{
-                    color:
-                      i === active
-                        ? '#F5F2EC'
-                        : active === 1
-                          ? '#171614'
-                          : '#F5F2EC',
-                  }}
-                >
-                  {s.no}
-                </span>
-              </div>
-            ))}
+                  <span className='flex items-start gap-4'>
+                    <span
+                      className={`mt-0.5 font-serif text-3xl leading-none transition-colors ${
+                        isActive ? 'text-manara' : 'text-[#c3a886]/55'
+                      }`}
+                    >
+                      {stage.no}
+                    </span>
+                    <span className='min-w-0 flex-1'>
+                      <span
+                        className={`block text-[9px] font-semibold uppercase tracking-[0.28em] ${
+                          isActive ? 'text-manara' : 'text-ivory/40'
+                        }`}
+                      >
+                        {stage.eyebrow}
+                      </span>
+                      <span className='mt-2 block font-serif text-[23px] leading-tight'>
+                        {stage.name}
+                      </span>
+                      <span className='mt-3 hidden min-h-[44px] text-[12px] leading-[1.65] sm:min-h-[42px] sm:text-[13px] lg:block'>
+                        <span
+                          className={`block transition-opacity duration-300 ${
+                            isActive ? 'text-charcoal/65 opacity-100' : 'text-charcoal/65 opacity-0'
+                          }`}
+                        >
+                          {stage.desc}
+                        </span>
+                      </span>
+                      <AnimatePresence initial={false}>
+                        {isActive && (
+                          <motion.span
+                            initial={shouldReduceMotion ? false : { height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={shouldReduceMotion ? undefined : { height: 0, opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className='block overflow-hidden'
+                          >
+                            <span className='mt-4 hidden border-t border-charcoal/10 pt-3 lg:block'>
+                              <span className='mb-2 flex items-center justify-between text-[8px] font-semibold uppercase tracking-[0.24em] text-charcoal/50'>
+                                <span>Next · Stage {nextStage.no}</span>
+                                <span>{shouldReduceMotion ? 'Auto-play off' : '4 sec'}</span>
+                              </span>
+                              <span className='block h-1 overflow-hidden rounded-full bg-charcoal/10'>
+                                {shouldReduceMotion ? (
+                                  <span className='block h-full w-full rounded-full bg-manara/35' />
+                                ) : (
+                                  <motion.span
+                                    key={`progress-${cycle}-${active}`}
+                                    aria-hidden='true'
+                                    className='block h-full origin-left rounded-full bg-manara'
+                                    initial={{ scaleX: 0 }}
+                                    animate={{ scaleX: 1 }}
+                                    transition={{ duration: AUTOPLAY_DELAY / 1000, ease: 'linear' }}
+                                  />
+                                )}
+                              </span>
+                            </span>
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </span>
+                    <span
+                      aria-hidden='true'
+                      className={`mt-2 h-2 w-2 shrink-0 rounded-full transition-all duration-500 ${
+                        isActive
+                          ? 'scale-100 bg-manara shadow-[0_0_0_5px_rgba(141,119,94,0.14)]'
+                          : 'scale-75 bg-ivory/20'
+                      }`}
+                    />
+                  </span>
+                </motion.button>
+              )
+            })}
           </div>
 
-          {/* Active caption */}
           <div
-            className={`absolute z-30 bottom-0 left-0 right-0 transition-colors duration-500 ${
-              active === 1
-                ? 'bg-ivory/95'
-                : 'bg-gradient-to-t from-charcoal/75 via-charcoal/20 to-transparent'
-            }`}
+            id='transformation-preview'
+            role='tabpanel'
+            aria-labelledby={`transformation-tab-${activeStage.no}`}
+            className='order-1 lg:order-2'
           >
-            <div
-              className={`h-px mx-6 md:mx-12 ${
-                active === 1 ? 'bg-charcoal/15' : 'bg-ivory/20'
-              }`}
-            />
-            <div className='max-w-[1500px] mx-auto px-6 md:px-12 py-6 md:py-8 flex items-end justify-between gap-6'>
-              <div className='max-w-md'>
-                <p
-                  className={`text-[11px] font-semibold uppercase tracking-[0.35em] transition-colors duration-500 ${
-                    active === 1 ? 'text-manara' : 'text-[#c3a886]'
-                  }`}
+            <div className='relative aspect-[16/10] overflow-hidden rounded-xl border border-ivory/10 bg-[#0d0c0b] shadow-[0_40px_100px_-40px_rgba(0,0,0,0.9)] sm:aspect-video lg:h-full lg:min-h-[570px] lg:aspect-auto'>
+              <AnimatePresence mode='wait' initial={false}>
+                <motion.div
+                  key={activeStage.no}
+                  initial={shouldReduceMotion ? false : { opacity: 0, scale: 1.025 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={shouldReduceMotion ? undefined : { opacity: 0, scale: 0.99 }}
+                  transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                  className='absolute inset-0'
                 >
-                  STAGE {STAGES[active].no} — {STAGES[active].name.toUpperCase()}
-                </p>
-                <p
-                  className={`mt-2.5 text-sm leading-relaxed hidden sm:block transition-colors duration-500 ${
-                    active === 1 ? 'text-charcoal/70' : 'text-ivory/75'
-                  }`}
-                >
-                  {STAGES[active].desc}
-                </p>
+                  <img
+                    src={activeStage.image}
+                    alt={activeStage.alt}
+                    className='h-full w-full object-cover'
+                    style={{ objectPosition: activeStage.imagePosition }}
+                  />
+                  <div className='absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-charcoal/10' />
+                </motion.div>
+              </AnimatePresence>
+
+              <div className='absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 sm:p-7 lg:p-8'>
+                <AnimatePresence mode='wait' initial={false}>
+                  <motion.div
+                    key={`caption-${activeStage.no}`}
+                    initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8 }}
+                    transition={{ duration: 0.4 }}
+                  >
+                    <p className='text-[9px] font-semibold uppercase tracking-[0.3em] text-[#d1b693]'>
+                      Stage {activeStage.no}
+                    </p>
+                    <p className='mt-1.5 font-serif text-2xl text-ivory sm:text-3xl'>
+                      {activeStage.name}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+                {activeStage.meta && (
+                  <p className='hidden rounded-full border border-white/15 bg-charcoal/45 px-4 py-2 text-[9px] font-semibold uppercase tracking-[0.24em] text-ivory/70 backdrop-blur-md sm:block'>
+                    {activeStage.meta}
+                  </p>
+                )}
               </div>
-              <p
-                className={`hidden lg:block text-[9px] font-medium tracking-[0.3em] uppercase ${
-                  active === 1 ? 'text-stone' : 'text-ivory/50'
-                }`}
-              >
-                THE MANĀRA PIPELINE / 01 — 04
-              </p>
             </div>
           </div>
         </div>
+
+        <p className='mt-5 text-center text-[9px] uppercase tracking-[0.25em] text-ivory/35 lg:text-right'>
+          Select any stage · Use arrow keys
+        </p>
       </div>
     </section>
   )
