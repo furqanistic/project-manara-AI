@@ -1,21 +1,10 @@
 import { motion } from 'framer-motion'
-import { ArrowRight, ChevronDown } from 'lucide-react'
-import React, { useEffect, useRef, useState } from 'react'
+import { ArrowRight } from 'lucide-react'
+import React from 'react'
 import { Link } from 'react-router-dom'
+import TopBar from '@/components/Layout/Topbar'
 import { EASE } from '@/components/Landing/ease'
 import BoomerangVideoBg from './BoomerangVideoBg'
-
-const STUDIO_ITEMS = [
-  { name: '3D Renders', href: '/visualizer' },
-  { name: 'Floor Plans', href: '/floorplans' },
-  { name: 'AI Designs', href: '/moodboard' },
-]
-
-const NAV_LINKS = [
-  { label: 'Projects', href: '/projects' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'About', href: '/about' },
-]
 
 const FEATURES = [
   {
@@ -38,94 +27,10 @@ const FEATURES = [
   },
 ]
 
-const TopNav = () => {
-  const [studioOpen, setStudioOpen] = useState(false)
-  const studioRef = useRef(null)
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (studioRef.current && !studioRef.current.contains(event.target)) {
-        setStudioOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  return (
-    <header className='fixed top-0 left-0 right-0 z-50 px-6 sm:px-10 md:px-14 py-3.5 sm:py-4 bg-ivory/85 backdrop-blur-md border-b border-beige'>
-      <div className='flex items-center justify-between'>
-        <Link to='/' className='flex items-center'>
-          <img
-            src='/logoicon.png'
-            alt='Manāra logo'
-            className='h-8 w-auto object-contain'
-          />
-        </Link>
-
-        <nav className='hidden md:flex items-center gap-8'>
-          {/* Studio Dropdown */}
-          <div className='relative' ref={studioRef}>
-            <button
-              onClick={() => setStudioOpen((prev) => !prev)}
-              className='flex items-center gap-1.5 text-sm text-charcoal/70 hover:text-manara transition-colors duration-200'
-            >
-              Studio
-              <ChevronDown
-                size={14}
-                className={`transition-transform duration-200 ${
-                  studioOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-            {studioOpen && (
-              <div className='absolute top-full left-0 mt-2 w-52 bg-ivory border border-beige rounded-lg shadow-[0_20px_50px_rgba(24,23,21,0.1)] p-1.5'>
-                {STUDIO_ITEMS.map((item) => (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={() => setStudioOpen(false)}
-                    className='flex items-center px-3 py-2.5 rounded text-sm font-medium text-charcoal/70 hover:text-manara hover:bg-white/60 transition-all'
-                  >
-                    {item.name}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.label}
-              to={link.href}
-              className='text-sm text-charcoal/70 hover:text-manara transition-colors duration-200'
-            >
-              {link.label}
-            </Link>
-          ))}
-        </nav>
-
-        <Link
-          to='/moodboard'
-          className="hidden md:inline-flex items-center bg-manara text-white text-sm font-medium rounded-full px-6 py-3 hover:bg-[#7a6650] transition-colors duration-200"
-        >
-          Start Creating
-        </Link>
-        <Link
-          to='/moodboard'
-          className="md:hidden bg-manara text-white text-sm font-medium rounded-full px-5 py-2.5 hover:bg-[#7a6650] transition-colors duration-200"
-        >
-          Start
-        </Link>
-      </div>
-    </header>
-  )
-}
-
 const HeroSection = () => {
   return (
     <>
-      <TopNav />
+      <TopBar />
 
       {/* Hero — cinematic background */}
       <section className='relative flex flex-col items-center min-h-screen'>

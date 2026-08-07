@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 
 // Optional background motion — a real looping interior video can be placed at
 // /public/boomerang.mp4 and referenced below. Until then, a slow cinematic
@@ -7,6 +7,8 @@ const VIDEO_SRC =
   'https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260715_090628_7052d8a6-a094-4341-a4a2-ad58493a67a9.mp4'
 
 const BoomerangVideoBg = () => {
+  const [videoReady, setVideoReady] = useState(false)
+
   return (
     <div className='absolute inset-0 overflow-hidden pointer-events-none select-none'>
       {/* Base imagery with gentle forward/back motion */}
@@ -17,6 +19,8 @@ const BoomerangVideoBg = () => {
             "url('https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?w=2200&q=85&auto=format')",
           backgroundSize: 'cover',
           backgroundPosition: 'center 30%',
+          opacity: videoReady ? 0 : 1,
+          transition: 'opacity 1.2s ease',
           animation: 'boomer-boomer 26s ease-in-out infinite',
           willChange: 'transform',
         }}
@@ -30,7 +34,12 @@ const BoomerangVideoBg = () => {
           loop
           muted
           playsInline
-          preload='metadata'
+          preload='auto'
+          onCanPlay={() => setVideoReady(true)}
+          style={{
+            opacity: videoReady ? 1 : 0,
+            transition: 'opacity 1.2s ease',
+          }}
         />
       )}
 

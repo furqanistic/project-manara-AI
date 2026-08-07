@@ -1,6 +1,6 @@
 import AvatarOnboardingPopup from '@/components/AddOns/AvatarOnboardingPopup'
+import { Label, Reveal } from '@/components/Landing/primitives'
 import TopBar from '@/components/Layout/Topbar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { ArrowRight, Crown, Sparkles, Star } from 'lucide-react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 
@@ -23,7 +23,7 @@ const CREDIT_PACKAGES = [
     tagline: 'Great for quick tests',
     price: '199',
     unit: 'AED',
-    color: '#b8a58c',
+    accent: '#b8a58c',
     description: 'Perfect to get started with room design.',
     credits: 20,
     features: [
@@ -40,7 +40,7 @@ const CREDIT_PACKAGES = [
     tagline: 'Most popular for homeowners',
     price: '449',
     unit: 'AED',
-    color: '#937c60',
+    accent: '#c3a886',
     popular: true,
     description: 'Balanced plan for multi-room projects.',
     credits: 50,
@@ -58,7 +58,7 @@ const CREDIT_PACKAGES = [
     tagline: 'For larger projects',
     price: '799',
     unit: 'AED',
-    color: '#7a654f',
+    accent: '#8d775e',
     description: 'Best fit for large or frequent projects.',
     credits: 100,
     features: [
@@ -81,9 +81,9 @@ const CREDIT_DEFINITIONS = [
 
 const Decorations = () => (
   <div className='absolute inset-0 overflow-hidden pointer-events-none'>
-    <div className='absolute -top-24 -left-24 w-96 h-96 bg-[#937c60]/8 dark:bg-[#937c60]/10 rounded-full blur-[100px]' />
-    <div className='absolute top-1/2 -right-24 w-80 h-80 bg-[#b8a58c]/8 dark:bg-[#b8a58c]/10 rounded-full blur-[80px]' />
-    <div className='absolute -bottom-24 left-1/3 w-64 h-64 bg-[#7a654f]/8 dark:bg-[#7a654f]/10 rounded-full blur-[120px]' />
+    <div className='absolute -top-24 -left-24 w-96 h-96 bg-[#8d775e]/6 rounded-full blur-[100px]' />
+    <div className='absolute top-1/2 -right-24 w-80 h-80 bg-[#b8a58c]/6 rounded-full blur-[80px]' />
+    <div className='absolute -bottom-24 left-1/3 w-64 h-64 bg-[#c3a886]/8 rounded-full blur-[120px]' />
   </div>
 )
 
@@ -91,71 +91,112 @@ const PricingCard = ({ plan, onSelect }) => {
   const isPopular = plan.popular
 
   return (
-    <div
-      className={`relative flex flex-col h-full rounded-3xl transition-all duration-300 ${
+    <article
+      className={`relative flex flex-col h-full overflow-hidden rounded-xl transition-all duration-500 ${
         isPopular
-          ? 'bg-white dark:bg-[#111] shadow-[0_20px_50px_rgba(147,124,96,0.12)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-[#937c60]/30 dark:ring-[#937c60]/50'
-          : 'bg-white dark:bg-[#111] shadow-xl dark:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)] border border-gray-100 dark:border-white/5'
+          ? 'bg-charcoal text-ivory shadow-[0_40px_80px_-30px_rgba(23,22,20,0.55)] lg:-translate-y-4'
+          : 'bg-white text-charcoal border border-beige/70 shadow-[0_20px_50px_-35px_rgba(23,22,20,0.4)]'
       }`}
     >
       {isPopular && (
-        <div className='absolute -top-3 left-1/2 -translate-x-1/2 z-20'>
-          <Badge className='bg-[#937c60] text-white px-5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-md'>
+        <div className='absolute top-5 left-0 right-0 flex justify-center z-20'>
+          <span className='bg-manara text-white text-[9px] font-semibold uppercase tracking-[0.3em] px-5 py-1.5 rounded-full'>
             Most Popular
-          </Badge>
+          </span>
         </div>
       )}
 
-      <div className='p-8 flex flex-col h-full'>
-        <div className='mb-8'>
-          <h3 className='text-2xl font-bold text-gray-900 dark:text-white mb-1'>{plan.name}</h3>
-          <p className='text-sm text-gray-500 dark:text-gray-400 font-medium'>{plan.tagline}</p>
+      <div
+        className='flex flex-col h-full p-8 md:p-10'
+        style={isPopular ? { paddingTop: '5.5rem' } : undefined}
+      >
+        <div className='mb-9'>
+          <p
+            className={`label-meta ${isPopular ? 'text-ivory/50' : 'text-stone'}`}
+          >
+            {plan.tagline}
+          </p>
+          <h3
+            className={`mt-3 font-serif text-4xl leading-none tracking-[-0.01em] ${
+              isPopular ? 'text-ivory' : 'text-charcoal'
+            }`}
+          >
+            {plan.name}
+          </h3>
         </div>
 
-        <div className='mb-8'>
-          <div className='flex items-baseline gap-1'>
-            <span className='text-sm font-bold text-gray-400 dark:text-gray-500'>{plan.unit}</span>
-            <span className='text-5xl font-extrabold text-[#1a1a1a] dark:text-white tracking-tight'>
+        <div className='pt-6 border-t' style={{ borderColor: isPopular ? 'rgba(245,242,236,0.14)' : '#ded6ca' }}>
+          <div className='flex items-baseline gap-2'>
+            <span
+              className={`text-[10px] font-semibold uppercase tracking-[0.3em] ${
+                isPopular ? 'text-[#c3a886]' : 'text-manara'
+              }`}
+            >
+              {plan.unit}
+            </span>
+            <span
+              className={`font-serif text-6xl md:text-7xl leading-none tracking-[-0.02em] ${
+                isPopular ? 'text-ivory' : 'text-charcoal'
+              }`}
+            >
               {plan.price}
             </span>
           </div>
-          <div className='flex items-center gap-2 mt-2'>
-            <span className='text-[10px] font-bold text-[#937c60] bg-[#937c60]/5 dark:bg-[#937c60]/10 px-2 py-0.5 rounded'>
+          <div className='mt-4 flex items-center gap-2'>
+            <span
+              className={`inline-flex items-center rounded-full px-3.5 py-1 text-[10px] font-semibold uppercase tracking-widest ${
+                isPopular
+                  ? 'bg-ivory/10 text-[#c3a886]'
+                  : 'bg-[#f5f2ec] text-manara'
+              }`}
+            >
               {plan.credits} Credits
             </span>
           </div>
         </div>
 
-        <p className='text-sm text-gray-600 dark:text-gray-400 leading-relaxed mb-8'>
+        <p
+          className={`mt-6 text-sm leading-[1.85] ${
+            isPopular ? 'text-ivory/70' : 'text-stone'
+          }`}
+        >
           {plan.description}
         </p>
 
-        <div className='flex-grow space-y-4 mb-10'>
+        <div className='flex-grow space-y-3.5 mt-8 mb-12'>
           {plan.features.map((feature, idx) => (
-            <div key={idx} className='flex items-start gap-3 group'>
-              <div
-                className='mt-2 shrink-0 w-1.5 h-1.5 rounded-full'
-                style={{ backgroundColor: plan.color }}
+            <div key={idx} className='flex items-center gap-3'>
+              <span
+                className={`mt-0.5 shrink-0 h-1 w-1 rounded-full ${
+                  isPopular ? 'bg-[#c3a886]' : 'bg-manara'
+                }`}
               />
-              <span className='text-sm text-gray-700 dark:text-gray-300 leading-snug group-hover:text-gray-900 dark:group-hover:text-white transition-colors'>
+              <span
+                className={`text-sm leading-snug ${
+                  isPopular ? 'text-ivory/80' : 'text-charcoal/70'
+                }`}
+              >
                 {feature}
               </span>
             </div>
           ))}
         </div>
 
-        <Button
-          onClick={onSelect}
-          className={`w-full py-7 rounded-2xl font-bold text-base transition-all duration-300 border-2 shadow-none ${
-            isPopular
-              ? 'bg-[#937c60] border-[#937c60] text-white hover:bg-[#867055] hover:border-[#867055]'
-              : 'bg-transparent border-gray-200 dark:border-white/10 text-[#937c60] hover:bg-[#937c60] hover:text-white hover:border-[#937c60]'
-          }`}
-        >
-          {plan.cta}
-        </Button>
+        <div className='mt-auto'>
+          <Button
+            onClick={onSelect}
+            className={`w-full h-[54px] rounded-xl text-[13px] font-semibold tracking-wide transition-all duration-300 border ${
+              isPopular
+                ? 'bg-manara border-manara text-white hover:bg-[#a08163] hover:border-[#a08163]'
+                : 'bg-transparent border-charcoal/25 text-charcoal hover:bg-charcoal hover:text-ivory hover:border-charcoal'
+            }`}
+          >
+            {plan.cta}
+            <ArrowRight size={15} className='ml-1.5' />
+          </Button>
+        </div>
       </div>
-    </div>
+    </article>
   )
 }
 
@@ -182,107 +223,141 @@ const PricingPage = () => {
   }
 
   return (
-    <div className='min-h-screen bg-[#faf8f6] dark:bg-[#0a0a0a] font-["Poppins"] transition-colors duration-500'>
+    <div className='min-h-screen bg-ivory text-charcoal font-sans transition-colors duration-500'>
       <TopBar />
 
-      <main className='relative pt-32 pb-24 px-4 overflow-hidden'>
+      <main className='relative pt-[9.5rem] pb-28 px-4 sm:px-6 overflow-hidden'>
         <Decorations />
 
-        <div className='max-w-7xl mx-auto relative z-10'>
-          <div className='max-w-3xl mx-auto text-center mb-20'>
-            <div className='inline-flex items-center px-4 py-1 rounded-full bg-[#937c60]/10 dark:bg-[#937c60]/20 text-[#937c60] text-[11px] font-bold mb-6 tracking-wider'>
-              SUBSCRIPTION PLANS
-            </div>
+        <div className='max-w-[1200px] mx-auto relative z-10'>
+          <div className='max-w-4xl mx-auto text-center mb-24 md:mb-32'>
+            <Reveal>
+              <Label>SUBSCRIPTION PLANS</Label>
+            </Reveal>
 
-            <h1 className='text-5xl md:text-7xl font-black text-gray-900 dark:text-white mb-6 tracking-tight leading-[1.05]'>
-              Choose Your <br />
-              <span className='text-[#937c60]'>Manara Plan</span>.
-            </h1>
+            <Reveal delay={0.1} y={40}>
+              <h1 className='mt-8 font-serif font-normal text-charcoal text-5xl sm:text-6xl md:text-7xl lg:text-[84px] leading-[1.02] tracking-[-0.015em]'>
+                Light it up,
+                <br />
+                <span className='italic text-manara'>plan by plan.</span>
+              </h1>
+            </Reveal>
 
-            <p className='text-lg text-gray-500 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto'>
-              Pick the plan that fits your design flow. Ready when you are, and upgradeable anytime.
-            </p>
+            <Reveal delay={0.18}>
+              <p className='mt-8 mx-auto max-w-xl text-base md:text-[17px] leading-[1.85] text-stone'>
+                Pick the plan that fits your design flow. Ready when you are,
+                and upgradeable anytime.
+              </p>
+            </Reveal>
 
-            <div className='mt-8 flex flex-wrap items-center justify-center gap-2 text-[11px] font-bold uppercase tracking-widest'>
-              <span className='inline-flex items-center gap-2 rounded-full border border-blue-200 bg-blue-50 px-4 py-2 text-blue-700'>
-                <Crown size={13} />
-                Marketing Preview
-              </span>
-              {currentUser ? (
-                <span className='inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-emerald-700'>
-                  Signed In: Continue to Billing
+            <Reveal delay={0.24}>
+              <div className='mt-9 flex flex-wrap items-center justify-center gap-3 text-[9px] font-semibold uppercase tracking-[0.3em]'>
+                <span className='inline-flex items-center gap-2 rounded-full border border-charcoal/15 bg-white/60 px-5 py-2.5 text-manara'>
+                  <Crown size={12} />
+                  Marketing Preview
                 </span>
-              ) : (
-                <span className='inline-flex items-center gap-2 rounded-full border border-[#937c60]/30 bg-[#937c60]/5 px-4 py-2 text-[#937c60]'>
-                  Sign in to activate a plan
-                </span>
-              )}
-            </div>
+                {currentUser ? (
+                  <span className='inline-flex items-center gap-2 rounded-full border border-charcoal/15 bg-white/60 px-5 py-2.5 text-manara'>
+                    Signed In — Continue to Billing
+                  </span>
+                ) : (
+                  <span className='inline-flex items-center gap-2 rounded-full border border-charcoal/15 bg-white/60 px-5 py-2.5 text-stone'>
+                    Sign in to activate a plan
+                  </span>
+                )}
+              </div>
+            </Reveal>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-24 items-center'>
-            {CREDIT_PACKAGES.map((plan) => (
-              <div
-                key={plan.id}
-                className={plan.popular ? 'lg:scale-105 z-10' : 'lg:scale-95'}
-              >
+          <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6 mb-24'>
+            {CREDIT_PACKAGES.map((plan, i) => (
+              <Reveal key={plan.id} delay={i * 0.08} y={36}>
                 <PricingCard
                   plan={plan}
                   onSelect={() => handleSelectPlan(plan)}
                 />
-              </div>
+              </Reveal>
             ))}
           </div>
 
-          <div className='max-w-5xl mx-auto mb-24'>
-            <div className='bg-white/80 dark:bg-[#111] border border-gray-100 dark:border-white/5 rounded-[32px] p-8 md:p-12 shadow-xl'>
-              <div className='flex items-center gap-3 mb-6'>
-                <div className='w-10 h-[1px] bg-[#937c60] opacity-40'></div>
-                <span className='text-[10px] font-bold tracking-[0.4em] text-[#937c60] uppercase'>Plan Inclusions</span>
-              </div>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-                {CREDIT_DEFINITIONS.map((item) => (
-                  <div key={item.label} className='flex items-center justify-between px-4 py-3 rounded-2xl bg-gray-50 dark:bg-white/5 text-sm font-semibold text-gray-700 dark:text-gray-200'>
-                    <span>{item.label}</span>
-                    <span className='text-[#937c60]'>{item.credits} credits</span>
-                  </div>
-                ))}
-              </div>
-              <p className='mt-6 text-xs text-gray-400'>
-                Tap any plan to continue setup in your subscription page.
-              </p>
-            </div>
-          </div>
-
-          <div className='flex flex-wrap justify-center items-center gap-12 md:gap-24 opacity-40 font-bold text-xs uppercase tracking-[0.2em] text-gray-600 dark:text-gray-400'>
-            <span>Clear Credit Costs</span>
-            <span>Track Generations</span>
-            <span>Credits Never Expire</span>
-          </div>
-
-          <div className='mt-32'>
-            <div className='bg-[#1a1a1a] dark:bg-[#111] rounded-[3rem] p-12 md:p-20 relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-12 shadow-2xl dark:border dark:border-white/5'>
-              <div className='absolute top-0 right-0 w-1/2 h-full bg-[#937c60]/10 blur-[100px] pointer-events-none' />
-
-              <div className='relative z-10 max-w-xl text-center lg:text-left'>
-                <h2 className='text-3xl md:text-5xl font-bold text-white mb-6 leading-tight'>
-                  Still not sure about the perfect fit?
-                </h2>
-                <p className='text-gray-400 text-lg md:text-xl'>
-                  Not sure how many credits you need? We can help estimate your project.
+          <div className='max-w-4xl mx-auto mb-28'>
+            <Reveal>
+              <div className='border border-beige bg-white/70 backdrop-blur-sm rounded-2xl px-7 py-9 md:px-12 md:py-12'>
+                <div className='flex items-center gap-4 mb-9'>
+                  <div className='h-px w-10 bg-beige' />
+                  <Label>Plan Inclusions</Label>
+                </div>
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-3'>
+                  {CREDIT_DEFINITIONS.map((item) => (
+                    <div
+                      key={item.label}
+                      className='flex items-center justify-between border-b border-beige py-3.5 text-sm'
+                    >
+                      <span className='font-medium text-charcoal/75'>
+                        {item.label}
+                      </span>
+                      <span className='font-serif italic text-manara'>
+                        {item.credits} credits
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className='mt-8 text-[11px] uppercase tracking-[0.25em] text-stone font-medium'>
+                  Tap any plan to continue setup in your subscription page.
                 </p>
               </div>
-
-              <div className='relative z-10 shrink-0 w-full lg:w-auto'>
-                <Button
-                  onClick={() => setIsAvatarOpen(true)}
-                  className='bg-[#937c60] hover:bg-[#a68d6f] text-white px-12 py-8 rounded-2xl text-lg font-bold w-full lg:w-auto transition-all hover:scale-105 active:scale-95'
-                >
-                  Book Free Consultation
-                </Button>
-              </div>
-            </div>
+            </Reveal>
           </div>
+
+          <div className='flex flex-wrap justify-center items-center gap-12 md:gap-20 mb-2'>
+            {['Clear Credit Costs', 'Track Generations', 'Credits Never Expire'].map(
+              (item) => (
+                <Reveal key={item}>
+                  <span className='label-meta text-stone'>{item}</span>
+                </Reveal>
+              )
+            )}
+          </div>
+
+          <div className='mt-24 md:mt-32'>
+            <Reveal>
+              <section className='bg-charcoal text-ivory rounded-2xl px-8 py-14 md:px-20 md:py-20 relative overflow-hidden flex flex-col lg:flex-row items-center justify-between gap-10 shadow-[0_40px_90px_-40px_rgba(23,22,20,0.7)]'>
+                <div className='absolute -top-24 -right-24 w-96 h-96 bg-manara/25 rounded-full blur-[120px] pointer-events-none' />
+
+                <div className='relative z-10 max-w-2xl text-center lg:text-left'>
+                  <p className='label-arch-light'>THE MANĀRA DESK</p>
+                  <h2 className='mt-5 font-serif text-4xl sm:text-5xl md:text-6xl leading-[1.05] tracking-[-0.01em]'>
+                    Still not sure about
+                    <br className='hidden md:block' />
+                    the <span className='italic text-[#c3a886]'>perfect fit?</span>
+                  </h2>
+                  <p className='mt-6 text-[15px] md:text-base text-ivory/60 leading-[1.85]'>
+                    Not sure how many credits you need? We can help estimate
+                    your project.
+                  </p>
+                </div>
+
+                <div className='relative z-10 shrink-0 w-full lg:w-auto'>
+                  <Button
+                    onClick={() => setIsAvatarOpen(true)}
+                    className='group w-full lg:w-auto bg-manara hover:bg-[#a76663] text-white text-[13px] font-semibold tracking-wide px-10 py-5 rounded-xl transition-all'
+                  >
+                    Book Free Consultation
+                    <ArrowRight
+                      size={15}
+                      className='ml-1 transition-transform group-hover:translate-x-1'
+                    />
+                  </Button>
+                </div>
+              </section>
+            </Reveal>
+          </div>
+
+          <Reveal delay={0.1}>
+            <p className='mt-14 text-center label-meta text-stone/70'>
+              MANĀRA — AI-POWERED INTERIOR DESIGN · DUBAI · UAE
+            </p>
+          </Reveal>
         </div>
       </main>
 
@@ -295,36 +370,40 @@ const PricingPage = () => {
       />
 
       <Dialog open={showAuthPrompt} onOpenChange={setShowAuthPrompt}>
-        <DialogContent className='max-w-md border border-[#937c60]/20 bg-white p-0 dark:bg-[#111]'>
-          <div className='relative overflow-hidden rounded-xl'>
-            <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(147,124,96,0.18),transparent_60%)]' />
-            <div className='relative p-7'>
+        <DialogContent className='max-w-md rounded-2xl border border-beige bg-ivory p-0 text-charcoal'>
+          <div className='relative overflow-hidden p-8 md:p-10'>
+            <div className='pointer-events-none absolute top-0 right-0 w-64 h-64 bg-[#c3a886]/10 rounded-full blur-[80px]' />
+            <div className='relative'>
               <DialogHeader>
-                <DialogTitle className='text-2xl font-extrabold tracking-tight text-gray-900 dark:text-white'>
+                <Label>Almost there</Label>
+                <DialogTitle className='mt-5 font-serif text-3xl md:text-4xl font-normal tracking-[-0.01em] text-charcoal leading-none'>
                   Create your account to continue
                 </DialogTitle>
-                <DialogDescription className='pt-2 text-sm leading-relaxed text-gray-600 dark:text-gray-300'>
-                  You selected the {selectedPlanName} plan. Create your account now, then subscribe from your billing page.
+                <DialogDescription className='pt-4 text-[15px] leading-[1.8] text-stone'>
+                  You selected the {selectedPlanName} plan. Create your account
+                  now, then subscribe from your billing page.
                 </DialogDescription>
               </DialogHeader>
-              <DialogFooter className='mt-7 flex-col sm:flex-row gap-2'>
+              <DialogFooter className='mt-8 flex-col sm:flex-row gap-3'>
                 <Button
                   onClick={() => {
                     setShowAuthPrompt(false)
                     navigate('/auth?type=signup')
                   }}
-                  className='group h-11 w-full rounded-xl bg-[#937c60] text-white hover:bg-[#866f54]'
+                  className='group h-[50px] flex-1 rounded-xl bg-manara text-white hover:bg-manara'
                 >
                   Create Account
-                  <ArrowRight size={14} className='ml-2 transition-transform group-hover:translate-x-0.5' />
+                  <ArrowRight
+                    size={14}
+                    className='ml-2 transition-transform group-hover:translate-x-0.5'
+                  />
                 </Button>
                 <Button
-                  variant='outline'
                   onClick={() => {
                     setShowAuthPrompt(false)
                     navigate('/auth?type=login')
                   }}
-                  className='h-11 w-full rounded-xl'
+                  className='h-[50px] flex-1 rounded-xl border border-charcoal/25 bg-transparent text-charcoal hover:bg-white'
                 >
                   I Already Have an Account
                 </Button>
