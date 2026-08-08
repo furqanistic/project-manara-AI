@@ -2,17 +2,6 @@ import React from 'react'
 import { Check } from 'lucide-react'
 import { Label, Reveal } from './primitives'
 
-const FEATURES = [
-  'Brand consistency across every output',
-  'Team permissions per role',
-  'Review and approval workflow',
-  'Version history on every asset',
-  'English and Arabic content',
-  'Compliance and permit information',
-  'Property analytics',
-  'Lead tracking end to end',
-]
-
 const APPROVALS = [
   { item: 'Floor plan — branded', state: 'Approved', by: 'Layla H.', done: true },
   { item: 'Interior renders v02', state: 'In review', by: 'Omar S.', done: false },
@@ -235,20 +224,6 @@ const Agencies = () => {
               </div>
             </div>
           </Reveal>
-        </div>
-
-        {/* Feature index */}
-        <div className='mt-16 md:mt-24 grid md:grid-cols-2 gap-x-16 gap-y-1'>
-          {FEATURES.map((f, i) => (
-            <Reveal key={f} delay={(i % 2) * 0.05}>
-              <div className='flex items-baseline gap-5 py-4 border-b border-beige'>
-                <span className='text-[10px] font-semibold text-manara'>
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <span className='text-[15px] text-charcoal/85'>{f}</span>
-              </div>
-            </Reveal>
-          ))}
         </div>
       </div>
     </section>

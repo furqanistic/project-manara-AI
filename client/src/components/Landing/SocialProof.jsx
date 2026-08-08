@@ -3,33 +3,39 @@ import { Reveal } from './primitives'
 
 const SocialProof = () => {
   return (
-    <section className='relative bg-ivory py-28 md:py-44'>
+    <section className='relative bg-ivory py-20 md:py-28'>
       <div className='max-w-[1500px] mx-auto px-6 md:px-12'>
-        <Reveal>
-          <div className='max-w-5xl mx-auto text-center'>
-            <p className='label-arch'>WHAT PROPERTY TEAMS SAY</p>
-          </div>
-        </Reveal>
-
-        <Reveal delay={0.1}>
-          <blockquote className='max-w-5xl mx-auto mt-14 text-center'>
-            <p className='font-serif text-[28px] sm:text-4xl md:text-[44px] leading-[1.3] tracking-[-0.01em] text-charcoal'>
-              “Manāra turned an entire property marketing workflow into one
-              clear, controlled experience.”
-            </p>
-            <div className='mt-12 flex items-center justify-center'>
-              <span className='h-px w-10 bg-manara' />
+        <div className='grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-center lg:gap-16'>
+          {/* Label + attribution */}
+          <Reveal className='order-2 lg:order-1'>
+            <div className='lg:border-t lg:border-beige lg:pt-8'>
+              <p className='label-arch'>WHAT PROPERTY TEAMS SAY</p>
+              <div className='mt-8 flex items-center gap-4 lg:flex-col lg:items-start'>
+                <span className='flex h-11 w-11 items-center justify-center rounded-full bg-manara/10 font-serif text-lg text-manara'>
+                  R
+                </span>
+                <div>
+                  <p className='text-[13px] font-semibold text-charcoal'>
+                    Rania Al Suwaidi
+                  </p>
+                  <p className='mt-1 text-[10px] font-medium tracking-[0.3em] uppercase text-stone'>
+                    Head of Marketing — Meridian Properties, Dubai
+                  </p>
+                </div>
+              </div>
             </div>
-            <footer className='mt-8'>
-              <p className='text-[13px] font-semibold text-charcoal'>
-                Rania Al Suwaidi
+          </Reveal>
+
+          {/* Quote */}
+          <Reveal delay={0.1} className='order-1 lg:order-2'>
+            <blockquote>
+              <p className='font-serif text-[26px] sm:text-3xl md:text-[38px] leading-[1.25] tracking-[-0.01em] text-charcoal'>
+                “Manāra turned an entire property marketing workflow into one
+                clear, controlled experience.”
               </p>
-              <p className='mt-1.5 text-[10px] font-medium tracking-[0.3em] uppercase text-stone'>
-                Head of Marketing — Meridian Properties, Dubai
-              </p>
-            </footer>
-          </blockquote>
-        </Reveal>
+            </blockquote>
+          </Reveal>
+        </div>
       </div>
     </section>
   )
